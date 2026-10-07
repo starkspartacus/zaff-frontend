@@ -21,7 +21,7 @@ export function ProductCard({ product, formatPrice, onClick }: { product: Produc
       )}
     >
       <div className="relative">
-        <ProductVisual imageId={product.imageId} category={product.category} brand={product.brand} name={product.name} className="w-full aspect-square" />
+        <ProductVisual imageId={product.imageId} category={product.category} brand={product.brand} size="thumb" name={product.name} className="w-full aspect-square" />
         <span
           className={cn(
             'theme-fixed absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold shadow',

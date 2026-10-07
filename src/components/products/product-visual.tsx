@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Cable, Cpu, Gamepad2, HardDrive, Headphones, Laptop, Monitor, Package, Printer, Router, Smartphone, Tablet, Watch } from 'lucide-react';
-import { imageUrl } from '@/lib/images';
+import { imageUrl, type ImageSize } from '@/lib/images';
 import { cn } from '@/lib/utils';
 
 const BY_CATEGORY: Record<string, { icon: React.ElementType; from: string; to: string }> = {
@@ -33,6 +33,7 @@ export function ProductVisual({
   name,
   className,
   rounded = 'rounded-2xl',
+  size = 'full',
 }: {
   imageId?: string | null;
   src?: string | null;
@@ -41,9 +42,11 @@ export function ProductVisual({
   name?: string;
   className?: string;
   rounded?: string;
+  /** « thumb » : vignette légère (cartes, listes) ; « full » : photo complète (fiche) */
+  size?: ImageSize;
 }) {
   const [broken, setBroken] = useState(false);
-  const url = src || imageUrl(imageId);
+  const url = src || imageUrl(imageId, size);
   const style = BY_CATEGORY[category || ''] || { icon: Package, from: '#fde68a', to: '#d4a017' };
   const Icon = style.icon;
 

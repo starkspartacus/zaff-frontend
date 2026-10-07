@@ -190,7 +190,7 @@ export default function CatalogPage() {
                     <tr key={p._id} className="hover:bg-neutral-900/40 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                        <ProductVisual imageId={p.imageId} category={p.category} brand={p.brand} name={p.name} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
+                        <ProductVisual imageId={p.imageId} category={p.category} brand={p.brand} size="thumb" name={p.name} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
                         <div className="min-w-0">
                         <div className="font-semibold text-white">{p.name}</div>
                         {(p.brand || p.model || p.color) && (

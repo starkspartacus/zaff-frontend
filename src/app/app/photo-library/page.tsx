@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, Copy, FolderOpen, Images, Loader2, Trash2, UploadCloud, Wand2, X } from 'lucide-react';
 import { useDeviceCatalog, useReferenceCatalog } from '@/lib/queries';
-import { deleteLibraryImage, imageUrl, shrinkImage, uploadImageBlob, useMyLibrary } from '@/lib/images';
+import { deleteLibraryImage, formatBytes, prepareImage, uploadImageBlob, useImageUsage, useMyLibrary } from '@/lib/images';
 import { guessFromFilename } from '@/lib/photo-guess';
 import { errorMessage } from '@/lib/types';
 import { ProductVisual } from '@/components/products/product-visual';
@@ -38,6 +38,7 @@ export default function PhotoLibraryPage() {
   const devices = useDeviceCatalog().data;
   const reference = useReferenceCatalog().data ?? [];
   const library = useMyLibrary();
+  const usage = useImageUsage();
   const [items, setItems] = useState<Item[]>([]);
   const [running, setRunning] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -103,9 +104,9 @@ export default function PhotoLibraryPage() {
       for (let it = queue.shift(); it; it = queue.shift()) {
         update(it.id, { status: 'uploading', error: undefined });
         try {
-          const blob = await shrinkImage(it.file);
+          const prepared = await prepareImage(it.file);
           const res = await uploadImageBlob(
-            blob,
+            prepared,
             { brand: it.brand.trim(), model: it.model.trim(), color: it.color.trim() || undefined, category: it.category || undefined },
             { library: true }
           );
@@ -246,6 +247,25 @@ export default function PhotoLibraryPage() {
         </section>
       )}
 
+      {/* Espace utilisé */}
+      {usage.data && (
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Stat label="Photos de ma boutique" value={String(usage.data.mine.photos)} hint={`${usage.data.mine.library} en photothèque · ${formatBytes(usage.data.mine.bytes)}`} />
+          <Stat label="Base partagée ZAFF" value={String(usage.data.shared.photos)} hint={`${formatBytes(usage.data.shared.bytes)}${usage.data.shared.hidden ? ` · ${usage.data.shared.hidden} masquée(s)` : ''}`} />
+          <Stat label="Stockage" value={usage.data.storage === 'uploadthing' ? 'UploadThing' : 'Base de données'} hint={usage.data.storage === 'uploadthing' ? 'Photos servies par leur CDN' : 'Renseignez UPLOADTHING_TOKEN en production'} />
+          {usage.data.provider && usage.data.provider.limitBytes > 0 ? (
+            <Stat
+              label="Quota UploadThing"
+              value={`${Math.round((usage.data.provider.totalBytes / usage.data.provider.limitBytes) * 100)} %`}
+              hint={`${formatBytes(usage.data.provider.totalBytes)} sur ${formatBytes(usage.data.provider.limitBytes)}`}
+              bar={usage.data.provider.totalBytes / usage.data.provider.limitBytes}
+            />
+          ) : (
+            <Stat label="Vignettes" value="≈ 320 px" hint="Cartes et listes légères, même en 3G" />
+          )}
+        </section>
+      )}
+
       {/* Ma photothèque */}
       <section className="space-y-3">
         <p className="text-sm font-bold text-white">
@@ -326,7 +346,22 @@ function MiniInput({ value, onChange, placeholder, disabled, invalid }: { value:
   );
 }
 
-function LibraryTile({ img, onDeleted }: { img: { id: string; brand: string; model: string; color: string | null; usage: number }; onDeleted: () => void }) {
+function Stat({ label, value, hint, bar }: { label: string; value: string; hint: string; bar?: number }) {
+  return (
+    <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-4">
+      <p className="text-[11px] text-neutral-500">{label}</p>
+      <p className="text-xl font-black text-white mt-0.5">{value}</p>
+      <p className="text-[11px] text-neutral-500 mt-0.5 truncate">{hint}</p>
+      {bar !== undefined && (
+        <div className="mt-2 h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+          <div className={cn('h-full', bar > 0.85 ? 'bg-red-500' : 'bg-gold')} style={{ width: `${Math.min(100, Math.round(bar * 100))}%` }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LibraryTile({ img, onDeleted }: { img: { id: string; brand: string; model: string; color: string | null; usage: number; hidden?: boolean }; onDeleted: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const del = async () => {
@@ -342,7 +377,12 @@ function LibraryTile({ img, onDeleted }: { img: { id: string; brand: string; mod
   };
   return (
     <div className="group relative" title={[img.brand, img.model, img.color].filter(Boolean).join(' · ') + (error ? ` — ${error}` : '')}>
-      <ProductVisual src={imageUrl(img.id)} name={img.model} className="w-full aspect-square border border-neutral-800" />
+      <ProductVisual imageId={img.id} size="thumb" name={img.model} className="w-full aspect-square border border-neutral-800" />
+      {img.hidden && (
+        <span className="theme-fixed absolute inset-x-1 top-1/2 -translate-y-1/2 rounded-md bg-red-600/90 px-1 py-0.5 text-center text-[9px] font-bold text-white">
+          Masquée (signalée)
+        </span>
+      )}
       <span className="theme-fixed absolute bottom-1 left-1 right-1 truncate rounded-md bg-black/60 px-1 text-[9px] font-semibold text-white">
         {img.model}
       </span>

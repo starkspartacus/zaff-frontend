@@ -11,11 +11,13 @@ interface BarcodeScannerProps {
   placeholder?: string;
   /** Démarrer directement la caméra (mobile) */
   autoStartCamera?: boolean;
+  /** Aide affichée sous le champ */
+  hint?: string;
 }
 
 const SAME_CODE_DELAY_MS = 2500;
 
-export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartCamera = false }: BarcodeScannerProps) {
+export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartCamera = false, hint }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastScan = useRef<{ code: string; at: number }>({ code: '', at: 0 });
@@ -24,6 +26,8 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
   const [manual, setManual] = useState('');
   const [cameraOn, setCameraOn] = useState(autoStartCamera);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  /** Clavier du téléphone : chiffres (IMEI) ou lettres (N° de série) */
+  const [numeric, setNumeric] = useState(false);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -122,10 +126,25 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
             onChange={(e) => setManual(e.target.value)}
             placeholder={placeholder || 'Scannez ou tapez le N° de série / IMEI'}
             autoComplete="off"
+            inputMode={numeric ? 'numeric' : 'text'}
+            enterKeyHint="done"
             autoCapitalize="characters"
             spellCheck={false}
-            className="w-full h-14 pl-11 pr-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-white text-base font-mono placeholder:text-neutral-500 placeholder:font-sans placeholder:text-sm focus:outline-none focus:border-gold"
+            className="w-full h-14 pl-11 pr-14 rounded-2xl bg-neutral-900 border border-neutral-800 text-white text-base font-mono placeholder:text-neutral-500 placeholder:font-sans placeholder:text-sm focus:outline-none focus:border-gold"
           />
+          <button
+            type="button"
+            onClick={() => {
+              setNumeric((v) => !v);
+              inputRef.current?.blur();
+              setTimeout(() => inputRef.current?.focus(), 50);
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-2 rounded-lg bg-neutral-800 text-[10px] font-bold text-neutral-300 hover:text-white"
+            title={numeric ? 'Clavier lettres et chiffres' : 'Clavier chiffres (IMEI)'}
+            aria-label={numeric ? 'Clavier lettres et chiffres' : 'Clavier chiffres'}
+          >
+            {numeric ? 'ABC' : '123'}
+          </button>
         </div>
         <button
           type="submit"
@@ -150,6 +169,7 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
       </form>
 
       {cameraError && <p className="text-xs text-amber-400">{cameraError}</p>}
+      {hint && <p className="text-[11px] text-neutral-500">{hint}</p>}
     </div>
   );
 }

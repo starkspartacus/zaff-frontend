@@ -6,6 +6,7 @@ import { scanFeedback } from '@/components/scan/feedback';
 import { errorMessage, type Product } from '@/lib/types';
 import { useAddUnits, useDeleteUnit, useProducts } from '@/lib/queries';
 import { ProductForm } from '@/components/products/product-form';
+import { imeiCheck } from '@/lib/imei';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { AnimatedList, AnimatedListItem } from '@/components/magicui/animated-list';
@@ -28,6 +29,8 @@ export default function ReceiveStockPage() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  /** IMEI tapé qui ne passe pas le contrôle : on demande confirmation avant de le mettre en stock */
+  const [suspect, setSuspect] = useState<string | null>(null);
 
   // Création rapide d'un modèle
   const [createOpen, setCreateOpen] = useState(false);
@@ -104,11 +107,19 @@ export default function ReceiveStockPage() {
       ]);
       return;
     }
+    if (imeiCheck(code) === 'invalid') {
+      scanFeedback(false);
+      setSuspect(code.replace(/[\s-]/g, ''));
+      return;
+    }
+    setSuspect(null);
     sendSerials([code]);
   };
 
   const handlePaste = () => {
     const serials = pasteText.split(/[\n,;\t]+/).map((s) => s.trim()).filter(Boolean);
+    const bad = serials.filter((s) => imeiCheck(s) === 'invalid');
+    if (bad.length && !window.confirm(`${bad.length} N° ne passe(nt) pas le contrôle IMEI (${bad.slice(0, 3).join(', ')}${bad.length > 3 ? '…' : ''}). Les mettre en stock quand même ?`)) return;
     sendSerials(serials);
     setPasteText('');
     setPasteOpen(false);
@@ -149,7 +160,36 @@ export default function ReceiveStockPage() {
           </div>
         </div>
 
-        <BarcodeScanner onScan={handleSerialScan} placeholder="Scannez le N° de série / IMEI de chaque appareil" />
+        <BarcodeScanner
+          onScan={handleSerialScan}
+          paused={!!suspect}
+          placeholder="Scannez ou tapez le N° de série / IMEI"
+          hint="Douchette, caméra (bouton Caméra) ou clavier : tapez le numéro puis « OK ». « 123 » ouvre le clavier chiffres. IMEI : *#06# sur le téléphone ou étiquette de la boîte."
+        />
+
+        {suspect && (
+          <div role="alert" className="rounded-2xl border border-amber-500/50 bg-amber-500/10 p-4 space-y-3">
+            <p className="text-sm text-white">
+              <AlertTriangle className="inline w-4 h-4 text-amber-400 mr-1 -mt-0.5" />
+              Le N° <span className="font-mono font-bold">{suspect}</span> ne ressemble pas à un IMEI valide (chiffre de contrôle). Faute de frappe ?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => setSuspect(null)} className="h-11 rounded-xl bg-neutral-900 border border-neutral-700 text-white text-sm font-semibold">
+                Corriger
+              </button>
+              <button
+                onClick={() => {
+                  const code = suspect;
+                  setSuspect(null);
+                  sendSerials([code]);
+                }}
+                className="h-11 rounded-xl bg-amber-500 text-ink text-sm font-bold"
+              >
+                Mettre en stock quand même
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between text-xs">
           <button onClick={() => setPasteOpen(!pasteOpen)} className="text-neutral-400 hover:text-white flex items-center gap-1.5">
@@ -251,7 +291,12 @@ export default function ReceiveStockPage() {
         </button>
       </div>
 
-      <BarcodeScanner onScan={handleModelScan} paused={createOpen} placeholder="Scannez le code-barres de la boîte (modèle)" />
+      <BarcodeScanner
+        onScan={handleModelScan}
+        paused={createOpen}
+        placeholder="Scannez ou tapez le code-barres de la boîte"
+        hint="Code-barres EAN imprimé sur la boîte (13 chiffres en général), ou choisissez le modèle dans la liste."
+      />
       {message && <p className="text-xs text-amber-400">{message}</p>}
 
       <div className="relative">

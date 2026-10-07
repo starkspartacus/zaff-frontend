@@ -421,7 +421,7 @@ function FoundCard(props: {
       <BorderBeam size={120} duration={5} />
       {/* Fiche produit */}
       <div className="flex items-start justify-between gap-3">
-        <ProductVisual imageId={product.imageId} category={product.category} brand={product.brand} name={product.name} className="w-20 h-20 shrink-0" />
+        <ProductVisual imageId={product.imageId} category={product.category} brand={product.brand} size="thumb" name={product.name} className="w-20 h-20 shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-lg font-bold text-white leading-tight">{product.name}</p>
           {details && <p className="text-sm text-neutral-400 mt-0.5">{details}</p>}

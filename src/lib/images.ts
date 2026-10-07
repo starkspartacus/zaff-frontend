@@ -16,11 +16,17 @@ export interface SharedImage {
   library?: boolean;
   pending?: boolean;
   createdAt?: string;
+  hidden?: boolean;
+  reports?: number;
+  hasThumb?: boolean;
   url: string;
 }
 
+export type ImageSize = 'full' | 'thumb';
+
 /** Adresse publique du fichier (balise <img>, mise en cache par le navigateur) */
-export const imageUrl = (id?: string | null) => (id ? `${API_BASE_URL}/global/images/${id}/file` : null);
+export const imageUrl = (id?: string | null, size: ImageSize = 'full') =>
+  id ? `${API_BASE_URL}/global/images/${id}/file${size === 'thumb' ? '?size=thumb' : ''}` : null;
 
 export const useSharedImages = (q: { brand?: string; model?: string; color?: string; category?: string }) =>
   useQuery({
@@ -34,7 +40,7 @@ export const useSharedImages = (q: { brand?: string; model?: string; color?: str
  * Réduit la photo dans le navigateur avant l'envoi (≤ 1000 px, WebP ou JPEG ≈ 100–250 Ko) :
  * rapide même en 3G, et léger pour la base partagée.
  */
-export async function shrinkImage(file: File, max = 1000): Promise<Blob> {
+export async function shrinkImage(file: Blob, max = 1000, maxBytes = 550 * 1024): Promise<Blob> {
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) throw new Error("Cette image ne peut pas être lue. Essayez une photo JPEG ou PNG.");
   const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
@@ -50,11 +56,23 @@ export async function shrinkImage(file: File, max = 1000): Promise<Blob> {
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close?.();
   const toBlob = (type: string, quality: number) => new Promise<Blob | null>((r) => canvas.toBlob(r, type, quality));
-  for (const [type, quality] of [['image/webp', 0.82], ['image/jpeg', 0.82], ['image/jpeg', 0.65]] as const) {
+  for (const [type, quality] of [['image/webp', 0.82], ['image/jpeg', 0.82], ['image/jpeg', 0.65], ['image/jpeg', 0.5]] as const) {
     const blob = await toBlob(type, quality);
-    if (blob && blob.type === type && blob.size <= 550 * 1024) return blob;
+    if (blob && blob.type === type && blob.size <= maxBytes) return blob;
   }
   throw new Error('Photo trop lourde, même réduite. Essayez une autre photo.');
+}
+
+/** Photo prête à envoyer : version ≤ 1000 px et vignette ≈ 320 px (cartes de la Vitrine, listes) */
+export interface PreparedImage {
+  blob: Blob;
+  thumb: Blob;
+}
+
+export async function prepareImage(file: File): Promise<PreparedImage> {
+  const blob = await shrinkImage(file);
+  const thumb = await shrinkImage(blob, 320, 75 * 1024);
+  return { blob, thumb };
 }
 
 /**
@@ -62,12 +80,14 @@ export async function shrinkImage(file: File, max = 1000): Promise<Blob> {
  * d'importer (photothèque) : choisir une photo ne l'envoie pas, aucun fichier n'est laissé sans produit.
  */
 export async function uploadImageBlob(
-  blob: Blob,
+  image: PreparedImage,
   meta: { brand: string; model: string; color?: string; category?: string },
   opts: { library?: boolean } = {}
 ) {
+  const ext = (b: Blob) => (b.type === 'image/webp' ? 'webp' : 'jpg');
   const form = new FormData();
-  form.append('file', blob, blob.type === 'image/webp' ? 'photo.webp' : 'photo.jpg');
+  form.append('file', image.blob, `photo.${ext(image.blob)}`);
+  form.append('thumb', image.thumb, `vignette.${ext(image.thumb)}`);
   for (const [k, v] of Object.entries(meta)) if (v) form.append(k, v);
   if (opts.library) form.append('library', 'true');
   return (await api.post('/global/images', form, { headers: { 'Content-Type': 'multipart/form-data' } })) as unknown as SharedImage & {
@@ -87,3 +107,19 @@ export const useMyLibrary = (enabled = true) =>
   });
 
 export const deleteLibraryImage = (id: string) => api.delete(`/global/images/${id}`);
+
+/** Signaler une photo d'une autre boutique (inadaptée, mauvais modèle) */
+export const reportImage = (id: string) => api.post(`/global/images/${id}/report`) as unknown as Promise<{ reported: boolean; hidden: boolean }>;
+
+export interface ImageUsage {
+  storage: 'uploadthing' | 'database';
+  shared: { photos: number; bytes: number; hidden: number };
+  mine: { photos: number; bytes: number; library: number };
+  provider: { totalBytes: number; limitBytes: number; filesUploaded: number } | null;
+}
+
+export const useImageUsage = (enabled = true) =>
+  useQuery({ queryKey: ['images', 'usage'], queryFn: () => api.get('/global/images/usage') as unknown as Promise<ImageUsage>, enabled });
+
+export const formatBytes = (n: number) =>
+  n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} Go` : n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`;

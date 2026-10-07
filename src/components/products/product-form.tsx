@@ -27,6 +27,7 @@ import {
   Watch,
   Cable,
   Wand2,
+  Flag,
   X,
   Camera,
   ImageOff,
@@ -38,8 +39,10 @@ import { useBrands, useCategories, useDeviceCatalog, useProducts, useReferenceCa
 import { CONDITION_LABELS, type ProductCondition } from '@/lib/contract';
 import { errorMessage, type Category, type Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { discardImage, imageUrl, shrinkImage, uploadImageBlob, useSharedImages } from '@/lib/images';
+import { discardImage, imageUrl, prepareImage, reportImage, uploadImageBlob, useSharedImages, type PreparedImage } from '@/lib/images';
+import { useAuth } from '@/contexts/auth-context';
 import { ProductVisual } from './product-visual';
+import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { fieldErrors, ProductFormSchema } from '@/lib/schemas';
 
 /**
@@ -152,11 +155,15 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   /** L'utilisateur a choisi lui-même (photo ou « sans photo ») : plus de choix automatique */
   const [imageTouched, setImageTouched] = useState(!!initial);
   /** Photo prise / choisie sur l'appareil : réduite tout de suite, envoyée seulement à l'enregistrement */
-  const [localPhoto, setLocalPhoto] = useState<{ blob: Blob; preview: string } | null>(null);
+  const [localPhoto, setLocalPhoto] = useState<(PreparedImage & { preview: string }) | null>(null);
+  const { establishment } = useAuth();
+  const [reported, setReported] = useState<Record<string, string>>({});
   const [preparing, setPreparing] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  /** Scan du code-barres de la boîte à la caméra (ou douchette) */
+  const [scanOpen, setScanOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -203,8 +210,8 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
     setPreparing(true);
     setImageError(null);
     try {
-      const blob = await shrinkImage(file);
-      setLocalPhoto({ blob, preview: URL.createObjectURL(blob) });
+      const prepared = await prepareImage(file);
+      setLocalPhoto({ ...prepared, preview: URL.createObjectURL(prepared.blob) });
       setImageId(LOCAL);
     } catch (err) {
       setImageError(errorMessage(err));
@@ -287,7 +294,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       // La photo prise sur l'appareil n'est envoyée que maintenant, au clic sur « Enregistrer »
       let finalImageId = imageId;
       if (imageId === LOCAL && localPhoto) {
-        const img = await uploadImageBlob(localPhoto.blob, { brand: brand.trim(), model: effectiveName.trim(), color: color.trim() || undefined, category: slug || undefined });
+        const img = await uploadImageBlob(localPhoto, { brand: brand.trim(), model: effectiveName.trim(), color: color.trim() || undefined, category: slug || undefined });
         finalImageId = img.id;
         if (!img.duplicate) uploadedId = img.id;
       }
@@ -340,7 +347,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       {/* Aperçu vivant de la fiche */}
       <div className="sticky top-0 z-10 -mx-1 px-1 pb-2 bg-neutral-950">
         <div className="rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3 flex items-center gap-3">
-          <ProductVisual imageId={imageId === LOCAL ? null : imageId} src={imageId === LOCAL ? localPhoto?.preview : null} category={slug} brand={brand} name={fullDesignation} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
+          <ProductVisual imageId={imageId === LOCAL ? null : imageId} size="thumb" src={imageId === LOCAL ? localPhoto?.preview : null} category={slug} brand={brand} name={fullDesignation} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className={cn('text-sm font-bold truncate', fullDesignation ? 'text-white' : 'text-neutral-500')}>
               {fullDesignation || 'Votre produit apparaîtra ici'}
@@ -431,26 +438,43 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {sharedImages.map((img) => {
             const on = imageId === img.id;
+            const fromOtherShop = !!img.establishmentName && img.establishmentName !== establishment?.name;
             return (
-              <button
+              <div
                 key={img.id}
-                type="button"
-                onClick={() => {
-                  setImageId(img.id);
-                  setImageTouched(true);
-                }}
-                aria-pressed={on}
                 title={[img.color, img.establishmentName && `ajoutée par ${img.establishmentName}`].filter(Boolean).join(' · ')}
                 className={cn('relative aspect-square rounded-2xl border-2 overflow-hidden transition-colors', on ? 'border-gold' : 'border-neutral-800 hover:border-neutral-600')}
               >
-                <ProductVisual src={imageUrl(img.id)} className="absolute inset-0" rounded="rounded-none" name={img.model} />
-                {img.color && <span className="absolute bottom-1 left-1 right-1 truncate rounded-md bg-black/60 px-1 text-[9px] font-semibold text-white theme-fixed">{img.color}</span>}
+                <button type="button" onClick={() => setImageId(img.id)} aria-pressed={on} className="absolute inset-0" aria-label={`Utiliser la photo ${img.color || img.model}`}>
+                  <ProductVisual imageId={img.id} size="thumb" className="absolute inset-0" rounded="rounded-none" name={img.model} />
+                </button>
+                {img.color && <span className="pointer-events-none absolute bottom-1 left-1 right-1 truncate rounded-md bg-black/60 px-1 text-[9px] font-semibold text-white theme-fixed">{img.color}</span>}
                 {on && (
-                  <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
+                  <span className="pointer-events-none absolute top-1 right-1 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
                     <Check className="w-3 h-3 text-ink" />
                   </span>
                 )}
-              </button>
+                {fromOtherShop && (
+                  <button
+                    type="button"
+                    disabled={!!reported[img.id]}
+                    onClick={async () => {
+                      if (!window.confirm('Signaler cette photo (inadaptée ou mauvais modèle) ? Après 3 signalements, elle ne sera plus proposée.')) return;
+                      try {
+                        const r = await reportImage(img.id);
+                        setReported((m) => ({ ...m, [img.id]: r.hidden ? 'Masquée' : 'Signalée' }));
+                        if (on) setImageId(null);
+                      } catch (err) {
+                        setImageError(errorMessage(err));
+                      }
+                    }}
+                    className="theme-fixed absolute top-1 left-1 h-5 px-1.5 rounded-full bg-black/60 text-white text-[9px] font-semibold flex items-center gap-0.5 disabled:opacity-80"
+                    aria-label="Signaler la photo"
+                  >
+                    <Flag className="w-2.5 h-2.5" /> {reported[img.id] || ''}
+                  </button>
+                )}
+              </div>
             );
           })}
           {localPhoto && (
@@ -542,7 +566,21 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
             mono
             error={errors.sku}
           />
-          <TextField label="Code-barres de la boîte" value={barcode} onChange={setBarcode} placeholder="Scan ou saisie" mono icon={Barcode} error={errors.barcode} inputMode="numeric" />
+          <TextField
+            label="Code-barres de la boîte"
+            value={barcode}
+            onChange={setBarcode}
+            placeholder="Tapez ou scannez"
+            mono
+            icon={Barcode}
+            error={errors.barcode}
+            inputMode="numeric"
+            action={
+              <button type="button" onClick={() => setScanOpen(true)} className="text-[11px] text-gold flex items-center gap-1">
+                <Camera className="w-3 h-3" /> Scanner
+              </button>
+            }
+          />
         </div>
       </Section>
 
@@ -624,6 +662,27 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
           {initial ? 'Enregistrer' : compact ? 'Créer et scanner les appareils' : 'Créer le produit'}
         </button>
       </div>
+      {scanOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm sm:p-4" onClick={() => setScanOpen(false)}>
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-neutral-950 border border-neutral-800 p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-white">Code-barres de la boîte</p>
+              <button type="button" onClick={() => setScanOpen(false)} className="p-1 text-neutral-400 hover:text-white" aria-label="Fermer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <BarcodeScanner
+              autoStartCamera
+              placeholder="Scannez ou tapez le code-barres"
+              onScan={(code) => {
+                setBarcode(code.trim());
+                setErrors((e) => ({ ...e, barcode: '' }));
+                setScanOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </form>
   );
 }
