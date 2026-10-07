@@ -5,7 +5,21 @@ import { api } from '@/lib/api';
 import { qk } from '@/lib/query-keys';
 import { NotificationSchema } from '@/lib/schemas';
 import { z } from 'zod';
-import type { AddUnitsResult, CashClosing, Category, CurrentRegister, MyStats, OpenRegister, Product, ProductUnit, Sale } from '@/lib/types';
+import type {
+  AddUnitsResult,
+  CashClosing,
+  Category,
+  CreditNoteInfo,
+  CurrentRegister,
+  MyStats,
+  OpenRegister,
+  Product,
+  ProductReturn,
+  ProductUnit,
+  ReturnLookup,
+  ReturnPolicy,
+  Sale,
+} from '@/lib/types';
 
 const get = <T,>(url: string) => api.get(url) as unknown as Promise<T>;
 const post = <T,>(url: string, body?: unknown) => api.post(url, body) as unknown as Promise<T>;
@@ -132,5 +146,31 @@ export function useValidateClosing() {
   return useMutation({
     mutationFn: ({ id, notes }: { id: string; notes?: string }) => api.patch(`/cash-closings/${id}/validate`, { notes }),
     onSuccess: () => invalidate('cash-closings'),
+  });
+}
+
+// ─── Retours, avoirs, paramètres ───
+
+export const useReturnPolicy = () =>
+  useQuery({ queryKey: qk.returnPolicy(), queryFn: () => get<ReturnPolicy>('/settings/return-policy'), staleTime: 5 * 60 * 1000 });
+
+export function useUpdateReturnPolicy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (policy: ReturnPolicy) => api.put('/settings/return-policy', policy) as unknown as Promise<ReturnPolicy>,
+    onSuccess: (policy) => qc.setQueryData(qk.returnPolicy(), policy),
+  });
+}
+
+export const useReturns = (days = 30) => useQuery({ queryKey: qk.returns(days), queryFn: () => get<ProductReturn[]>(`/returns?days=${days}`) });
+
+export const lookupReturn = (serial: string) => get<ReturnLookup>(`/returns/lookup/${encodeURIComponent(serial)}`);
+export const lookupCreditNote = (code: string) => get<CreditNoteInfo>(`/credit-notes/${encodeURIComponent(code.trim())}`);
+
+export function useCreateReturn() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) => post<ProductReturn>('/returns', body),
+    onSuccess: () => invalidate('returns', 'units', 'products', 'repairs', 'cash-closings', 'dashboard', 'my-stats'),
   });
 }

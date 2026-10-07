@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports -- script Node (CommonJS) exécuté avant `next dev` */
 /**
  * Vérifie que toutes les dépendances de package.json sont installées.
  * Lancé avant le serveur de développement : après un `git pull` qui ajoute une

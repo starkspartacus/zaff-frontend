@@ -8,6 +8,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   in_stock: { label: 'En stock', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
   sold: { label: 'Vendu', cls: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
   defective: { label: 'Défectueux', cls: 'bg-red-500/10 text-red-400 border-red-500/20' },
+  in_repair: { label: "À l'atelier (client)", cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
 };
 
 const date = (d?: string | null) => (d ? new Date(d).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
@@ -38,6 +39,7 @@ export function UnitsTable({ search, canManage }: { search: string; canManage: b
           { id: 'in_stock', label: 'En stock' },
           { id: 'sold', label: 'Vendus' },
           { id: 'defective', label: 'Défectueux' },
+          { id: 'in_repair', label: "À l'atelier" },
         ].map((f) => (
           <button
             key={f.id}

@@ -27,7 +27,7 @@ export const ROLE_HOME: Record<Role, string> = {
 
 /** Pages accessibles (préfixes) pour les rôles non propriétaires */
 const ROLE_PAGES: Partial<Record<Role, string[]>> = {
-  seller: ['/app/scan', '/app/my-activity', '/app/cash-closing', '/app/sales', '/app/stock', '/app/customers', '/app/repairs', '/app/warranties'],
+  seller: ['/app/scan', '/app/returns', '/app/my-activity', '/app/cash-closing', '/app/sales', '/app/stock', '/app/customers', '/app/repairs', '/app/warranties'],
   storekeeper: ['/app/receive', '/app/my-activity', '/app/catalog', '/app/stock', '/app/suppliers'],
 };
 

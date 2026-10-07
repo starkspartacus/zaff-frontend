@@ -23,7 +23,7 @@ export interface Product {
   hasSerialNumbers?: boolean;
 }
 
-export type UnitStatus = 'in_stock' | 'sold' | 'defective';
+export type UnitStatus = 'in_stock' | 'sold' | 'defective' | 'in_repair';
 
 export interface ProductUnit {
   _id: string;
@@ -55,6 +55,8 @@ export interface Sale {
   paymentMethod: string;
   saleDate: string;
   sellerName?: string | null;
+  creditNoteCode?: string | null;
+  creditNoteAmount?: number;
   /** Client (renvoyé peuplé par l'API) */
   customerId?: { _id: string; name: string; phone?: string | null } | null;
   createdAt?: string;
@@ -133,5 +135,89 @@ export const PAYMENT_LABELS: Record<keyof PaymentTotals, string> = {
   bank_transfer: 'Virement',
   credit: 'Crédit',
 };
+
+// ─── Retours, avoirs, garantie ───
+
+export interface ActionToggles {
+  creditNote: boolean;
+  refund: boolean;
+  exchange: boolean;
+}
+
+export interface ReturnPolicy {
+  returnsEnabled: boolean;
+  returnWindowDays: number;
+  conditions: string[];
+  changeOfMind: ActionToggles;
+  restockingFeePercent: number;
+  refundMethods: Array<'cash' | 'mobile'>;
+  creditNoteValidityDays: number;
+  defective: {
+    exchangeWindowDays: number;
+    earlyActions: ActionToggles;
+    defaultWarrantyMonths: number;
+    warrantyRepair: boolean;
+    paidRepairOutOfWarranty: boolean;
+  };
+}
+
+export type ReturnReason = 'change_of_mind' | 'defective';
+export type ReturnAction = 'credit_note' | 'refund' | 'exchange' | 'warranty_repair' | 'paid_repair';
+
+export interface ReturnOption {
+  action: ReturnAction;
+  label: string;
+  description: string;
+  amount?: number;
+  refundMethods?: Array<'cash' | 'mobile'>;
+}
+
+export interface ReturnLookup {
+  serialNumber: string;
+  product: Pick<Product, '_id' | 'name' | 'brand' | 'model' | 'color'> | null;
+  sale: {
+    _id: string;
+    invoiceNumber: number;
+    saleDate: string;
+    sellerName?: string | null;
+    paymentMethod: string;
+    customer: { _id: string; name: string; phone?: string | null } | null;
+  };
+  daysSincePurchase: number;
+  price: number;
+  warrantyEnd: string | null;
+  underWarranty: boolean;
+  changeOfMind: { allowed: boolean; reason?: string; options: ReturnOption[]; fee: number; conditions: string[] };
+  defective: { allowed: boolean; reason?: string; options: ReturnOption[]; stage: 'early' | 'warranty' | 'out_of_warranty' };
+}
+
+export interface ProductReturn {
+  _id: string;
+  returnNumber: number;
+  serialNumber: string;
+  productName: string;
+  invoiceNumber: number;
+  reason: ReturnReason;
+  action: ReturnAction;
+  amount: number;
+  fee: number;
+  refundMethod?: 'cash' | 'mobile' | null;
+  creditNoteCode?: string | null;
+  repairTicketNumber?: number | null;
+  unitStatusAfter: UnitStatus;
+  processedByName: string;
+  createdAt: string;
+}
+
+export interface CreditNoteInfo {
+  code: string;
+  amount: number;
+  balance: number;
+  status: 'active' | 'used' | 'expired';
+  expiresAt: string;
+  customerName?: string | null;
+  usable: boolean;
+  expired: boolean;
+}
 
 export const errorMessage = (err: unknown) => (err instanceof Error ? err.message : 'Une erreur est survenue');

@@ -45,6 +45,12 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   comptage des espèces avec écart en direct, explication obligatoire s'il y a un écart, confirmation, historique.
 - `/app/cash-closings` propriétaire : espèces encore chez les vendeurs, clôtures à valider (« J'ai reçu… »),
   caisses ouvertes par vendeur, historique. Tout se met à jour par le WebSocket (scope `cash-closings`).
+- `/app/returns` vendeur / propriétaire : scan de l'appareil rapporté → motif (changement d'avis / panne) →
+  vérifications (conditions de la boutique) ou description de la panne → **seules les solutions autorisées par la
+  politique de la boutique** (échange, avoir, remboursement, réparation sous garantie / payante) → résultat (code
+  d'avoir imprimable, montant à rendre, ticket SAV). Échange : « Scanner le nouvel appareil » ouvre
+  `/app/scan?credit=AV-…` (lu avec `useSearchParams` sous `<Suspense>`), l'avoir est déduit du prix.
+- `/app/settings` propriétaire : politique de retour et de garantie, avec le résumé « Ce que vos clients entendront ».
 - `src/components/scan/barcode-scanner.tsx` : caméra (ZXing, HTTPS requis sur mobile) + douchette / clavier.
 
 ## Notifications push (application fermée)
@@ -63,6 +69,8 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   prévenus par le WebSocket).
 
 ## Vérifier un changement
+Backend sans MongoDB pour tester l'interface : `npm run dev:memory` dans zaff-backend (vrai backend, base en mémoire).
+
 `npx tsc --noEmit` · `npx eslint` (ne pas dépasser le nombre d'erreurs existant) · `npm run build`.
 Test navigateur : faux backend REST + Socket.IO et Playwright (Chromium `/opt/pw-browsers`) — connexion,
 toast de vente, invalidation du dashboard, cloche, persistance de session, mobile.

@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { scanFeedback } from '@/components/scan/feedback';
-import { errorMessage, type Product, type Sale, type ScanLookup } from '@/lib/types';
-import { useCreateSale, useMyStats, useSellUnit } from '@/lib/queries';
+import { errorMessage, type CreditNoteInfo, type Product, type Sale, type ScanLookup } from '@/lib/types';
+import { lookupCreditNote, useCreateSale, useMyStats, useSellUnit } from '@/lib/queries';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { BorderBeam } from '@/components/magicui/border-beam';
@@ -18,6 +19,7 @@ import {
   ChevronDown,
   CreditCard,
   PackageSearch,
+  Ticket,
   ScanLine,
   Smartphone,
   UserPlus,
@@ -39,8 +41,18 @@ const PAYMENTS = [
   { id: 'card', label: 'Carte', icon: CreditCard },
 ] as const;
 
+/** La page lit `?credit=AV-…` (échange) : composant client sous Suspense, recommandé par Next pour useSearchParams */
 export default function ScanSellPage() {
+  return (
+    <Suspense fallback={null}>
+      <ScanSell />
+    </Suspense>
+  );
+}
+
+function ScanSell() {
   const { establishment } = useAuth();
+  const creditParam = useSearchParams().get('credit');
   const currency = establishment?.currency || 'F CFA';
   const formatPrice = (v: number) => `${(v || 0).toLocaleString('fr-FR')} ${currency}`;
 
@@ -59,6 +71,24 @@ export default function ScanSellPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [warrantyMonths, setWarrantyMonths] = useState(12);
   const isSelling = sellUnit.isPending || createSale.isPending;
+
+  // Avoir (échange ou bon d'achat) appliqué à la prochaine vente
+  const [credit, setCredit] = useState<CreditNoteInfo | null>(null);
+  const [creditError, setCreditError] = useState<string | null>(null);
+  const applyCredit = (code: string) =>
+    lookupCreditNote(code)
+      .then((note) => {
+        if (!note.usable) throw new Error(note.expired ? `L'avoir ${note.code} a expiré.` : `L'avoir ${note.code} a déjà été utilisé.`);
+        setCredit(note);
+        setCreditError(null);
+      })
+      .catch((err) => {
+        setCredit(null);
+        setCreditError(errorMessage(err));
+      });
+  useEffect(() => {
+    if (creditParam) applyCredit(creditParam);
+  }, [creditParam]);
 
   const resetOptions = (product?: Product) => {
     setPaymentMethod('cash');
@@ -100,6 +130,7 @@ export default function ScanSellPage() {
           paymentMethod,
           unitPrice: Number(price) || 0,
           warrantyMonths: customer.customerName || customer.customerPhone ? warrantyMonths : 0,
+          creditNoteCode: credit?.code,
           ...customer,
         });
         sale = res.sale;
@@ -113,10 +144,12 @@ export default function ScanSellPage() {
           total: Number(price) || 0,
           paymentMethod,
           saleType: 'purchase',
+          creditNoteCode: credit?.code,
           ...customer,
         });
       }
       scanFeedback(true);
+      setCredit(null); // un avoir ne sert qu'une fois (le reste éventuel reste sur l'avoir)
       setStep({
         kind: 'sold',
         sale,
@@ -159,6 +192,24 @@ export default function ScanSellPage() {
       </div>
 
       <BarcodeScanner onScan={handleScan} paused={busy} autoStartCamera={false} />
+
+      {credit && (
+        <BlurFade className="rounded-2xl border border-[#d4a017]/40 bg-[#d4a017]/5 px-4 py-3 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-2 text-sm text-white min-w-0">
+            <Ticket className="w-4 h-4 text-[#d4a017] shrink-0" />
+            <span className="truncate">
+              Avoir <strong className="font-mono whitespace-nowrap">{credit.code}</strong> appliqué
+            </span>
+          </span>
+          <span className="flex items-center gap-2 shrink-0">
+            <strong className="text-[#f5d77f] whitespace-nowrap">{formatPrice(credit.balance)}</strong>
+            <button onClick={() => setCredit(null)} className="p-1 text-neutral-500 hover:text-white" aria-label="Retirer l'avoir">
+              <X className="w-4 h-4" />
+            </button>
+          </span>
+        </BlurFade>
+      )}
+      {creditError && !credit && <p className="text-xs text-red-400">{creditError}</p>}
 
       {step.kind === 'idle' && (
         <div className="rounded-3xl border border-dashed border-neutral-800 p-8 text-center text-neutral-400 text-sm space-y-2">
@@ -207,6 +258,8 @@ export default function ScanSellPage() {
           setCustomerPhone={setCustomerPhone}
           warrantyMonths={warrantyMonths}
           setWarrantyMonths={setWarrantyMonths}
+          creditBalance={credit?.balance || 0}
+          onApplyCredit={applyCredit}
         />
         </BlurFade>
       )}
@@ -225,6 +278,11 @@ export default function ScanSellPage() {
           </p>
           <p className="text-xs text-neutral-400">
             Facture <span className="font-mono text-white">#{step.sale.invoiceNumber}</span> · stock mis à jour
+            {step.sale.creditNoteAmount ? (
+              <span className="block mt-1 text-[#f5d77f]">
+                Avoir {step.sale.creditNoteCode} : −{formatPrice(step.sale.creditNoteAmount)} · encaissé {formatPrice(step.sale.total - step.sale.creditNoteAmount)}
+              </span>
+            ) : null}
           </p>
           <ScanAgainButton onClick={() => setStep({ kind: 'idle' })} label="Scanner l'article suivant" />
         </ResultCard>
@@ -283,7 +341,11 @@ function FoundCard(props: {
   setCustomerPhone: (v: string) => void;
   warrantyMonths: number;
   setWarrantyMonths: (v: number) => void;
+  creditBalance: number;
+  onApplyCredit: (code: string) => Promise<void>;
 }) {
+  const [creditCode, setCreditCode] = useState('');
+  const [showCredit, setShowCredit] = useState(false);
   const { data, formatPrice } = props;
   const product = data.product;
   const details = [product.brand, product.model, product.color].filter(Boolean).join(' · ');
@@ -377,6 +439,39 @@ function FoundCard(props: {
           {props.editPrice ? 'Valider le prix' : 'Modifier le prix'}
         </button>
       </div>
+
+      {/* Avoir */}
+      {props.creditBalance > 0 ? (
+        <div className="rounded-2xl bg-[#d4a017]/5 border border-[#d4a017]/30 px-4 py-3 space-y-1 text-sm">
+          <div className="flex items-center justify-between gap-3 text-neutral-300">
+            <span>Avoir déduit</span>
+            <span className="whitespace-nowrap">−{formatPrice(Math.min(props.creditBalance, props.price))}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 font-black text-white">
+            <span>À payer</span>
+            <span className="whitespace-nowrap text-base">{formatPrice(Math.max(0, props.price - props.creditBalance))}</span>
+          </div>
+        </div>
+      ) : showCredit ? (
+        <div className="flex gap-2">
+          <input
+            value={creditCode}
+            onChange={(e) => setCreditCode(e.target.value.toUpperCase())}
+            placeholder="Code de l'avoir (ex. AV-1001)"
+            className="flex-1 h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm font-mono text-white focus:outline-none focus:border-[#d4a017]"
+          />
+          <button
+            onClick={() => creditCode.trim() && props.onApplyCredit(creditCode.trim())}
+            className="h-11 px-4 rounded-xl bg-neutral-900 border border-neutral-700 text-white text-xs font-semibold"
+          >
+            Appliquer
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => setShowCredit(true)} className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5">
+          <Ticket className="w-4 h-4 text-[#d4a017]" /> Le client a un avoir
+        </button>
+      )}
 
       {/* Paiement */}
       <div className="grid grid-cols-3 gap-2">

@@ -26,6 +26,8 @@ import {
   CalendarCheck,
   Lock,
   Wallet,
+  Undo2,
+  Settings,
 } from 'lucide-react';
 
 interface NavGroup {
@@ -43,6 +45,7 @@ const navGroups: NavGroup[] = [
     label: 'Au quotidien',
     items: [
       { title: 'Vendre (scan)', href: '/app/scan', icon: ScanLine, badge: 'Scan' },
+      { title: 'Retours & garantie', href: '/app/returns', icon: Undo2 },
       { title: 'Mise en stock (scan)', href: '/app/receive', icon: PackagePlus },
       { title: 'Mon activité du jour', href: '/app/my-activity', icon: CalendarCheck },
       { title: 'Clôturer ma caisse', href: '/app/cash-closing', icon: Lock },
@@ -83,6 +86,7 @@ const navGroups: NavGroup[] = [
     label: 'Administration',
     items: [
       { title: 'Équipe & Accès', href: '/app/users', icon: UserCheck },
+      { title: 'Paramètres boutique', href: '/app/settings', icon: Settings },
     ],
   },
 ];

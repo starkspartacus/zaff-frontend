@@ -15,4 +15,6 @@ export const qk = {
   currentRegister: () => ['cash-closings', 'current'] as const,
   closings: (days: number, status: string) => ['cash-closings', 'list', days, status] as const,
   openRegisters: () => ['cash-closings', 'open'] as const,
+  returnPolicy: () => ['settings', 'return-policy'] as const,
+  returns: (days: number) => ['returns', days] as const,
 };

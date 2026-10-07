@@ -256,7 +256,7 @@ export default function RepairsPage() {
                       {new Date(r.receivedDate || r.createdAt).toLocaleDateString('fr-FR')}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-white">{r.customerId?.name || 'Client'}</div>
+                      <div className="font-semibold text-white">{r.customerId?.name || (r.ownership === 'shop' ? 'Boutique' : 'Client')}</div>
                       <div className="text-[10px] text-neutral-400">{r.customerId?.phone}</div>
                     </td>
                     <td className="py-3.5 px-4">
@@ -267,6 +267,20 @@ export default function RepairsPage() {
                       <div className="text-[11px] text-neutral-400 line-clamp-1 mt-0.5">
                         {r.issueDescription}
                       </div>
+                      {(r.underWarranty || r.ownership === 'shop') && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {r.underWarranty && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                              Sous garantie
+                            </span>
+                          )}
+                          {r.ownership === 'shop' && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/30">
+                              Appareil boutique (repris)
+                            </span>
+                          )}
+                        </div>
+                      )}
                       {r.serialNumber && (
                         <div className="text-[10px] font-mono text-neutral-500">
                           IMEI: {r.serialNumber}
