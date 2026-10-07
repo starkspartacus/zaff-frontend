@@ -23,19 +23,21 @@ export type PresenceEntry = z.infer<typeof PresenceSchema>[number];
 
 // ─── Formulaires ───
 
-const phoneOrEmail = z
-  .string()
-  .trim()
-  .min(1, 'Renseignez votre téléphone ou e-mail.')
-  .refine((v) => v.includes('@') ? z.email().safeParse(v).success : /^\+?[\d\s\-().]{8,}$/.test(v), {
-    message: 'Téléphone ou e-mail invalide.',
-  });
-
-export const LoginSchema = z.object({
-  identifier: phoneOrEmail,
-  password: z.string().min(1, 'Renseignez votre mot de passe.'),
-  tenantSlug: z.string().trim().optional(),
-});
+/** Connexion : par téléphone (pays choisi d'abord) ou par e-mail */
+export const LoginSchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('phone'),
+    country: z.string().length(2, 'Choisissez le pays de votre numéro.'),
+    identifier: z.string().trim().min(1, 'Renseignez votre numéro de téléphone.'),
+    password: z.string().min(1, 'Renseignez votre mot de passe.'),
+  }),
+  z.object({
+    mode: z.literal('email'),
+    identifier: z.string().trim().toLowerCase().pipe(z.email('Adresse e-mail invalide.')),
+    password: z.string().min(1, 'Renseignez votre mot de passe.'),
+  }),
+]);
+export type LoginInput = z.input<typeof LoginSchema>;
 
 export const NewModelSchema = z.object({
   category: z.string().trim().min(1, 'La catégorie est obligatoire.'),

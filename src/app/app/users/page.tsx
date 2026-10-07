@@ -6,6 +6,8 @@ import { api } from '@/lib/api';
 import { normalizeRole, ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/lib/roles';
 import { CreateUserSchema } from '@/lib/schemas';
 import { errorMessage } from '@/lib/types';
+import { DEFAULT_COUNTRY, formatInternational, isPhoneValid, toE164 } from '@/lib/geo';
+import { PhoneInput } from '@/components/forms/geo-fields';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import {
@@ -29,6 +31,8 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  // Par défaut, le pays de la boutique
+  const [phoneCountry, setPhoneCountry] = useState<string>(establishment?.countryCode || DEFAULT_COUNTRY);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'seller' | 'storekeeper'>('seller');
   const [password, setPassword] = useState('');
@@ -56,7 +60,12 @@ export default function UsersPage() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    const parsed = CreateUserSchema.safeParse({ name, phone, email, role, password });
+    const e164 = isPhoneValid(phone, phoneCountry) ? toE164(phone, phoneCountry) : null;
+    if (!e164) {
+      setFormError("Ce numéro n'est pas valide pour le pays choisi.");
+      return;
+    }
+    const parsed = CreateUserSchema.safeParse({ name, phone: e164, email, role, password });
     if (!parsed.success) {
       setFormError(parsed.error.issues[0]?.message || 'Vérifiez les informations.');
       return;
@@ -151,7 +160,7 @@ export default function UsersPage() {
                         {ROLE_LABELS[normalizeRole(u.role)]}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-neutral-300">{u.phone}</td>
+                    <td className="py-3.5 px-4 font-mono text-neutral-300">{u.phone ? formatInternational(u.phone) : '—'}</td>
                     <td className="py-3.5 px-4 text-neutral-400">{u.email || '—'}</td>
                     <td className="py-3.5 px-4 text-center">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -198,14 +207,7 @@ export default function UsersPage() {
 
               <div>
                 <label className="text-xs text-neutral-400 block mb-1">Téléphone de connexion *</label>
-                <Input
-                  type="tel"
-                  placeholder="+225 07..."
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                />
+                <PhoneInput country={phoneCountry} onCountryChange={setPhoneCountry} value={phone} onChange={setPhone} />
               </div>
 
               <div>

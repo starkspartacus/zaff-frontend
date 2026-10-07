@@ -28,7 +28,7 @@ export function useAuth() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const pending = useAuthStore((s) => s.pending);
 
-  const login = async (identifier: string, password: string, tenantSlug?: string) => {
+  const login = async (identifier: string, password: string, tenantSlug?: string, countryCode?: string) => {
     const { setPending, setSession } = useAuthStore.getState();
     setPending(true);
     try {
@@ -36,6 +36,7 @@ export function useAuth() {
         identifier,
         password,
         tenantSlug: tenantSlug || undefined,
+        countryCode: countryCode || undefined,
       })) as unknown as LoginResponse;
       const sessionUser = { ...res.user, role: normalizeRole(res.user?.role) };
       queryClient.clear(); // aucune donnée d'une autre session ne doit subsister

@@ -20,6 +20,8 @@ export interface Establishment {
   phone?: string;
   email?: string;
   address?: string;
+  countryCode?: string | null;
+  city?: string | null;
 }
 
 interface AuthState {
