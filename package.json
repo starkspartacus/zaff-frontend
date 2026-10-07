@@ -6,7 +6,8 @@
     "dev": "next dev -p 3007",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "predev": "node scripts/check-deps.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
