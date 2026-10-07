@@ -86,18 +86,17 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   accessoires → 6 Prix (marge en direct) → 7 Stock. Suggestions en cascade depuis `GET /global/reference/devices`
   (`useDeviceCatalog`) + les produits déjà créés par la boutique ; toute valeur absente se tape (« Ajouter « … » »).
   Alerte doublon (« Utiliser ce produit »), validation Zod `ProductFormSchema`.
-- **Images produits** : base partagée par toutes les boutiques (`/global/images`, `src/lib/images.ts`), fichiers chez
-  **UploadThing** (côté serveur). Section « Photo » de la fiche produit : photos disponibles pour la marque + le modèle
-  (la bonne couleur d'abord, la meilleure choisie automatiquement), « Prendre / ajouter », ou « Sans photo ».
-  **Aucun envoi avant « Enregistrer / Créer »** : la photo prise est réduite sur l'appareil (≤ 1000 px, WebP / JPEG) et
-  montrée en aperçu local ; l'envoi a lieu au clic, puis le produit est enregistré ; s'il échoue, la photo envoyée est
-  annulée (`discardImage`). Remplacer ou retirer la photo d'un produit efface l'ancienne (UploadThing + base) si plus
-  aucun produit ne l'utilise. `ProductVisual` affiche la photo, sinon une illustration colorée par catégorie.
-- `/app/photo-library` **Photothèque** (propriétaire) : import en masse (plusieurs photos ou un dossier, glisser-déposer,
-  200 max par import), marque / modèle / couleur / catégorie **devinés depuis le nom du fichier** (`src/lib/photo-guess.ts`,
-  catalogue des appareils connus), modifiables, « Appliquer » une marque aux photos sans marque ; rien n'est envoyé avant
-  « Importer » (3 envois en parallèle, progression, doublons signalés « Déjà là »). Liste des photos de la boutique avec
-  nombre de produits qui les utilisent ; suppression seulement si aucun produit ne s'en sert.
+- **Images produits** : les boutiques **ne photographient plus** leurs produits. Section « Photo » de la fiche produit :
+  photos officielles de l'appareil du catalogue global (la bonne couleur d'abord, choisie automatiquement), ou « Sans
+  photo » ; bouton « Signaler » si une photo est inadaptée. Le produit enregistre `imageId` + `deviceId`. `ProductVisual`
+  affiche la photo (vignette ou pleine taille), sinon une illustration colorée par catégorie.
+- **Espace administrateur `/admin`** (hors `/app`, session séparée `stores/admin-store.ts` clé `zaff-admin`, client
+  `src/lib/admin-api.ts` ; 401/403 → `/admin/login`). Connexion avec l'e-mail et le mot de passe de l'environnement du
+  serveur. Pages : tableau de bord (appareils, couverture photo, stockage, appareils à photographier), Appareils (recherche,
+  filtres, création `DeviceEditorModal`), fiche appareil `/admin/device?id=` (photos par coloris, photo par défaut ★,
+  retrait, ajout préparé localement et envoyé seulement sur « Envoyer »), **Import de photos** en masse (`/admin/import` :
+  appareil / couleur devinés depuis le nom du fichier `src/lib/photo-guess.ts`, appareil inconnu créé, 3 envois en parallèle,
+  doublons « Déjà là »), Signalements (Garder / Retirer).
 - `/app/showcase` **Vitrine** (vendeur, magasinier, propriétaire) : cartes `ProductCard` (photo, prix de vente, version,
   état, pastille de stock), recherche, filtres par catégorie, « En stock seulement ». Fiche : infos + appareils disponibles,
   « Vendre » ouvre `/app/scan?code=<N° de série>` (recherche automatique comme un scan). Photo aussi sur la fiche de vente

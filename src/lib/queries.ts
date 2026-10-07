@@ -51,9 +51,14 @@ export const useReferenceCatalog = () =>
   useQuery({ queryKey: qk.reference(), queryFn: () => get<ReferenceCategory[]>('/global/reference/catalog'), staleTime: 60 * 60 * 1000 });
 
 export interface DeviceModel {
+  /** Appareil du catalogue global */
+  id?: string;
   name: string;
   variants?: string[];
   colors?: string[];
+  /** Photos conformes par coloris (ajoutées par l'administrateur ZAFF) */
+  photos?: { imageId: string; color: string | null }[];
+  imageId?: string | null;
 }
 export interface CategoryProfile {
   variantLabel: string;

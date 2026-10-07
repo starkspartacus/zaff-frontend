@@ -75,39 +75,6 @@ export async function prepareImage(file: File): Promise<PreparedImage> {
   return { blob, thumb };
 }
 
-/**
- * Envoi d'une photo déjà réduite. Appelé **uniquement au moment d'enregistrer** (fiche produit) ou
- * d'importer (photothèque) : choisir une photo ne l'envoie pas, aucun fichier n'est laissé sans produit.
- */
-export async function uploadImageBlob(
-  image: PreparedImage,
-  meta: { brand: string; model: string; color?: string; category?: string },
-  opts: { library?: boolean } = {}
-) {
-  const ext = (b: Blob) => (b.type === 'image/webp' ? 'webp' : 'jpg');
-  const form = new FormData();
-  form.append('file', image.blob, `photo.${ext(image.blob)}`);
-  form.append('thumb', image.thumb, `vignette.${ext(image.thumb)}`);
-  for (const [k, v] of Object.entries(meta)) if (v) form.append(k, v);
-  if (opts.library) form.append('library', 'true');
-  return (await api.post('/global/images', form, { headers: { 'Content-Type': 'multipart/form-data' } })) as unknown as SharedImage & {
-    duplicate: boolean;
-  };
-}
-
-/** Annule une photo envoyée dont le produit n'a pas pu être enregistré (sinon supprimée par le serveur au bout d'1 h) */
-export const discardImage = (id: string) => api.delete(`/global/images/${id}/pending`).catch(() => undefined);
-
-/** Photothèque de ma boutique (propriétaire) */
-export const useMyLibrary = (enabled = true) =>
-  useQuery({
-    queryKey: ['images', 'mine'],
-    queryFn: () => api.get('/global/images/mine') as unknown as Promise<SharedImage[]>,
-    enabled,
-  });
-
-export const deleteLibraryImage = (id: string) => api.delete(`/global/images/${id}`);
-
 /** Signaler une photo d'une autre boutique (inadaptée, mauvais modèle) */
 export const reportImage = (id: string) => api.post(`/global/images/${id}/report`) as unknown as Promise<{ reported: boolean; hidden: boolean }>;
 
@@ -117,9 +84,6 @@ export interface ImageUsage {
   mine: { photos: number; bytes: number; library: number };
   provider: { totalBytes: number; limitBytes: number; filesUploaded: number } | null;
 }
-
-export const useImageUsage = (enabled = true) =>
-  useQuery({ queryKey: ['images', 'usage'], queryFn: () => api.get('/global/images/usage') as unknown as Promise<ImageUsage>, enabled });
 
 export const formatBytes = (n: number) =>
   n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} Go` : n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`;
