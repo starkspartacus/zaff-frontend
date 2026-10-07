@@ -24,6 +24,8 @@ import {
   ScanLine,
   PackagePlus,
   CalendarCheck,
+  Lock,
+  Wallet,
 } from 'lucide-react';
 
 interface NavGroup {
@@ -43,6 +45,7 @@ const navGroups: NavGroup[] = [
       { title: 'Vendre (scan)', href: '/app/scan', icon: ScanLine, badge: 'Scan' },
       { title: 'Mise en stock (scan)', href: '/app/receive', icon: PackagePlus },
       { title: 'Mon activité du jour', href: '/app/my-activity', icon: CalendarCheck },
+      { title: 'Clôturer ma caisse', href: '/app/cash-closing', icon: Lock },
     ],
   },
   {
@@ -50,6 +53,7 @@ const navGroups: NavGroup[] = [
     items: [
       { title: 'Cockpit Rapide', href: '/app', icon: LayoutDashboard },
       { title: 'Analytics & Chiffres', href: '/app/dashboard', icon: TrendingUp },
+      { title: 'Clôtures de caisse', href: '/app/cash-closings', icon: Wallet },
     ],
   },
   {

@@ -41,7 +41,19 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   puis scanner chaque appareil (✓ / ✗ avec la raison, annulation possible).
 - `/app/my-activity` : mes ventes / mes mises en stock. `/app` propriétaire : chiffres du jour, ventes par
   vendeur, équipe en ligne (temps réel).
+- `/app/cash-closing` vendeur (et propriétaire qui vend) : ma caisse en cours (espèces / Mobile Money à remettre),
+  comptage des espèces avec écart en direct, explication obligatoire s'il y a un écart, confirmation, historique.
+- `/app/cash-closings` propriétaire : espèces encore chez les vendeurs, clôtures à valider (« J'ai reçu… »),
+  caisses ouvertes par vendeur, historique. Tout se met à jour par le WebSocket (scope `cash-closings`).
 - `src/components/scan/barcode-scanner.tsx` : caméra (ZXing, HTTPS requis sur mobile) + douchette / clavier.
+
+## Notifications push (application fermée)
+- `public/sw.js` : affiche la notification reçue **sauf si l'app est visible** (le toast temps réel suffit),
+  ouvre la bonne page au clic. Servi sans cache (`next.config.ts`). `src/app/manifest.ts` + icônes `public/icon-*.png`
+  (installation sur l'écran d'accueil, indispensable pour le push sur iPhone).
+- `src/lib/push.ts` : état / activation / désactivation (clé publique VAPID fournie par l'API). Interrupteur dans la
+  cloche (`PushToggle`), bandeau d'invitation sur l'accueil du propriétaire (`PushPrompt`). La déconnexion désabonne
+  l'appareil. HTTPS obligatoire en production.
 
 ## Conventions
 - Appels API via `api` (`src/lib/api.ts`) : réponse déjà « déballée » (`data`), erreurs `ApiError` (message

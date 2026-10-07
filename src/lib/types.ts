@@ -76,4 +76,62 @@ export interface MyStats {
   stocking: { unitsAdded: number; recent: ProductUnit[] };
 }
 
+export interface PaymentTotals {
+  cash: number;
+  mobile: number;
+  card: number;
+  bank_transfer: number;
+  credit: number;
+}
+
+/** Caisse en cours d'un collaborateur (ventes pas encore clôturées) */
+export interface CurrentRegister {
+  totals: PaymentTotals;
+  totalAmount: number;
+  salesCount: number;
+  itemsCount: number;
+  expectedCash: number;
+  since: string | null;
+  lastClosedAt: string | null;
+  sales: Pick<Sale, '_id' | 'invoiceNumber' | 'total' | 'paymentMethod' | 'saleDate' | 'items'>[];
+}
+
+export interface CashClosing {
+  _id: string;
+  sellerId: string;
+  sellerName: string;
+  openedAt: string;
+  closedAt: string;
+  salesCount: number;
+  totals: PaymentTotals;
+  totalAmount: number;
+  expectedCash: number;
+  declaredCash: number;
+  cashDifference: number;
+  notes?: string | null;
+  status: 'submitted' | 'validated';
+  validatedByName?: string | null;
+  validatedAt?: string | null;
+  ownerNotes?: string | null;
+}
+
+/** Propriétaire : caisse encore ouverte d'un vendeur */
+export interface OpenRegister {
+  sellerId: string;
+  sellerName: string;
+  totals: PaymentTotals;
+  totalAmount: number;
+  salesCount: number;
+  since: string;
+  lastSaleAt: string;
+}
+
+export const PAYMENT_LABELS: Record<keyof PaymentTotals, string> = {
+  cash: 'Espèces',
+  mobile: 'Mobile Money',
+  card: 'Carte',
+  bank_transfer: 'Virement',
+  credit: 'Crédit',
+};
+
 export const errorMessage = (err: unknown) => (err instanceof Error ? err.message : 'Une erreur est survenue');

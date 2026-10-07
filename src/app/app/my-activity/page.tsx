@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useMyStats } from '@/lib/queries';
 import { NumberTicker } from '@/components/magicui/number-ticker';
-import { CalendarCheck, PackagePlus, RefreshCw, ScanLine } from 'lucide-react';
+import { CalendarCheck, Lock, PackagePlus, RefreshCw, ScanLine } from 'lucide-react';
 
 const PERIODS = [
   { id: 'day', label: "Aujourd'hui" },
@@ -101,9 +101,14 @@ export default function MyActivityPage() {
               </p>
             </div>
           </div>
-          <Link href="/app/scan" className="w-full h-12 rounded-2xl bg-[#d4a017] text-black font-bold text-sm flex items-center justify-center gap-2">
-            <ScanLine className="w-4 h-4" /> Nouvelle vente
-          </Link>
+          <div className="grid grid-cols-2 gap-2">
+            <Link href="/app/scan" className="h-12 rounded-2xl bg-[#d4a017] text-black font-bold text-sm flex items-center justify-center gap-2">
+              <ScanLine className="w-4 h-4" /> Nouvelle vente
+            </Link>
+            <Link href="/app/cash-closing" className="h-12 rounded-2xl bg-neutral-900 border border-neutral-700 text-white font-bold text-sm flex items-center justify-center gap-2">
+              <Lock className="w-4 h-4 text-[#d4a017]" /> Clôturer ma caisse
+            </Link>
+          </div>
           <List
             title={`Mes ventes (${periodLabel})`}
             empty="Aucune vente sur la période."

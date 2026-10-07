@@ -12,4 +12,7 @@ export const qk = {
   dashboard: (period: string) => ['dashboard', period] as const,
   sales: () => ['sales'] as const,
   notifications: () => ['notifications'] as const,
+  currentRegister: () => ['cash-closings', 'current'] as const,
+  closings: (days: number, status: string) => ['cash-closings', 'list', days, status] as const,
+  openRegisters: () => ['cash-closings', 'open'] as const,
 };

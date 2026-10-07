@@ -9,6 +9,7 @@ import { ROLE_LABELS, normalizeRole } from '@/lib/roles';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { LiveStatus } from '@/components/notifications/notification-bell';
+import { PushPrompt } from '@/components/notifications/push-toggle';
 import { SpotlightCard } from '@/components/seraui/spotlight-card';
 import {
   ShoppingCart,
@@ -137,6 +138,8 @@ export default function AppPage() {
           </p>
         </SpotlightCard>
       </div>
+
+      <PushPrompt />
 
       {/* Équipe en ligne (présence temps réel) */}
       {presence.length > 0 && (

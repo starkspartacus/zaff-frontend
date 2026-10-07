@@ -9,6 +9,7 @@ import { AnimatedShinyText } from '@/components/magicui/animated-shiny-text';
 import { selectUnreadCount, useNotificationStore } from '@/stores/notification-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { NotificationItem, notificationHref } from './notification-item';
+import { PushToggle } from './push-toggle';
 import { cn } from '@/lib/utils';
 
 /** Indicateur de connexion temps réel */
@@ -112,6 +113,7 @@ export function NotificationBell() {
               </AnimatedList>
             )}
           </div>
+          <PushToggle />
         </div>
       )}
     </div>

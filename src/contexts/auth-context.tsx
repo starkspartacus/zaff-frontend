@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { disablePush } from '@/lib/push';
 import { normalizeRole, ROLE_HOME } from '@/lib/roles';
 import { useAuthStore, type Establishment, type UserProfile } from '@/stores/auth-store';
 
@@ -48,7 +49,9 @@ export function useAuth() {
   const registerEstablishment = (data: Record<string, unknown>) =>
     api.post('/global/establishments', data) as unknown as Promise<{ slug?: string; name?: string }>;
 
-  const logout = () => {
+  const logout = async () => {
+    // L'appareil ne doit plus recevoir les notifications de ce compte
+    await Promise.race([disablePush().catch(() => undefined), new Promise((r) => setTimeout(r, 1500))]);
     useAuthStore.getState().clear();
     queryClient.clear();
     router.push('/login');

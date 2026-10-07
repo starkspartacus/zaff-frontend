@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { qk } from '@/lib/query-keys';
 import { NotificationSchema } from '@/lib/schemas';
 import { z } from 'zod';
-import type { AddUnitsResult, Category, MyStats, Product, ProductUnit, Sale } from '@/lib/types';
+import type { AddUnitsResult, CashClosing, Category, CurrentRegister, MyStats, OpenRegister, Product, ProductUnit, Sale } from '@/lib/types';
 
 const get = <T,>(url: string) => api.get(url) as unknown as Promise<T>;
 const post = <T,>(url: string, body?: unknown) => api.post(url, body) as unknown as Promise<T>;
@@ -59,6 +59,17 @@ export const useNotificationsHistory = (enabled: boolean) =>
     staleTime: 5 * 60 * 1000,
   });
 
+// ─── Clôtures de caisse ───
+
+export const useCurrentRegister = () =>
+  useQuery({ queryKey: qk.currentRegister(), queryFn: () => get<CurrentRegister>('/cash-closings/current') });
+
+export const useClosings = (days = 30, status = 'all') =>
+  useQuery({ queryKey: qk.closings(days, status), queryFn: () => get<CashClosing[]>(`/cash-closings?days=${days}&status=${status}`) });
+
+export const useOpenRegisters = (enabled = true) =>
+  useQuery({ queryKey: qk.openRegisters(), queryFn: () => get<OpenRegister[]>('/cash-closings/open'), enabled });
+
 // ─── Écritures ──────────────────────────────────────────────────────────────
 
 /** Après une écriture, on rafraîchit tout de suite chez soi (les autres écrans le sont par le WebSocket) */
@@ -71,7 +82,7 @@ export function useSellUnit() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) => post<{ sale: Sale; unit: ProductUnit }>('/units/sell', body),
-    onSuccess: () => invalidate('my-stats', 'units', 'products', 'sales', 'dashboard'),
+    onSuccess: () => invalidate('my-stats', 'units', 'products', 'sales', 'dashboard', 'cash-closings'),
   });
 }
 
@@ -79,7 +90,7 @@ export function useCreateSale() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) => post<Sale>('/sales', body),
-    onSuccess: () => invalidate('my-stats', 'units', 'products', 'sales', 'dashboard'),
+    onSuccess: () => invalidate('my-stats', 'units', 'products', 'sales', 'dashboard', 'cash-closings'),
   });
 }
 
@@ -105,5 +116,21 @@ export function useSetUnitStatus() {
     mutationFn: ({ id, ...body }: { id: string; status: 'in_stock' | 'defective'; notes?: string }) =>
       api.patch(`/units/${id}/status`, body),
     onSuccess: () => invalidate('units', 'products', 'dashboard'),
+  });
+}
+
+export function useCloseRegister() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (body: { declaredCash: number; notes?: string }) => post<CashClosing>('/cash-closings', body),
+    onSuccess: () => invalidate('cash-closings', 'my-stats'),
+  });
+}
+
+export function useValidateClosing() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, notes }: { id: string; notes?: string }) => api.patch(`/cash-closings/${id}/validate`, { notes }),
+    onSuccess: () => invalidate('cash-closings'),
   });
 }

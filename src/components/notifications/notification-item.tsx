@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AlertTriangle, CheckCircle2, Info, PackagePlus, ShoppingBag, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, PackagePlus, ShoppingBag, Wallet, XCircle } from 'lucide-react';
 import type { AppNotification } from '@/lib/schemas';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +15,7 @@ const LEVEL_STYLE: Record<AppNotification['level'], string> = {
 const ICONS = {
   sale: ShoppingBag,
   stock: PackagePlus,
+  cash: Wallet,
   error: XCircle,
   warning: AlertTriangle,
   success: CheckCircle2,
@@ -24,6 +25,7 @@ const ICONS = {
 function iconKey(n: AppNotification): keyof typeof ICONS {
   if (n.type === 'sale.created') return 'sale';
   if (n.type === 'units.added') return 'stock';
+  if (n.type.startsWith('cash.')) return 'cash';
   return n.level;
 }
 
@@ -77,5 +79,7 @@ export function NotificationItem({
 export function notificationHref(n: AppNotification): string | null {
   if (n.type === 'sale.created') return '/app/invoices';
   if (n.type === 'stock.low' || n.type === 'units.added') return '/app/stock';
+  if (n.type === 'cash.closed') return '/app/cash-closings';
+  if (n.type === 'cash.validated') return '/app/cash-closing';
   return null;
 }

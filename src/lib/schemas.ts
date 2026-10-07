@@ -57,6 +57,16 @@ export const CreateUserSchema = z.object({
   password: z.string().min(6, 'Au moins 6 caractères.'),
 });
 
+export const CloseRegisterSchema = z.object({
+  declaredCash: z
+    .string()
+    .trim()
+    .min(1, 'Comptez les espèces de la caisse et indiquez le montant.')
+    .transform((v) => Number(v.replace(/[\s.]/g, '').replace(',', '.')))
+    .pipe(z.number({ message: 'Montant invalide.' }).min(0, 'Le montant ne peut pas être négatif.')),
+  notes: z.string().trim().max(500, '500 caractères maximum.').optional(),
+});
+
 /** Erreurs Zod → { champ: message } pour l'affichage sous chaque champ */
 export function fieldErrors(error: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};
