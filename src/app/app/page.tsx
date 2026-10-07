@@ -26,6 +26,7 @@ export default function AppPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const fetchData = async () => {
       try {
         const [dashRes, salesRes] = await Promise.allSettled([
@@ -33,6 +34,7 @@ export default function AppPage() {
           api.get('/sales'),
         ]);
 
+        if (!active) return;
         if (dashRes.status === 'fulfilled') {
           setStats(dashRes.value);
         }
@@ -47,6 +49,12 @@ export default function AppPage() {
     };
 
     fetchData();
+    // Suivi à distance : les chiffres du jour se mettent à jour tout seuls
+    const timer = setInterval(fetchData, 30_000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, []);
 
   const formatPrice = (amount: number) => {
@@ -154,6 +162,43 @@ export default function AppPage() {
             Articles sous le seuil d'alerte
           </p>
         </SpotlightCard>
+      </div>
+
+      {/* Ventes du jour par vendeur */}
+      <div className="rounded-3xl border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-white flex items-center gap-2">
+            <Users className="w-4 h-4 text-[#d4a017]" /> Ventes du jour par vendeur
+          </h2>
+          <span className="text-[11px] text-neutral-500 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Mise à jour auto
+          </span>
+        </div>
+        {!stats?.bySeller?.length ? (
+          <p className="text-sm text-neutral-500 text-center py-4">
+            {isLoading ? 'Chargement…' : "Aucune vente aujourd'hui pour le moment."}
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {stats.bySeller.map((s: { sellerId: string | null; sellerName: string; count: number; revenue: number; lastSaleAt: string }) => (
+              <div key={s.sellerId || 'none'} className="rounded-2xl border border-neutral-800 bg-neutral-900/50 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#d4a017] to-amber-200 text-black font-bold text-xs flex items-center justify-center shrink-0">
+                    {s.sellerName?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{s.sellerName}</p>
+                    <p className="text-[11px] text-neutral-400">
+                      {s.count} vente{s.count > 1 ? 's' : ''} · dernière à{' '}
+                      {new Date(s.lastSaleAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-sm font-bold text-[#f5d77f] shrink-0">{formatPrice(s.revenue)}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quick Launchpad & Recent Sales Grid */}
@@ -276,7 +321,7 @@ export default function AppPage() {
                       {sale.invoiceNumber}
                     </p>
                     <p className="text-[11px] text-neutral-400 truncate">
-                      {sale.customerId?.name || 'Client Comptant'} • {new Date(sale.createdAt).toLocaleDateString('fr-FR')}
+                      {sale.customerId?.name || 'Client Comptant'}{sale.sellerName ? ` • ${sale.sellerName}` : ''} • {new Date(sale.createdAt).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
                   <div className="text-right shrink-0">

@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
+import { ROLE_LABELS } from '@/lib/roles';
 import { Menu, ShoppingCart, Wrench, Bell, Sparkles } from 'lucide-react';
 
 interface AppHeaderProps {
@@ -75,7 +76,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         <div className="hidden lg:flex items-center gap-2.5 pl-3 border-l border-neutral-800">
           <div className="text-right">
             <p className="text-xs font-medium text-white">{user?.name || 'Admin'}</p>
-            <p className="text-[10px] text-[#d4a017] uppercase tracking-wider font-semibold">{user?.role || 'Manager'}</p>
+            <p className="text-[10px] text-[#d4a017] uppercase tracking-wider font-semibold">{user ? ROLE_LABELS[user.role] : ''}</p>
           </div>
         </div>
       </div>

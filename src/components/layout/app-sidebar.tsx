@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Logo } from '@/components/ui/logo';
+import { canAccess, normalizeRole, ROLE_HOME, ROLE_LABELS } from '@/lib/roles';
 import {
   LayoutDashboard,
   TrendingUp,
@@ -20,6 +21,9 @@ import {
   LogOut,
   ChevronRight,
   Store,
+  ScanLine,
+  PackagePlus,
+  CalendarCheck,
 } from 'lucide-react';
 
 interface NavGroup {
@@ -33,6 +37,14 @@ interface NavGroup {
 }
 
 const navGroups: NavGroup[] = [
+  {
+    label: 'Au quotidien',
+    items: [
+      { title: 'Vendre (scan)', href: '/app/scan', icon: ScanLine, badge: 'Scan' },
+      { title: 'Mise en stock (scan)', href: '/app/receive', icon: PackagePlus },
+      { title: 'Mon activité du jour', href: '/app/my-activity', icon: CalendarCheck },
+    ],
+  },
   {
     label: 'Pilotage',
     items: [
@@ -74,12 +86,22 @@ const navGroups: NavGroup[] = [
 export function AppSidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const { user, establishment, logout } = useAuth();
+  const role = normalizeRole(user?.role);
+  // Le propriétaire n'a pas de « Mon activité » : il voit tout dans le cockpit
+  const groups = navGroups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter(
+        (i) => canAccess(role, i.href) && !(i.href === '/app/my-activity' && role === 'admin')
+      ),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <aside className="w-72 h-full bg-neutral-950/95 backdrop-blur-md border-r border-neutral-800/80 flex flex-col justify-between select-none">
       {/* Top Header */}
       <div className="p-5 pb-3">
-        <Link href="/app" onClick={onClose} className="block">
+        <Link href={ROLE_HOME[role]} onClick={onClose} className="block">
           <Logo size="sm" />
         </Link>
 
@@ -104,7 +126,7 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
 
       {/* Nav Menu Items */}
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-5 scrollbar-thin scrollbar-thumb-neutral-800">
-        {navGroups.map((group, idx) => (
+        {groups.map((group, idx) => (
           <div key={idx}>
             <div className="px-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 mb-1.5">
               {group.label}
@@ -161,7 +183,7 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-white truncate">{user?.name || 'Utilisateur'}</p>
-              <p className="text-[10px] text-neutral-400 capitalize">{user?.role || 'Vendeur'}</p>
+              <p className="text-[10px] text-neutral-400">{ROLE_LABELS[role]}</p>
             </div>
           </div>
 

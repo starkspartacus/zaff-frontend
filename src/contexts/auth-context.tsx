@@ -3,13 +3,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { normalizeRole, ROLE_HOME, type Role } from '@/lib/roles';
 
 export interface UserProfile {
   id: string;
   name: string;
   phone: string;
   email?: string | null;
-  role: 'superadmin' | 'admin' | 'standard';
+  role: Role;
 }
 
 export interface Establishment {
@@ -50,7 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (storedToken && storedUser && storedEst) {
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        setUser({ ...parsed, role: normalizeRole(parsed.role) });
         setEstablishment(JSON.parse(storedEst));
       }
     } catch (e) {
@@ -69,7 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tenantSlug: tenantSlug || undefined,
       });
 
-      const { accessToken, user: userData, establishment: estData } = res;
+      const { accessToken, establishment: estData } = res;
+      const userData: UserProfile = { ...res.user, role: normalizeRole(res.user?.role) };
       setToken(accessToken);
       setUser(userData);
       setEstablishment(estData);
@@ -79,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('zaff_establishment', JSON.stringify(estData));
       localStorage.setItem('zaff_tenant_slug', estData.slug);
 
-      router.push('/app');
+      router.push(ROLE_HOME[userData.role]);
     } finally {
       setIsLoading(false);
     }

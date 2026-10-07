@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
+import { UnitsTable } from '@/components/stock/units-table';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import {
@@ -19,11 +20,12 @@ import {
 } from 'lucide-react';
 
 export default function StockPage() {
-  const { establishment } = useAuth();
+  const { establishment, user } = useAuth();
+  const canManage = user?.role !== 'seller';
   const [products, setProducts] = useState<any[]>([]);
   const [movements, setMovements] = useState<any[]>([]);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'levels' | 'history'>('levels');
+  const [activeTab, setActiveTab] = useState<'levels' | 'units' | 'history'>('levels');
   const [isLoading, setIsLoading] = useState(true);
 
   // Modal
@@ -111,19 +113,21 @@ export default function StockPage() {
           </p>
         </div>
 
+        {canManage && (
         <div className="flex items-center gap-3">
           <GlowButton
             onClick={() => {
-              setSelectedProductId(products[0]?._id || '');
+              setSelectedProductId(products.find((p) => !p.hasSerialNumbers)?._id || '');
               setIsModalOpen(true);
             }}
             glowColor="rgba(212, 160, 23, 0.4)"
             className="px-4 py-2 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shadow-md shadow-[#d4a017]/20"
           >
             <Plus className="w-4 h-4" />
-            Nouveau Mouvement
+            Mouvement (sans N° de série)
           </GlowButton>
         </div>
+        )}
       </div>
 
       {/* KPI Highlights */}
@@ -158,6 +162,16 @@ export default function StockPage() {
             Niveaux de Stock Actuels
           </button>
           <button
+            onClick={() => setActiveTab('units')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'units'
+                ? 'bg-[#d4a017] text-black'
+                : 'text-neutral-400 hover:text-white bg-neutral-900'
+            }`}
+          >
+            Numéros de série
+          </button>
+          <button
             onClick={() => setActiveTab('history')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               activeTab === 'history'
@@ -182,7 +196,9 @@ export default function StockPage() {
       </div>
 
       {/* Content based on tab */}
-      {activeTab === 'levels' ? (
+      {activeTab === 'units' ? (
+        <UnitsTable search={search} canManage={canManage} />
+      ) : activeTab === 'levels' ? (
         <div className="bg-neutral-950/80 border border-neutral-800/80 rounded-3xl overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -324,7 +340,7 @@ export default function StockPage() {
                   className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#d4a017] h-10"
                 >
                   <option value="">Sélectionner un produit</option>
-                  {products.map((p) => (
+                  {products.filter((p) => !p.hasSerialNumbers).map((p) => (
                     <option key={p._id} value={p._id}>
                       {p.name} (Stock actuel: {p.stockQuantity})
                     </option>

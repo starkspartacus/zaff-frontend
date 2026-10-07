@@ -24,6 +24,9 @@ import {
   Percent,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { BarcodeScanner } from '@/components/scan/barcode-scanner';
+import { scanFeedback } from '@/components/scan/feedback';
+import { errorMessage, type Product, type ScanLookup } from '@/lib/types';
 
 export default function SalesPosPage() {
   const { establishment, user } = useAuth();
@@ -46,6 +49,10 @@ export default function SalesPosPage() {
   const [amountPaid, setAmountPaid] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completedSale, setCompletedSale] = useState<any>(null);
+
+  // Produit à N° de série en attente de scan
+  const [serialPicker, setSerialPicker] = useState<Product | null>(null);
+  const [serialError, setSerialError] = useState<string | null>(null);
 
   // New Customer modal
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
@@ -96,8 +103,75 @@ export default function SalesPosPage() {
     });
   }, [products, selectedCategory, searchQuery]);
 
+  // Ajout d'un appareil précis (N° de série vérifié côté serveur)
+  const addUnitToCart = (product: Product, serialNumber: string) => {
+    if (cart.some((item) => item.serialNumber === serialNumber)) {
+      throw new Error(`L'appareil ${serialNumber} est déjà dans le panier.`);
+    }
+    const unitPrice = isResellerPricing && product.resellerPrice ? product.resellerPrice : product.salePrice;
+    setCart((prev) => [...prev, { product, quantity: 1, unitPrice, serialNumber }]);
+  };
+
+  const resolveScan = async (code: string, expectedProduct?: Product | null) => {
+    const res = (await api.get(`/units/lookup/${encodeURIComponent(code)}`)) as unknown as ScanLookup;
+    if (res.type === 'unit') {
+      if (expectedProduct && String(res.product?._id) !== String(expectedProduct._id)) {
+        throw new Error(`Ce N° de série correspond à « ${res.product?.name} », pas à « ${expectedProduct.name} ».`);
+      }
+      if (!res.sellable) {
+        throw new Error(
+          res.unit.status === 'sold'
+            ? `L'appareil ${res.unit.serialNumber} est déjà vendu (facture #${res.unit.invoiceNumber}).`
+            : `L'appareil ${res.unit.serialNumber} n'est pas disponible à la vente.`
+        );
+      }
+      addUnitToCart(res.product, res.unit.serialNumber);
+      return;
+    }
+    // Code-barres d'un modèle
+    if (res.product.hasSerialNumbers) {
+      throw new Error(`Code-barres du modèle « ${res.product.name} » : scannez le N° de série / IMEI de l'appareil.`);
+    }
+    addToCart(res.product);
+  };
+
+  // Scan (douchette) directement dans la barre de recherche
+  const handleSearchEnter = async () => {
+    const code = searchQuery.trim();
+    if (!code) return;
+    try {
+      await resolveScan(code);
+      scanFeedback(true);
+      setSearchQuery('');
+    } catch (err) {
+      // Pas un code connu : la recherche texte reste affichée
+      if (filteredProducts.length === 0) {
+        scanFeedback(false);
+        alert(errorMessage(err));
+      }
+    }
+  };
+
+  const handleSerialPicked = async (code: string) => {
+    setSerialError(null);
+    try {
+      await resolveScan(code, serialPicker);
+      scanFeedback(true);
+      setSerialPicker(null);
+    } catch (err) {
+      scanFeedback(false);
+      setSerialError(errorMessage(err));
+    }
+  };
+
   // Add to cart
   const addToCart = (product: any) => {
+    if (product.hasSerialNumbers) {
+      // Chaque appareil est identifié : on demande son N° de série
+      setSerialError(null);
+      setSerialPicker(product);
+      return;
+    }
     const existingIndex = cart.findIndex((item) => item.product._id === product._id);
     const unitPrice = isResellerPricing && product.resellerPrice ? product.resellerPrice : product.salePrice;
 
@@ -124,6 +198,7 @@ export default function SalesPosPage() {
 
   // Update line quantity
   const updateQuantity = (index: number, delta: number) => {
+    if (cart[index].serialNumber && delta > 0) return; // un N° de série = un appareil
     const updated = [...cart];
     const newQty = updated[index].quantity + delta;
     if (newQty <= 0) {
@@ -207,6 +282,7 @@ export default function SalesPosPage() {
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           total: item.unitPrice * item.quantity,
+          serialNumber: item.serialNumber || undefined,
         })),
         subtotal,
         discount: Number(discount) || 0,
@@ -249,9 +325,15 @@ export default function SalesPosPage() {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
               <Input
                 type="text"
-                placeholder="Rechercher produit, code-barres..."
+                placeholder="Rechercher ou scanner (N° série, code-barres)…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearchEnter();
+                  }
+                }}
                 className="pl-10 bg-neutral-900 border-neutral-800 text-white placeholder:text-neutral-500 rounded-xl h-10"
               />
             </div>
@@ -417,6 +499,9 @@ export default function SalesPosPage() {
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold text-white truncate">{item.product.name}</p>
+                  {item.serialNumber && (
+                    <p className="text-[10px] font-mono text-neutral-400 truncate">N° {item.serialNumber}</p>
+                  )}
                   <p className="text-[11px] text-[#f5d77f]">
                     {formatPrice(item.unitPrice)}
                   </p>
@@ -435,7 +520,8 @@ export default function SalesPosPage() {
                     </span>
                     <button
                       onClick={() => updateQuantity(idx, 1)}
-                      className="w-5 h-5 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white"
+                      disabled={!!item.serialNumber}
+                      className="w-5 h-5 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white disabled:opacity-30"
                     >
                       <Plus className="w-3 h-3" />
                     </button>
@@ -592,6 +678,26 @@ export default function SalesPosPage() {
         </div>
       )}
 
+      {/* SCAN DU N° DE SÉRIE */}
+      {serialPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-6 max-w-md w-full space-y-4 relative">
+            <button
+              onClick={() => setSerialPicker(null)}
+              className="absolute top-5 right-5 p-1 text-neutral-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div>
+              <h2 className="text-lg font-bold text-white">{serialPicker.name}</h2>
+              <p className="text-xs text-neutral-400 mt-0.5">Scannez le N° de série / IMEI de l&apos;appareil remis au client.</p>
+            </div>
+            <BarcodeScanner onScan={handleSerialPicked} />
+            {serialError && <p className="text-xs text-red-400">{serialError}</p>}
+          </div>
+        </div>
+      )}
+
       {/* COMPLETED SALE / TICKET DIALOG */}
       {completedSale && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
@@ -621,6 +727,7 @@ export default function SalesPosPage() {
                   <div key={i} className="flex justify-between">
                     <span>
                       {it.quantity}x {it.productName}
+                      {it.serialNumber && <span className="block text-[10px] text-neutral-500">N° {it.serialNumber}</span>}
                     </span>
                     <span>{formatPrice(it.total)}</span>
                   </div>

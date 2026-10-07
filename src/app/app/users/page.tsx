@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
+import { normalizeRole, ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/lib/roles';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import {
@@ -27,7 +28,7 @@ export default function UsersPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'admin' | 'standard'>('standard');
+  const [role, setRole] = useState<'admin' | 'seller' | 'storekeeper'>('seller');
   const [password, setPassword] = useState('');
 
   useEffect(() => {
@@ -137,11 +138,13 @@ export default function UsersPage() {
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                           u.role === 'admin' || u.role === 'superadmin'
                             ? 'bg-[#d4a017]/15 text-[#f5d77f] border border-[#d4a017]/30'
+                            : normalizeRole(u.role) === 'storekeeper'
+                            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                             : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                         }`}
                       >
                         <Shield className="w-3 h-3" />
-                        {u.role === 'admin' ? 'Administrateur' : 'Vendeur / Caissier'}
+                        {ROLE_LABELS[normalizeRole(u.role)]}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-neutral-300">{u.phone}</td>
@@ -214,29 +217,24 @@ export default function UsersPage() {
 
               <div>
                 <label className="text-xs text-neutral-400 block mb-1">Rôle et permissions *</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRole('standard')}
-                    className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition-all ${
-                      role === 'standard'
-                        ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]'
-                        : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    Vendeur / Caisse
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole('admin')}
-                    className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition-all ${
-                      role === 'admin'
-                        ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]'
-                        : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    Administrateur
-                  </button>
+                <div className="space-y-2">
+                  {(['seller', 'storekeeper', 'admin'] as const).map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRole(r)}
+                      className={`w-full p-3 rounded-xl border text-left transition-all ${
+                        role === r
+                          ? 'bg-[#d4a017]/15 border-[#d4a017]'
+                          : 'bg-neutral-900 border-neutral-800 hover:border-neutral-600'
+                      }`}
+                    >
+                      <span className={`block text-xs font-bold ${role === r ? 'text-[#f5d77f]' : 'text-white'}`}>
+                        {ROLE_LABELS[r]}
+                      </span>
+                      <span className="block text-[11px] text-neutral-400 mt-0.5">{ROLE_DESCRIPTIONS[r]}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 

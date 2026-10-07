@@ -38,6 +38,8 @@ export default function CatalogPage() {
   const [barcode, setBarcode] = useState('');
   const [categoryName, setCategoryName] = useState('');
   const [brandName, setBrandName] = useState('');
+  const [modelName, setModelName] = useState('');
+  const [color, setColor] = useState('');
   const [purchasePrice, setPurchasePrice] = useState<number>(0);
   const [price, setPrice] = useState<number>(0);
   const [resellerPrice, setResellerPrice] = useState<number>(0);
@@ -84,12 +86,14 @@ export default function CatalogPage() {
     setBarcode('');
     setCategoryName(categories[0]?.name || '');
     setBrandName('');
+    setModelName('');
+    setColor('');
     setPurchasePrice(0);
     setPrice(0);
     setResellerPrice(0);
-    setStockQuantity(10);
+    setStockQuantity(0);
     setMinStockThreshold(3);
-    setHasSerialNumbers(false);
+    setHasSerialNumbers(true);
     setIsModalOpen(true);
   };
 
@@ -100,6 +104,8 @@ export default function CatalogPage() {
     setBarcode(p.barcode || '');
     setCategoryName(categories.find((c) => c.slug === p.category)?.name || p.category || '');
     setBrandName(p.brand || '');
+    setModelName(p.model || '');
+    setColor(p.color || '');
     setPurchasePrice(p.purchasePrice || 0);
     setPrice(p.salePrice || 0);
     setResellerPrice(p.resellerPrice || 0);
@@ -132,10 +138,13 @@ export default function CatalogPage() {
         category: category.slug,
         brand: brand?.name || undefined,
         brandId: brand?._id || undefined,
+        model: modelName.trim() || undefined,
+        color: color.trim() || undefined,
         purchasePrice: Number(purchasePrice) || 0,
         salePrice: Number(price) || 0,
         resellerPrice: Number(resellerPrice) || 0,
-        stockQuantity: Number(stockQuantity) || 0,
+        // Produit à N° de série : le stock vient uniquement des appareils scannés
+        stockQuantity: hasSerialNumbers ? undefined : Number(stockQuantity) || 0,
         minStockAlert: Number(minStockThreshold) || 0,
         hasSerialNumbers,
       };
@@ -171,7 +180,10 @@ export default function CatalogPage() {
       !q ||
       p.name?.toLowerCase().includes(q) ||
       p.sku?.toLowerCase().includes(q) ||
-      p.barcode?.toLowerCase().includes(q);
+      p.barcode?.toLowerCase().includes(q) ||
+      p.model?.toLowerCase().includes(q) ||
+      p.color?.toLowerCase().includes(q) ||
+      p.brand?.toLowerCase().includes(q);
     return matchesCat && matchesQuery;
   });
 
@@ -277,9 +289,14 @@ export default function CatalogPage() {
                     <tr key={p._id} className="hover:bg-neutral-900/40 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-white">{p.name}</div>
+                        {(p.brand || p.model || p.color) && (
+                          <div className="text-[11px] text-neutral-400">
+                            {[p.brand, p.model, p.color].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
                         {p.hasSerialNumbers && (
                           <span className="text-[10px] text-[#d4a017] flex items-center gap-1 mt-0.5">
-                            <Sparkles className="w-3 h-3" /> N° Série / IMEI requis
+                            <Sparkles className="w-3 h-3" /> Suivi par N° de série / IMEI
                           </span>
                         )}
                       </td>
@@ -427,6 +444,29 @@ export default function CatalogPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-neutral-400 block mb-1">Modèle / capacité</label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: 15 Pro Max 256 Go"
+                    value={modelName}
+                    onChange={(e) => setModelName(e.target.value)}
+                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-neutral-400 block mb-1">Couleur</label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: Titane naturel"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-3 pt-2">
                 <div>
                   <label className="text-xs text-neutral-400 block mb-1">Prix d'Achat</label>
@@ -461,13 +501,19 @@ export default function CatalogPage() {
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div>
                   <label className="text-xs text-neutral-400 block mb-1">Stock Initial / Actuel</label>
-                  <Input
-                    type="number"
-                    value={stockQuantity}
-                    onChange={(e) => setStockQuantity(Number(e.target.value) || 0)}
-                    required
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
+                  {hasSerialNumbers ? (
+                    <div className="h-10 px-3 rounded-xl bg-neutral-900/50 border border-neutral-800 text-[11px] text-neutral-400 flex items-center">
+                      {editingProduct ? `${editingProduct.stockQuantity} appareil(s)` : '0'} · alimenté par scan
+                    </div>
+                  ) : (
+                    <Input
+                      type="number"
+                      value={stockQuantity}
+                      onChange={(e) => setStockQuantity(Number(e.target.value) || 0)}
+                      required
+                      className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
+                    />
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-neutral-400 block mb-1">Seuil Alerte Stock</label>
@@ -490,7 +536,7 @@ export default function CatalogPage() {
                   className="w-4 h-4 accent-[#d4a017]"
                 />
                 <label htmlFor="hasSerialCheck" className="text-xs text-neutral-300">
-                  Cet article nécessite un numéro de série / IMEI (Garantie activée à la vente)
+                  Suivi par N° de série / IMEI : chaque appareil est scanné à la mise en stock et à la vente
                 </label>
               </div>
             </div>

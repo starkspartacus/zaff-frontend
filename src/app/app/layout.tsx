@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { AppHeader } from '@/components/layout/app-header';
+import { canAccess, ROLE_HOME } from '@/lib/roles';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, token, isLoading } = useAuth();
@@ -12,11 +13,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  const allowed = !!user && canAccess(user.role, pathname);
+
   useEffect(() => {
     if (!isLoading && (!token || !user)) {
       router.push('/login');
+    } else if (user && !allowed) {
+      // Page hors du périmètre du rôle : retour à l'accueil du rôle
+      router.replace(ROLE_HOME[user.role]);
     }
-  }, [user, token, isLoading, router]);
+  }, [user, token, isLoading, router, allowed]);
 
   // Loading state
   if (isLoading) {
@@ -30,7 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  if (!user || !allowed) {
     return null;
   }
 
