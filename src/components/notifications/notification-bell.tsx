@@ -65,9 +65,9 @@ export function NotificationBell() {
       >
         <Bell className="w-5 h-5" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#d4a017] text-black text-[10px] font-black flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-gold text-ink text-[10px] font-black flex items-center justify-center">
             {unread > 9 ? '9+' : unread}
-            <span className="absolute inset-0 rounded-full bg-[#d4a017] animate-ping opacity-40" />
+            <span className="absolute inset-0 rounded-full bg-gold animate-ping opacity-40" />
           </span>
         )}
       </button>
@@ -101,10 +101,10 @@ export function NotificationBell() {
                         }}
                         className={cn(
                           'w-full text-left rounded-2xl px-3 py-2.5 hover:bg-neutral-900 transition-colors relative',
-                          !n.read && 'bg-[#d4a017]/5'
+                          !n.read && 'bg-gold/5'
                         )}
                       >
-                        {!n.read && <span className="absolute left-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[#d4a017]" />}
+                        {!n.read && <span className="absolute left-1 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-gold" />}
                         <NotificationItem n={n} currency={currency} compact />
                       </button>
                     </AnimatedListItem>

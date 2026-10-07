@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import { ProductForm } from '@/components/products/product-form';
+import { ProductVisual } from '@/components/products/product-visual';
 import {
   Boxes,
   Search,
@@ -93,7 +94,7 @@ export default function CatalogPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Boxes className="w-6 h-6 text-[#d4a017]" />
+            <Boxes className="w-6 h-6 text-gold" />
             Catalogue High-Tech
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
@@ -116,7 +117,7 @@ export default function CatalogPage() {
           <GlowButton
             onClick={openCreateModal}
             glowColor="rgba(212, 160, 23, 0.4)"
-            className="px-4 py-2 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shrink-0 shadow-md shadow-[#d4a017]/20"
+            className="px-4 py-2 bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shrink-0 shadow-md shadow-gold/20"
           >
             <Plus className="w-4 h-4" />
             Ajouter Produit
@@ -130,7 +131,7 @@ export default function CatalogPage() {
           onClick={() => setSelectedCat('all')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
             selectedCat === 'all'
-              ? 'bg-[#d4a017] text-black font-semibold'
+              ? 'bg-gold text-ink font-semibold'
               : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
           }`}
         >
@@ -142,7 +143,7 @@ export default function CatalogPage() {
             onClick={() => setSelectedCat(c.slug)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
               selectedCat === c.slug
-                ? 'bg-[#d4a017] text-black font-semibold'
+                ? 'bg-gold text-ink font-semibold'
                 : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
             }`}
           >
@@ -170,7 +171,7 @@ export default function CatalogPage() {
               {isLoading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-neutral-500">
-                    <div className="w-6 h-6 border-2 border-[#d4a017] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     Chargement du catalogue...
                   </td>
                 </tr>
@@ -188,6 +189,9 @@ export default function CatalogPage() {
                   return (
                     <tr key={p._id} className="hover:bg-neutral-900/40 transition-colors">
                       <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                        <ProductVisual imageId={p.imageId} category={p.category} brand={p.brand} name={p.name} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
+                        <div className="min-w-0">
                         <div className="font-semibold text-white">{p.name}</div>
                         {(p.brand || p.model || p.color) && (
                           <div className="text-[11px] text-neutral-400">
@@ -195,10 +199,12 @@ export default function CatalogPage() {
                           </div>
                         )}
                         {p.hasSerialNumbers && (
-                          <span className="text-[10px] text-[#d4a017] flex items-center gap-1 mt-0.5">
+                          <span className="text-[10px] text-gold flex items-center gap-1 mt-0.5">
                             <Sparkles className="w-3 h-3" /> Suivi par N° de série / IMEI
                           </span>
                         )}
+                        </div>
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 font-mono text-neutral-400">
                         <div>{p.sku}</div>
@@ -210,12 +216,12 @@ export default function CatalogPage() {
                       <td className="py-3.5 px-4 font-bold text-white">
                         {formatPrice(p.salePrice)}
                       </td>
-                      <td className="py-3.5 px-4 font-bold text-[#f5d77f]">
+                      <td className="py-3.5 px-4 font-bold text-gold-soft">
                         {formatPrice(p.resellerPrice)}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                          className={`inline-block whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-bold ${
                             isOut
                               ? 'bg-red-500/10 text-red-400 border border-red-500/20'
                               : isLow

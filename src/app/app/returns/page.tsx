@@ -72,7 +72,7 @@ export default function ReturnsPage() {
     <div className="max-w-xl mx-auto space-y-5">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          <Undo2 className="w-6 h-6 text-[#d4a017]" /> Retours & garantie
+          <Undo2 className="w-6 h-6 text-gold" /> Retours & garantie
         </h1>
         <p className="text-xs text-neutral-400 mt-0.5">Scannez l&apos;appareil rapporté par le client</p>
       </div>
@@ -231,7 +231,7 @@ function ReturnFlow({ data, currency, onCancel, onDone }: { data: ReturnLookup; 
             value={issue}
             onChange={(e) => setIssue(e.target.value)}
             placeholder="Ex. : ne s'allume plus, écran qui clignote, batterie qui ne charge pas…"
-            className="w-full rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-sm text-white focus:outline-none focus:border-[#d4a017]"
+            className="w-full rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-sm text-white focus:outline-none focus:border-gold"
           />
         </BlurFade>
       )}
@@ -249,17 +249,17 @@ function ReturnFlow({ data, currency, onCancel, onDone }: { data: ReturnLookup; 
                 onClick={() => setOption(o)}
                 className={cn(
                   'w-full rounded-2xl border p-4 flex items-center gap-3 text-left transition-colors',
-                  active ? 'border-[#d4a017] bg-[#d4a017]/10' : 'border-neutral-800 bg-neutral-950 hover:border-neutral-600'
+                  active ? 'border-gold bg-gold/10' : 'border-neutral-800 bg-neutral-950 hover:border-neutral-600'
                 )}
               >
-                <div className={cn('w-10 h-10 rounded-xl border flex items-center justify-center shrink-0', active ? 'border-[#d4a017] text-[#d4a017]' : 'border-neutral-700 text-neutral-400')}>
+                <div className={cn('w-10 h-10 rounded-xl border flex items-center justify-center shrink-0', active ? 'border-gold text-gold' : 'border-neutral-700 text-neutral-400')}>
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-white">{o.label}</p>
                   <p className="text-xs text-neutral-400">{o.description}</p>
                 </div>
-                {o.amount !== undefined && <p className="text-sm font-black text-[#f5d77f] shrink-0">{money(o.amount, currency)}</p>}
+                {o.amount !== undefined && <p className="text-sm font-black text-gold-soft shrink-0">{money(o.amount, currency)}</p>}
               </button>
             );
           })}
@@ -272,7 +272,7 @@ function ReturnFlow({ data, currency, onCancel, onDone }: { data: ReturnLookup; 
                   onClick={() => setRefundMethod(m)}
                   className={cn(
                     'h-12 rounded-2xl border text-xs font-semibold flex items-center justify-center gap-2',
-                    refundMethod === m ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+                    refundMethod === m ? 'bg-gold/15 border-gold text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                   )}
                 >
                   {m === 'cash' ? <Banknote className="w-4 h-4" /> : <Smartphone className="w-4 h-4" />} {m === 'cash' ? 'Espèces' : 'Mobile Money'}
@@ -284,8 +284,8 @@ function ReturnFlow({ data, currency, onCancel, onDone }: { data: ReturnLookup; 
           {needsCustomer && (
             <div className="rounded-2xl border border-neutral-800 p-3 space-y-2">
               <p className="text-xs text-neutral-400">Client (facultatif) : pour retrouver l&apos;avoir ou le prévenir de la réparation</p>
-              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Nom" className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-[#d4a017]" />
-              <input type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Téléphone" className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-[#d4a017]" />
+              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Nom" className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold" />
+              <input type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Téléphone" className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold" />
             </div>
           )}
 
@@ -293,7 +293,7 @@ function ReturnFlow({ data, currency, onCancel, onDone }: { data: ReturnLookup; 
           <button
             disabled={!option}
             onClick={() => setConfirming(true)}
-            className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold text-base disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full h-14 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-base disabled:opacity-40 flex items-center justify-center gap-2"
           >
             <CheckCircle2 className="w-5 h-5" /> Valider le retour
           </button>
@@ -309,7 +309,7 @@ function ReturnFlow({ data, currency, onCancel, onDone }: { data: ReturnLookup; 
               {option.label} pour <strong>{data.product?.name}</strong>
               {option.amount !== undefined && (
                 <>
-                  {' '}: <strong className="text-[#f5d77f]">{money(option.amount, currency)}</strong>
+                  {' '}: <strong className="text-gold-soft">{money(option.amount, currency)}</strong>
                   {option.action === 'refund' && ` en ${refundMethod === 'cash' ? 'espèces' : 'Mobile Money'}`}
                 </>
               )}
@@ -325,7 +325,7 @@ function ReturnFlow({ data, currency, onCancel, onDone }: { data: ReturnLookup; 
               <button
                 onClick={submit}
                 disabled={createReturn.isPending}
-                className="col-span-2 h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold text-sm disabled:opacity-50"
+                className="col-span-2 h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-sm disabled:opacity-50"
               >
                 {createReturn.isPending ? 'Enregistrement…' : 'Oui, valider'}
               </button>
@@ -351,22 +351,22 @@ function ResultScreen({ result, data, currency, onNext }: { result: ProductRetur
         </div>
 
         {hasCredit && (
-          <div className="rounded-2xl border border-[#d4a017]/40 bg-neutral-950 p-5 space-y-1">
+          <div className="rounded-2xl border border-gold/40 bg-neutral-950 p-5 space-y-1">
             <p className="text-[11px] uppercase tracking-wider text-neutral-500">{result.action === 'exchange' ? 'Avoir pour l’échange' : 'Avoir à remettre au client'}</p>
-            <p className="text-4xl font-black tracking-widest text-[#f5d77f] font-mono">{result.creditNoteCode}</p>
+            <p className="text-4xl font-black tracking-widest text-gold-soft font-mono">{result.creditNoteCode}</p>
             <p className="text-lg font-bold text-white">{money(result.amount, currency)}</p>
           </div>
         )}
         {result.action === 'refund' && (
-          <div className="rounded-2xl border border-[#d4a017]/40 bg-neutral-950 p-5">
+          <div className="rounded-2xl border border-gold/40 bg-neutral-950 p-5">
             <p className="text-sm text-neutral-300">Rendez au client</p>
-            <p className="text-3xl font-black text-[#f5d77f]">{money(result.amount, currency)}</p>
+            <p className="text-3xl font-black text-gold-soft">{money(result.amount, currency)}</p>
             <p className="text-xs text-neutral-400">en {result.refundMethod === 'mobile' ? 'Mobile Money' : 'espèces'} — déduit de votre caisse à la clôture</p>
           </div>
         )}
         {result.repairTicketNumber && (
           <p className="text-sm text-white flex items-center justify-center gap-2">
-            <Wrench className="w-4 h-4 text-[#d4a017]" /> Ticket atelier <strong>SAV-{result.repairTicketNumber}</strong>
+            <Wrench className="w-4 h-4 text-gold" /> Ticket atelier <strong>SAV-{result.repairTicketNumber}</strong>
           </p>
         )}
         <p className="text-xs text-neutral-400">{STATUS_AFTER[result.unitStatusAfter]}</p>
@@ -375,12 +375,12 @@ function ResultScreen({ result, data, currency, onNext }: { result: ProductRetur
           {result.action === 'exchange' ? (
             <Link
               href={`/app/scan?credit=${encodeURIComponent(result.creditNoteCode || '')}`}
-              className="col-span-2 h-12 rounded-2xl bg-[#d4a017] text-black font-bold text-sm flex items-center justify-center gap-2"
+              className="col-span-2 h-12 rounded-2xl bg-gold text-ink font-bold text-sm flex items-center justify-center gap-2"
             >
               <ScanLine className="w-4 h-4" /> Scanner le nouvel appareil
             </Link>
           ) : (
-            <button onClick={onNext} className="h-12 rounded-2xl bg-[#d4a017] text-black font-bold text-sm flex items-center justify-center gap-2">
+            <button onClick={onNext} className="h-12 rounded-2xl bg-gold text-ink font-bold text-sm flex items-center justify-center gap-2">
               <ScanLine className="w-4 h-4" /> Autre retour
             </button>
           )}
@@ -427,7 +427,7 @@ function History({ currency }: { currency: string }) {
             </p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-xs font-semibold text-[#f5d77f]">{label[r.action]}</p>
+            <p className="text-xs font-semibold text-gold-soft">{label[r.action]}</p>
             <p className="text-[11px] text-neutral-400">{r.creditNoteCode || (r.repairTicketNumber ? `SAV-${r.repairTicketNumber}` : r.amount ? money(r.amount, currency) : '')}</p>
           </div>
         </div>
@@ -451,10 +451,10 @@ function ReasonButton({ active, onClick, icon: Icon, label, sub }: { active: boo
       onClick={onClick}
       className={cn(
         'rounded-2xl border p-4 text-left transition-colors',
-        active ? 'border-[#d4a017] bg-[#d4a017]/10' : 'border-neutral-800 bg-neutral-950 hover:border-neutral-600'
+        active ? 'border-gold bg-gold/10' : 'border-neutral-800 bg-neutral-950 hover:border-neutral-600'
       )}
     >
-      <Icon className={cn('w-5 h-5 mb-2', active ? 'text-[#d4a017]' : 'text-neutral-400')} />
+      <Icon className={cn('w-5 h-5 mb-2', active ? 'text-gold' : 'text-neutral-400')} />
       <p className="text-sm font-bold text-white">{label}</p>
       <p className="text-[11px] text-neutral-500">{sub}</p>
     </button>

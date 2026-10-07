@@ -4,6 +4,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Couleurs de marque ZAFF (redéfinies par le thème clair) */
+@theme {
+  --color-gold: #d4a017;
+  --color-gold-soft: #f5d77f;
+  --color-gold-deep: #b8860b;
+  --color-gold-ink: #7a5a00;
+  /* Texte sombre fixe (sur les boutons dorés), identique dans les deux thèmes */
+  --color-ink: #0a0a0a;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -140,4 +150,107 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Thème clair de l'application (par défaut dans /app, voir stores/theme-store.ts).
+ * Les écrans sont écrits en classes « sombres » (bg-black, bg-neutral-950, text-white…) :
+ * on inverse la palette par variables CSS, pour un rendu clair, chaleureux et lisible
+ * sans dupliquer chaque classe. Les couleurs d'état sont assombries pour rester lisibles sur fond clair.
+ * ───────────────────────────────────────────────────────────────────────────── */
+html.dark[data-theme="light"] {
+  color-scheme: light;
+  --color-black: #fbf7ef;
+  --color-white: #1f1a14;
+  --color-neutral-950: #ffffff;
+  --color-neutral-900: #f7f1e6;
+  --color-neutral-800: #ebe2d1;
+  --color-neutral-700: #dccfb8;
+  --color-neutral-600: #a8987d;
+  --color-neutral-500: #7d705c;
+  --color-neutral-400: #5e5344;
+  --color-neutral-300: #463d31;
+  --color-neutral-200: #342d24;
+  --color-neutral-100: #27211a;
+  --color-neutral-50: #1f1a14;
+
+  --color-gold: #c99410;
+  --color-gold-soft: #8f6500;
+  --color-gold-deep: #a97a06;
+  --color-gold-ink: #6b4f00;
+
+  --color-emerald-200: #065f46;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #059669;
+  --color-emerald-950: #ecfdf5;
+  --color-red-200: #991b1b;
+  --color-red-300: #b91c1c;
+  --color-red-400: #dc2626;
+  --color-red-950: #fef2f2;
+  --color-amber-200: #92400e;
+  --color-amber-300: #b45309;
+  --color-amber-400: #d97706;
+  --color-amber-950: #fffbeb;
+  --color-sky-300: #0369a1;
+  --color-sky-400: #0284c7;
+  --color-blue-300: #1d4ed8;
+  --color-blue-400: #2563eb;
+  --color-violet-300: #6d28d9;
+  --color-violet-400: #7c3aed;
+  --color-purple-300: #7e22ce;
+  --color-purple-400: #9333ea;
+  --color-orange-300: #c2410c;
+  --color-orange-400: #ea580c;
+  --color-yellow-400: #ca8a04;
+  --color-teal-400: #0d9488;
+  --color-cyan-400: #0891b2;
+  --color-pink-400: #db2777;
+
+  --background: oklch(0.98 0.01 85);
+  --foreground: oklch(0.2 0.01 60);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.01 60);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.01 60);
+  --muted: oklch(0.96 0.01 85);
+  --muted-foreground: oklch(0.5 0.02 70);
+  --accent: oklch(0.95 0.02 85);
+  --accent-foreground: oklch(0.2 0.01 60);
+  --border: oklch(0.9 0.02 85);
+  --input: oklch(0.9 0.02 85);
+}
+
+/* Un peu de gaieté : fond chaleureux légèrement doré derrière l'application claire */
+html.dark[data-theme="light"] .app-main {
+  background:
+    radial-gradient(1200px 500px at 100% -10%, rgb(212 160 23 / 0.10), transparent 60%),
+    radial-gradient(900px 400px at -10% 110%, rgb(16 185 129 / 0.06), transparent 60%),
+    var(--color-black);
+}
+html.dark[data-theme="light"] ::selection {
+  background: rgb(212 160 23 / 0.25);
+}
+
+/* Éléments qui gardent leurs couleurs d'origine quel que soit le thème (papier du contrat, QR code…) */
+.theme-fixed {
+  --color-black: #000;
+  --color-white: #fff;
+  --color-neutral-50: oklch(98.5% 0 0);
+  --color-neutral-100: oklch(97% 0 0);
+  --color-neutral-200: oklch(92.2% 0 0);
+  --color-neutral-300: oklch(87% 0 0);
+  --color-neutral-400: oklch(70.8% 0 0);
+  --color-neutral-500: oklch(55.6% 0 0);
+  --color-neutral-600: oklch(43.9% 0 0);
+  --color-neutral-700: oklch(37.1% 0 0);
+  --color-neutral-800: oklch(26.9% 0 0);
+  --color-neutral-900: oklch(20.5% 0 0);
+  --color-neutral-950: oklch(14.5% 0 0);
+  --color-gold: #d4a017;
+  --color-gold-soft: #f5d77f;
+  --color-gold-deep: #b8860b;
+  --color-gold-ink: #7a5a00;
+  --color-amber-50: oklch(98.7% 0.022 95.277);
+  --color-amber-400: oklch(82.8% 0.189 84.429);
+  --color-amber-800: oklch(47.3% 0.137 46.201);
 }

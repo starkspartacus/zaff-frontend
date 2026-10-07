@@ -7,7 +7,17 @@
 ERP + caisse pour boutiques high-tech. Stock **à l'unité par N° de série / IMEI**, vente **par scan**,
 suivi **en temps réel** par le propriétaire. Interface en français, pensée mobile d'abord (vendeur et
 magasinier au téléphone, une main) : peu d'écrans, gros boutons, confirmation claire de chaque action,
-messages d'erreur compréhensibles. Thème noir / or (`#d4a017`, `#f5d77f`).
+messages d'erreur compréhensibles. Couleurs de marque or : jetons `gold`, `gold-soft`, `gold-deep`, `gold-ink`, `ink`
+(`globals.css`) — **ne plus écrire `[#d4a017]` ni `text-black`** dans les classes, sinon le thème clair ne s'applique pas.
+
+## Thèmes clair / sombre
+- **Clair par défaut dans l'application** (`/app`), sombre au choix : bouton soleil / lune dans l'en-tête (`ThemeToggle`),
+  mémorisé sur l'appareil (`stores/theme-store.ts`, clé `zaff-theme`). `app/app/layout.tsx` pose `data-theme` sur `<html>` ;
+  les pages publiques (accueil, connexion, inscription, `/verify`, `/contract`) gardent leur style.
+- Les écrans sont écrits en classes « sombres » (`bg-black`, `bg-neutral-950`, `text-white`…) : le thème clair **inverse la
+  palette par variables CSS** (`html.dark[data-theme="light"]` dans `globals.css`) — fond crème, cartes blanches, couleurs
+  d'état assombries pour rester lisibles, halo doré (`.app-main`). Écrire les nouveaux écrans de la même façon.
+- `.theme-fixed` : garde les couleurs d'origine (papier du contrat, photos produits, pastilles sur image).
 
 ## Pile technique
 - **Next.js 16 (App Router)** — lire `node_modules/next/dist/docs/` avant d'utiliser une API Next (cf. AGENTS.md).
@@ -76,6 +86,15 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   accessoires → 6 Prix (marge en direct) → 7 Stock. Suggestions en cascade depuis `GET /global/reference/devices`
   (`useDeviceCatalog`) + les produits déjà créés par la boutique ; toute valeur absente se tape (« Ajouter « … » »).
   Alerte doublon (« Utiliser ce produit »), validation Zod `ProductFormSchema`.
+- **Images produits** : base partagée par toutes les boutiques (`/global/images`, `src/lib/images.ts`). Dans la fiche
+  produit, section « Photo » : photos déjà disponibles pour la marque + le modèle (la bonne couleur d'abord, la meilleure
+  choisie automatiquement), « Prendre / ajouter » (appareil photo du téléphone, photo **réduite dans le navigateur** ≤ 1000 px
+  WebP / JPEG avant l'envoi), ou « Sans photo ». `ProductVisual` affiche la photo, sinon une illustration colorée par
+  catégorie (icône + marque).
+- `/app/showcase` **Vitrine** (vendeur, magasinier, propriétaire) : cartes `ProductCard` (photo, prix de vente, version,
+  état, pastille de stock), recherche, filtres par catégorie, « En stock seulement ». Fiche : infos + appareils disponibles,
+  « Vendre » ouvre `/app/scan?code=<N° de série>` (recherche automatique comme un scan). Photo aussi sur la fiche de vente
+  du scan et dans le Catalogue.
 - `src/components/scan/barcode-scanner.tsx` : caméra (ZXing, HTTPS requis sur mobile) + douchette / clavier.
 
 ## Notifications push (application fermée)

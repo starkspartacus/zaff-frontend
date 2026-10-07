@@ -23,6 +23,8 @@ export interface Product {
   hasSerialNumbers?: boolean;
   condition?: 'new' | 'refurbished' | 'used';
   accessories?: string | null;
+  /** Photo de la base d'images partagée */
+  imageId?: string | null;
 }
 
 export type UnitStatus = 'in_stock' | 'sold' | 'defective' | 'in_repair';

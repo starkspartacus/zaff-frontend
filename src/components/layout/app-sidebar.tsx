@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Logo } from '@/components/ui/logo';
 import { canAccess, normalizeRole, ROLE_HOME, ROLE_LABELS } from '@/lib/roles';
 import {
+  LayoutGrid,
   LayoutDashboard,
   TrendingUp,
   ShoppingCart,
@@ -45,6 +46,7 @@ const navGroups: NavGroup[] = [
     label: 'Au quotidien',
     items: [
       { title: 'Vendre (scan)', href: '/app/scan', icon: ScanLine, badge: 'Scan' },
+      { title: 'Vitrine des articles', href: '/app/showcase', icon: LayoutGrid },
       { title: 'Retours & garantie', href: '/app/returns', icon: Undo2 },
       { title: 'Mise en stock (scan)', href: '/app/receive', icon: PackagePlus },
       { title: 'Mon activité du jour', href: '/app/my-activity', icon: CalendarCheck },
@@ -116,7 +118,7 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
         {/* Current Active Boutique */}
         <div className="mt-4 p-3 rounded-2xl bg-neutral-900/60 border border-neutral-800/80 flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-[#d4a017]/15 border border-[#d4a017]/40 flex items-center justify-center text-[#d4a017] shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-gold/15 border border-gold/40 flex items-center justify-center text-gold shrink-0">
               <Store className="w-4 h-4" />
             </div>
             <div className="min-w-0">
@@ -151,7 +153,7 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
                     onClick={onClose}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group ${
                       isActive
-                        ? 'bg-gradient-to-r from-[#d4a017]/20 to-[#d4a017]/5 text-[#f5d77f] border border-[#d4a017]/30 shadow-sm shadow-[#d4a017]/10'
+                        ? 'bg-gradient-to-r from-gold/20 to-gold/5 text-gold-soft border border-gold/30 shadow-sm shadow-gold/10'
                         : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-900/60'
                     }`}
                   >
@@ -159,7 +161,7 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
                       <Icon
                         className={`w-4 h-4 transition-colors ${
                           isActive
-                            ? 'text-[#d4a017]'
+                            ? 'text-gold'
                             : 'text-neutral-500 group-hover:text-neutral-300'
                         }`}
                       />
@@ -168,11 +170,11 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
 
                     <div className="flex items-center gap-1.5">
                       {item.badge && (
-                        <span className="text-[9px] font-semibold bg-[#d4a017]/20 text-[#d4a017] px-1.5 py-0.5 rounded-full border border-[#d4a017]/30">
+                        <span className="text-[9px] font-semibold bg-gold/20 text-gold px-1.5 py-0.5 rounded-full border border-gold/30">
                           {item.badge}
                         </span>
                       )}
-                      {isActive && <ChevronRight className="w-3.5 h-3.5 text-[#d4a017]" />}
+                      {isActive && <ChevronRight className="w-3.5 h-3.5 text-gold" />}
                     </div>
                   </Link>
                 );
@@ -186,7 +188,7 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
       <div className="p-4 border-t border-neutral-900 bg-neutral-950">
         <div className="p-3 rounded-2xl bg-neutral-900/50 border border-neutral-800/80 flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#d4a017] to-amber-200 text-black font-bold text-xs flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gold to-amber-200 text-ink font-bold text-xs flex items-center justify-center shrink-0">
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div className="min-w-0">

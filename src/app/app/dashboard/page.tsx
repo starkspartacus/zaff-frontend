@@ -54,7 +54,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <TrendingUp className="w-6 h-6 text-[#d4a017]" />
+            <TrendingUp className="w-6 h-6 text-gold" />
             Analyses Financières & Performance
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
@@ -75,7 +75,7 @@ export default function DashboardPage() {
               onClick={() => setPeriod(item.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 period === item.id
-                  ? 'bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black shadow-sm'
+                  ? 'bg-gradient-to-r from-gold to-gold-deep text-ink shadow-sm'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
@@ -97,13 +97,13 @@ export default function DashboardPage() {
         <SpotlightCard className="p-5 rounded-2xl bg-neutral-950/70 border-neutral-800/80">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-neutral-400">Chiffre d'Affaires</span>
-            <DollarSign className="w-4 h-4 text-[#d4a017]" />
+            <DollarSign className="w-4 h-4 text-gold" />
           </div>
           <div className="text-2xl font-bold text-white tracking-tight">
             {formatPrice(revenue)}
           </div>
           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-neutral-400">
-            <span className="text-[#f5d77f] font-medium">{data?.sales?.count || 0}</span> ventes réalisées
+            <span className="text-gold-soft font-medium">{data?.sales?.count || 0}</span> ventes réalisées
           </div>
         </SpotlightCard>
 
@@ -142,7 +142,7 @@ export default function DashboardPage() {
             {formatPrice(data?.inventory?.totalStockValue || 0)}
           </div>
           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-neutral-400">
-            <span className="text-[#f5d77f] font-semibold">{data?.inventory?.totalUnits || 0}</span> articles en réserve
+            <span className="text-gold-soft font-semibold">{data?.inventory?.totalUnits || 0}</span> articles en réserve
           </div>
         </SpotlightCard>
       </div>
@@ -153,7 +153,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 p-6 rounded-3xl bg-neutral-950/80 border border-neutral-800/80 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#d4a017]" />
+              <Sparkles className="w-4 h-4 text-gold" />
               Top Produits les Plus Vendus
             </h2>
             <span className="text-xs text-neutral-400">Par volume d'unités</span>
@@ -182,7 +182,7 @@ export default function DashboardPage() {
                         <span className="font-semibold text-white">{p.productName}</span>
                       </div>
                       <div className="text-right">
-                        <span className="font-bold text-[#f5d77f] mr-2">
+                        <span className="font-bold text-gold-soft mr-2">
                           {formatPrice(p.totalRevenue)}
                         </span>
                         <span className="text-neutral-400">({p.quantitySold} vendus)</span>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
                     {/* Visual Bar */}
                     <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-[#d4a017] to-[#b8860b] h-full rounded-full transition-all duration-500"
+                        className="bg-gradient-to-r from-gold to-gold-deep h-full rounded-full transition-all duration-500"
                         style={{ width: `${percent}%` }}
                       />
                     </div>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
         <div className="p-6 rounded-3xl bg-neutral-950/80 border border-neutral-800/80 space-y-4 flex flex-col justify-between">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2 mb-1">
-              <Layers className="w-4 h-4 text-[#d4a017]" />
+              <Layers className="w-4 h-4 text-gold" />
               Activité Atelier SAV
             </h2>
             <p className="text-xs text-neutral-400">Statut des dossiers de réparation</p>

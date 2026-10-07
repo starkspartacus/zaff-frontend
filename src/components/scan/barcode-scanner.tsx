@@ -101,8 +101,8 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
           <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
           {/* Viseur */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="w-4/5 h-1/3 rounded-2xl border-2 border-[#d4a017] shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] relative">
-              <div className="absolute left-2 right-2 top-1/2 h-0.5 bg-[#d4a017]/80 animate-pulse" />
+            <div className="w-4/5 h-1/3 rounded-2xl border-2 border-gold shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] relative">
+              <div className="absolute left-2 right-2 top-1/2 h-0.5 bg-gold/80 animate-pulse" />
             </div>
           </div>
           {paused && (
@@ -115,7 +115,7 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
 
       <form onSubmit={submitManual} className="flex gap-2">
         <div className="relative flex-1">
-          <ScanLine className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d4a017]" />
+          <ScanLine className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gold" />
           <input
             ref={inputRef}
             value={manual}
@@ -124,12 +124,12 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
             autoComplete="off"
             autoCapitalize="characters"
             spellCheck={false}
-            className="w-full h-14 pl-11 pr-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-white text-base font-mono placeholder:text-neutral-500 placeholder:font-sans placeholder:text-sm focus:outline-none focus:border-[#d4a017]"
+            className="w-full h-14 pl-11 pr-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-white text-base font-mono placeholder:text-neutral-500 placeholder:font-sans placeholder:text-sm focus:outline-none focus:border-gold"
           />
         </div>
         <button
           type="submit"
-          className="h-14 px-4 rounded-2xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-[#d4a017] text-xs font-semibold flex items-center gap-1.5"
+          className="h-14 px-4 rounded-2xl bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-gold text-xs font-semibold flex items-center gap-1.5"
           title="Valider la saisie"
         >
           <Keyboard className="w-4 h-4" /> OK
@@ -139,8 +139,8 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
           onClick={() => setCameraOn((v) => !v)}
           className={`h-14 px-4 rounded-2xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
             cameraOn
-              ? 'bg-[#d4a017] border-[#d4a017] text-black'
-              : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:text-white hover:border-[#d4a017]'
+              ? 'bg-gold border-gold text-ink'
+              : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:text-white hover:border-gold'
           }`}
           title={cameraOn ? 'Arrêter la caméra' : 'Scanner avec la caméra'}
         >

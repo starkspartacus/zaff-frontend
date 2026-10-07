@@ -358,7 +358,7 @@ export default function SalesPosPage() {
                 onClick={() => handleToggleReseller(true)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   isResellerPricing
-                    ? 'bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black shadow-sm'
+                    ? 'bg-gradient-to-r from-gold to-gold-deep text-ink shadow-sm'
                     : 'text-neutral-400 hover:text-white'
                 }`}
               >
@@ -373,7 +373,7 @@ export default function SalesPosPage() {
               onClick={() => setSelectedCategory('all')}
               className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                 selectedCategory === 'all'
-                  ? 'bg-[#d4a017] text-black font-semibold'
+                  ? 'bg-gold text-ink font-semibold'
                   : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
               }`}
             >
@@ -385,7 +385,7 @@ export default function SalesPosPage() {
                 onClick={() => setSelectedCategory(c.slug)}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                   selectedCategory === c.slug
-                    ? 'bg-[#d4a017] text-black font-semibold'
+                    ? 'bg-gold text-ink font-semibold'
                     : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
                 }`}
               >
@@ -409,7 +409,7 @@ export default function SalesPosPage() {
                 className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all group ${
                   isOutOfStock
                     ? 'bg-neutral-900/30 border-neutral-800/40 opacity-50 cursor-not-allowed'
-                    : 'bg-neutral-900/70 hover:bg-neutral-900 border-neutral-800/80 hover:border-[#d4a017]/60 hover:shadow-lg hover:shadow-[#d4a017]/5 active:scale-[0.98]'
+                    : 'bg-neutral-900/70 hover:bg-neutral-900 border-neutral-800/80 hover:border-gold/60 hover:shadow-lg hover:shadow-gold/5 active:scale-[0.98]'
                 }`}
               >
                 <div className="space-y-1">
@@ -430,16 +430,16 @@ export default function SalesPosPage() {
                     </span>
                   </div>
 
-                  <p className="text-xs font-semibold text-white group-hover:text-[#f5d77f] transition-colors line-clamp-2">
+                  <p className="text-xs font-semibold text-white group-hover:text-gold-soft transition-colors line-clamp-2">
                     {p.name}
                   </p>
                 </div>
 
                 <div className="mt-4 pt-2 border-t border-neutral-800/60 flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-[#f5d77f]">
+                  <span className="text-xs font-extrabold text-gold-soft">
                     {formatPrice(displayPrice)}
                   </span>
-                  <div className="w-6 h-6 rounded-lg bg-[#d4a017]/10 text-[#d4a017] group-hover:bg-[#d4a017] group-hover:text-black flex items-center justify-center transition-colors">
+                  <div className="w-6 h-6 rounded-lg bg-gold/10 text-gold group-hover:bg-gold group-hover:text-ink flex items-center justify-center transition-colors">
                     <Plus className="w-3.5 h-3.5" />
                   </div>
                 </div>
@@ -457,7 +457,7 @@ export default function SalesPosPage() {
             <span className="text-neutral-400 font-medium">Client assigné</span>
             <button
               onClick={() => setIsNewCustomerOpen(true)}
-              className="text-[#d4a017] hover:underline flex items-center gap-1 font-medium"
+              className="text-gold hover:underline flex items-center gap-1 font-medium"
             >
               <UserPlus className="w-3 h-3" /> Nouveau
             </button>
@@ -472,7 +472,7 @@ export default function SalesPosPage() {
                 handleToggleReseller(true);
               }
             }}
-            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#d4a017]"
+            className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold"
           >
             <option value="">Client Comptant (Passage)</option>
             {customers.map((c) => (
@@ -504,7 +504,7 @@ export default function SalesPosPage() {
                   {item.serialNumber && (
                     <p className="text-[10px] font-mono text-neutral-400 truncate">N° {item.serialNumber}</p>
                   )}
-                  <p className="text-[11px] text-[#f5d77f]">
+                  <p className="text-[11px] text-gold-soft">
                     {formatPrice(item.unitPrice)}
                   </p>
                 </div>
@@ -550,7 +550,7 @@ export default function SalesPosPage() {
 
           <div className="flex items-center justify-between text-xs text-neutral-400">
             <span className="flex items-center gap-1">
-              <Tag className="w-3.5 h-3.5 text-[#d4a017]" /> Remise ({currency})
+              <Tag className="w-3.5 h-3.5 text-gold" /> Remise ({currency})
             </span>
             <input
               type="number"
@@ -558,13 +558,13 @@ export default function SalesPosPage() {
               value={discount || ''}
               onChange={(e) => setDiscount(Number(e.target.value) || 0)}
               placeholder="0"
-              className="w-24 text-right bg-neutral-900 border border-neutral-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-[#d4a017]"
+              className="w-24 text-right bg-neutral-900 border border-neutral-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-gold"
             />
           </div>
 
           <div className="pt-2 border-t border-neutral-800 flex items-baseline justify-between">
             <span className="text-sm font-semibold text-white">Total Net</span>
-            <span className="text-2xl font-black text-[#f5d77f] tracking-tight">
+            <span className="text-2xl font-black text-gold-soft tracking-tight">
               {formatPrice(total)}
             </span>
           </div>
@@ -573,7 +573,7 @@ export default function SalesPosPage() {
             disabled={cart.length === 0}
             onClick={handleOpenCheckout}
             glowColor="rgba(212, 160, 23, 0.4)"
-            className="w-full h-12 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold rounded-2xl hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-sm shadow-lg shadow-[#d4a017]/20"
+            className="w-full h-12 bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold rounded-2xl hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-sm shadow-lg shadow-gold/20"
           >
             <Banknote className="w-4 h-4" />
             Encaisser ({formatPrice(total)})
@@ -599,11 +599,11 @@ export default function SalesPosPage() {
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#d4a017]/10 border border-[#d4a017]/30 text-center">
+            <div className="p-4 rounded-2xl bg-gold/10 border border-gold/30 text-center">
               <span className="text-xs text-neutral-400 uppercase tracking-wider font-semibold">
                 Montant total à percevoir
               </span>
-              <p className="text-3xl font-black text-[#f5d77f] mt-1">
+              <p className="text-3xl font-black text-gold-soft mt-1">
                 {formatPrice(total)}
               </p>
             </div>
@@ -626,7 +626,7 @@ export default function SalesPosPage() {
                       onClick={() => setPaymentMethod(m.id as any)}
                       className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs font-semibold transition-all ${
                         paymentMethod === m.id
-                          ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]'
+                          ? 'bg-gold/15 border-gold text-gold-soft'
                           : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
                       }`}
                     >
@@ -665,7 +665,7 @@ export default function SalesPosPage() {
             <button
               onClick={handleFinalizeSale}
               disabled={isSubmitting}
-              className="w-full h-12 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold rounded-2xl hover:brightness-110 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-sm shadow-lg shadow-[#d4a017]/20"
+              className="w-full h-12 bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold rounded-2xl hover:brightness-110 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-sm shadow-lg shadow-gold/20"
             >
               {isSubmitting ? (
                 <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
@@ -747,23 +747,23 @@ export default function SalesPosPage() {
 
             <Link
               href={`/contract?sale=${completedSale._id}`}
-              className="w-full py-2.5 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/40 text-[#f5d77f] text-xs font-bold flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-xl bg-gold/10 border border-gold/40 text-gold-soft text-xs font-bold flex items-center justify-center gap-2"
             >
               <FileSignature className="w-4 h-4" /> Contrat et garantie du client
             </Link>
             <div className="flex gap-3">
               <button
                 onClick={() => window.print()}
-                className="flex-1 py-2.5 rounded-xl bg-neutral-900 border border-neutral-700 text-white text-xs font-semibold hover:border-[#d4a017] transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl bg-neutral-900 border border-neutral-700 text-white text-xs font-semibold hover:border-gold transition-all flex items-center justify-center gap-2"
               >
-                <Printer className="w-4 h-4 text-[#d4a017]" /> Imprimer
+                <Printer className="w-4 h-4 text-gold" /> Imprimer
               </button>
               <button
                 onClick={() => {
                   setCompletedSale(null);
                   setIsCheckoutOpen(false);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-[#d4a017] text-black text-xs font-bold hover:brightness-110 transition-all"
+                className="flex-1 py-2.5 rounded-xl bg-gold text-ink text-xs font-bold hover:brightness-110 transition-all"
               >
                 Nouvelle Vente
               </button>
@@ -819,7 +819,7 @@ export default function SalesPosPage() {
                 id="isResellerCheck"
                 checked={newCustIsReseller}
                 onChange={(e) => setNewCustIsReseller(e.target.checked)}
-                className="w-4 h-4 accent-[#d4a017]"
+                className="w-4 h-4 accent-gold"
               />
               <label htmlFor="isResellerCheck" className="text-xs text-neutral-300">
                 Client Revendeur (Tarif Grossiste)
@@ -828,7 +828,7 @@ export default function SalesPosPage() {
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-[#d4a017] text-black font-bold text-xs hover:brightness-110 transition-all mt-2"
+              className="w-full py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all mt-2"
             >
               Enregistrer Client
             </button>

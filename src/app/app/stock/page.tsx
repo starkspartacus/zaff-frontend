@@ -105,7 +105,7 @@ export default function StockPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Layers className="w-6 h-6 text-[#d4a017]" />
+            <Layers className="w-6 h-6 text-gold" />
             Gestion des Niveaux & Mouvements de Stock
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
@@ -121,7 +121,7 @@ export default function StockPage() {
               setIsModalOpen(true);
             }}
             glowColor="rgba(212, 160, 23, 0.4)"
-            className="px-4 py-2 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shadow-md shadow-[#d4a017]/20"
+            className="px-4 py-2 bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shadow-md shadow-gold/20"
           >
             <Plus className="w-4 h-4" />
             Mouvement (sans N° de série)
@@ -144,7 +144,7 @@ export default function StockPage() {
         </div>
         <div className="p-4 rounded-2xl bg-neutral-950/80 border border-neutral-800/80">
           <span className="text-xs text-neutral-400">Valeur d'Achat du Stock</span>
-          <p className="text-2xl font-bold text-[#f5d77f] mt-1">{formatPrice(totalStockValue)}</p>
+          <p className="text-2xl font-bold text-gold-soft mt-1">{formatPrice(totalStockValue)}</p>
         </div>
       </div>
 
@@ -155,7 +155,7 @@ export default function StockPage() {
             onClick={() => setActiveTab('levels')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               activeTab === 'levels'
-                ? 'bg-[#d4a017] text-black'
+                ? 'bg-gold text-ink'
                 : 'text-neutral-400 hover:text-white bg-neutral-900'
             }`}
           >
@@ -165,7 +165,7 @@ export default function StockPage() {
             onClick={() => setActiveTab('units')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               activeTab === 'units'
-                ? 'bg-[#d4a017] text-black'
+                ? 'bg-gold text-ink'
                 : 'text-neutral-400 hover:text-white bg-neutral-900'
             }`}
           >
@@ -175,7 +175,7 @@ export default function StockPage() {
             onClick={() => setActiveTab('history')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
               activeTab === 'history'
-                ? 'bg-[#d4a017] text-black'
+                ? 'bg-gold text-ink'
                 : 'text-neutral-400 hover:text-white bg-neutral-900'
             }`}
           >
@@ -227,7 +227,7 @@ export default function StockPage() {
                       <td className="py-3.5 px-4 text-center font-bold text-white text-sm">
                         {p.stockQuantity}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-[#f5d77f]">
+                      <td className="py-3.5 px-4 text-right font-bold text-gold-soft">
                         {formatPrice((p.purchasePrice || 0) * (p.stockQuantity || 0))}
                       </td>
                       <td className="py-3.5 px-4 text-center">
@@ -337,7 +337,7 @@ export default function StockPage() {
                   value={selectedProductId}
                   onChange={(e) => setSelectedProductId(e.target.value)}
                   required
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#d4a017] h-10"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold h-10"
                 >
                   <option value="">Sélectionner un produit</option>
                   {products.filter((p) => !p.hasSerialNumbers).map((p) => (
@@ -363,7 +363,7 @@ export default function StockPage() {
                       onClick={() => setType(t.id as any)}
                       className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition-all ${
                         type === t.id
-                          ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]'
+                          ? 'bg-gold/15 border-gold text-gold-soft'
                           : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
                       }`}
                     >
@@ -409,7 +409,7 @@ export default function StockPage() {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-[#d4a017] text-black font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-[#d4a017]/20"
+                className="px-5 py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-gold/20"
               >
                 Valider le Mouvement
               </button>

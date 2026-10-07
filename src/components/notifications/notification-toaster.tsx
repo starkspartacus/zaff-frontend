@@ -48,7 +48,7 @@ export function NotificationToaster() {
                   if (href) router.push(href);
                   dismiss(t.id);
                 }}
-                className="pointer-events-auto relative rounded-2xl border border-neutral-800 bg-neutral-950/95 backdrop-blur-md p-3.5 pr-9 shadow-2xl shadow-black/50 cursor-pointer hover:border-[#d4a017]/50 transition-colors"
+                className="pointer-events-auto relative rounded-2xl border border-neutral-800 bg-neutral-950/95 backdrop-blur-md p-3.5 pr-9 shadow-2xl shadow-black/50 cursor-pointer hover:border-gold/50 transition-colors"
               >
                 <NotificationItem n={t} currency={currency} />
                 <button

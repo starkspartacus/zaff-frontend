@@ -85,8 +85,9 @@ export const useDashboard = (period: string, enabled = true) =>
 export const useRecentSales = (enabled = true) =>
   useQuery({ queryKey: qk.sales(), queryFn: () => get<Sale[]>('/sales'), enabled, select: (s) => s.slice(0, 5) });
 
-export const useUnits = (filters: Record<string, string>) =>
+export const useUnits = (filters: Record<string, string>, enabled = true) =>
   useQuery({
+    enabled,
     queryKey: qk.units(filters),
     queryFn: () => get<ProductUnit[]>(`/units?${new URLSearchParams(filters)}`),
     placeholderData: (prev) => prev, // garde la liste affichée pendant une nouvelle recherche

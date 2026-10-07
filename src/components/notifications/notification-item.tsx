@@ -64,7 +64,7 @@ export function NotificationItem({
         <div className="flex items-baseline justify-between gap-2">
           <p className="text-sm font-semibold text-white truncate">{n.title}</p>
           {amount !== null && (
-            <p className="text-sm font-bold text-[#f5d77f] shrink-0">
+            <p className="text-sm font-bold text-gold-soft shrink-0">
               {amount.toLocaleString('fr-FR')} {currency}
             </p>
           )}

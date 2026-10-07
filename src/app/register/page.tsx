@@ -225,7 +225,7 @@ export default function RegisterPage() {
 
   return (
     <div className="relative min-h-screen bg-black overflow-clip px-4 py-8 sm:py-12">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-gradient-to-b from-[#d4a017]/15 to-transparent rounded-full blur-[130px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-gradient-to-b from-gold/15 to-transparent rounded-full blur-[130px] pointer-events-none" />
 
       <div className="relative z-10 max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
@@ -233,7 +233,7 @@ export default function RegisterPage() {
             <ArrowLeft className="w-4 h-4" /> Accueil
           </Link>
           <Link href="/login" className="text-xs text-neutral-400 hover:text-white">
-            Déjà inscrit ? <span className="text-[#d4a017] font-semibold">Se connecter</span>
+            Déjà inscrit ? <span className="text-gold font-semibold">Se connecter</span>
           </Link>
         </div>
 
@@ -259,7 +259,7 @@ export default function RegisterPage() {
                 className="space-y-5"
               >
                 <div>
-                  <p className="text-[11px] uppercase tracking-wider text-[#d4a017] font-semibold">Étape {step + 1} sur 4</p>
+                  <p className="text-[11px] uppercase tracking-wider text-gold font-semibold">Étape {step + 1} sur 4</p>
                   <h2 className="text-xl font-bold text-white">{STEPS[step].title}</h2>
                 </div>
 
@@ -287,9 +287,9 @@ export default function RegisterPage() {
                       <FieldError msg={errors.countryCode} />
                     </div>
                     {country && (
-                      <BlurFade key={country.code} className="rounded-2xl border border-[#d4a017]/30 bg-[#d4a017]/5 px-4 py-3 flex items-center justify-between text-sm">
+                      <BlurFade key={country.code} className="rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3 flex items-center justify-between text-sm">
                         <span className="text-neutral-300">Devise de la boutique</span>
-                        <span className="font-bold text-[#f5d77f]">
+                        <span className="font-bold text-gold-soft">
                           {country.currency.name} ({country.currency.symbol})
                         </span>
                       </BlurFade>
@@ -324,7 +324,7 @@ export default function RegisterPage() {
                     <AnimatePresence>
                       {city?.communes?.length ? (
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                          <FieldLabel optional={!city.communeRequired}>Commune {city.communeRequired && <span className="text-[#d4a017]">(obligatoire)</span>}</FieldLabel>
+                          <FieldLabel optional={!city.communeRequired}>Commune {city.communeRequired && <span className="text-gold">(obligatoire)</span>}</FieldLabel>
                           <CommunePicker communes={city.communes} value={f.commune} onChange={(c) => set('commune', c)} invalid={!!errors.commune} />
                           <FieldError msg={errors.commune} />
                         </motion.div>
@@ -500,7 +500,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={next}
                   disabled={checking}
-                  className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {checking ? 'Vérification…' : 'Continuer'} <ArrowRight className="w-4 h-4" />
                 </button>
@@ -509,7 +509,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={submit}
                   disabled={submitting}
-                  className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-[#d4a017]/20"
+                  className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-gold/20"
                 >
                   {submitting ? (
                     <span className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
@@ -544,7 +544,7 @@ const inputCls = (invalid: boolean, withIcon = false) =>
   cn(
     'w-full h-12 rounded-xl bg-neutral-900 border text-sm text-white placeholder:text-neutral-500 focus:outline-none',
     withIcon ? 'pl-10 pr-3.5' : 'px-3.5',
-    invalid ? 'border-red-500/60' : 'border-neutral-800 focus:border-[#d4a017]'
+    invalid ? 'border-red-500/60' : 'border-neutral-800 focus:border-gold'
   );
 
 /** Frise des étapes : horizontale sur téléphone, verticale sur ordinateur */
@@ -555,7 +555,7 @@ function Timeline({ step, onGo }: { step: number; onGo: (i: number) => void }) {
       {/* Ligne de progression */}
       <div className="absolute left-5 right-5 top-5 h-0.5 bg-neutral-800 lg:left-5 lg:right-auto lg:top-5 lg:bottom-5 lg:h-auto lg:w-0.5">
         <motion.div
-          className="h-full lg:h-auto lg:w-full bg-gradient-to-r lg:bg-gradient-to-b from-[#d4a017] to-[#f5d77f]"
+          className="h-full lg:h-auto lg:w-full bg-gradient-to-r lg:bg-gradient-to-b from-gold to-gold-soft"
           initial={false}
           animate={{ width: `${progress}%` }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}
@@ -563,7 +563,7 @@ function Timeline({ step, onGo }: { step: number; onGo: (i: number) => void }) {
         />
       </div>
       <motion.div
-        className="hidden lg:block absolute left-5 top-5 w-0.5 bg-gradient-to-b from-[#d4a017] to-[#f5d77f]"
+        className="hidden lg:block absolute left-5 top-5 w-0.5 bg-gradient-to-b from-gold to-gold-soft"
         initial={false}
         animate={{ height: `calc(${progress}% - ${progress ? 0 : 0}px)` }}
         transition={{ type: 'spring', stiffness: 120, damping: 20 }}
@@ -581,12 +581,12 @@ function Timeline({ step, onGo }: { step: number; onGo: (i: number) => void }) {
                 aria-current={state === 'current' ? 'step' : undefined}
                 className="relative w-10 h-10 shrink-0"
               >
-                {state === 'current' && <span className="absolute inset-0 rounded-full bg-[#d4a017]/30 animate-ping" />}
+                {state === 'current' && <span className="absolute inset-0 rounded-full bg-gold/30 animate-ping" />}
                 <motion.span
                   className={cn(
                     'relative w-10 h-10 rounded-full border-2 flex items-center justify-center',
-                    state === 'done' && 'bg-[#d4a017] border-[#d4a017] text-black',
-                    state === 'current' && 'bg-neutral-950 border-[#d4a017] text-[#f5d77f]',
+                    state === 'done' && 'bg-gold border-gold text-ink',
+                    state === 'current' && 'bg-neutral-950 border-gold text-gold-soft',
                     state === 'todo' && 'bg-neutral-950 border-neutral-700 text-neutral-500'
                   )}
                   initial={false}
@@ -611,7 +611,7 @@ function Recap({ icon: Icon, label, sub, onEdit }: { icon: React.ElementType; la
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-2.5 min-w-0">
-        <Icon className="w-4 h-4 text-[#d4a017] mt-0.5 shrink-0" />
+        <Icon className="w-4 h-4 text-gold mt-0.5 shrink-0" />
         <div className="min-w-0">
           <p className="text-white truncate">{label}</p>
           {sub && <p className="text-[11px] text-neutral-500 truncate">{sub}</p>}
@@ -655,7 +655,7 @@ function ConflictModal({ conflict, onClose, onFix, onLogin }: { conflict: Confli
               <h2 id="conflict-title" className="text-lg font-bold text-white">
                 {isPhone ? 'Ce numéro a déjà un compte' : 'Cet e-mail a déjà un compte'}
               </h2>
-              <p className="text-sm font-mono text-[#f5d77f] mt-1 break-all">{conflict.value}</p>
+              <p className="text-sm font-mono text-gold-soft mt-1 break-all">{conflict.value}</p>
               <p className="text-sm text-neutral-400 mt-2">
                 {isPhone
                   ? 'Un numéro ne peut être utilisé que pour un seul compte ZAFF dans un même pays.'
@@ -664,7 +664,7 @@ function ConflictModal({ conflict, onClose, onFix, onLogin }: { conflict: Confli
               </p>
             </div>
             <div className="grid gap-2">
-              <button onClick={onLogin} className="h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-sm flex items-center justify-center gap-2">
+              <button onClick={onLogin} className="h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-sm flex items-center justify-center gap-2">
                 <LogIn className="w-4 h-4" /> C&apos;est mon compte, me connecter
               </button>
               <button onClick={onFix} className="h-12 rounded-2xl bg-neutral-900 border border-neutral-700 text-white text-sm font-semibold">
@@ -706,11 +706,11 @@ function Success({ shop, owner }: { shop: string; owner: string }) {
         <div>
           <p className="text-2xl font-black text-white">Bienvenue {owner} !</p>
           <p className="text-sm text-neutral-400 mt-1">
-            <strong className="text-[#f5d77f]">{shop}</strong> est prête.
+            <strong className="text-gold-soft">{shop}</strong> est prête.
           </p>
         </div>
         <p className="text-xs text-neutral-500 flex items-center justify-center gap-2">
-          <span className="w-4 h-4 border-2 border-[#d4a017]/40 border-t-[#d4a017] rounded-full animate-spin" /> Ouverture de votre espace…
+          <span className="w-4 h-4 border-2 border-gold/40 border-t-gold rounded-full animate-spin" /> Ouverture de votre espace…
         </p>
       </motion.div>
     </div>

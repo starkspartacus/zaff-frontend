@@ -81,7 +81,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-black overflow-hidden px-4 py-12">
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-[#d4a017]/15 to-transparent rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-gold/15 to-transparent rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-gradient-to-tl from-[#e5b83b]/10 to-transparent rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
 
@@ -93,14 +93,14 @@ export default function LoginPage() {
       >
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-[#d4a017] transition-colors mb-6 group"
+          className="inline-flex items-center gap-2 text-xs text-neutral-400 hover:text-gold transition-colors mb-6 group"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
           Retour à l&apos;accueil
         </Link>
 
         <div className="bg-neutral-950/80 backdrop-blur-xl border border-neutral-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/80 relative">
-          <div className="absolute -top-px left-12 right-12 h-px bg-gradient-to-r from-transparent via-[#d4a017]/60 to-transparent" />
+          <div className="absolute -top-px left-12 right-12 h-px bg-gradient-to-r from-transparent via-gold/60 to-transparent" />
 
           <div className="flex flex-col items-center text-center mb-6">
             <Logo size="lg" className="mb-4" />
@@ -119,13 +119,13 @@ export default function LoginPage() {
                 onClick={() => switchMode(id)}
                 className={cn(
                   'relative z-10 flex items-center justify-center gap-2 h-10 rounded-xl text-sm font-semibold transition-colors',
-                  mode === id ? 'text-black' : 'text-neutral-400 hover:text-white'
+                  mode === id ? 'text-ink' : 'text-neutral-400 hover:text-white'
                 )}
               >
                 {mode === id && (
                   <motion.span
                     layoutId="login-mode"
-                    className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-[#d4a017] to-[#f5d77f]"
+                    className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-gold to-gold-soft"
                     transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                   />
                 )}
@@ -154,7 +154,7 @@ export default function LoginPage() {
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-5 p-4 rounded-2xl bg-[#d4a017]/5 border border-[#d4a017]/30 space-y-2"
+              className="mb-5 p-4 rounded-2xl bg-gold/5 border border-gold/30 space-y-2"
             >
               <p className="text-sm text-neutral-300">Votre compte existe dans plusieurs boutiques. Laquelle ouvrir ?</p>
               {shops.map((shop) => (
@@ -163,9 +163,9 @@ export default function LoginPage() {
                   type="button"
                   disabled={isLoading}
                   onClick={() => submit(shop.slug)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-[#d4a017] text-left transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-gold text-left transition-colors"
                 >
-                  <Store className="w-4 h-4 text-[#d4a017]" />
+                  <Store className="w-4 h-4 text-gold" />
                   <span className="text-sm font-semibold text-white">{shop.name}</span>
                 </button>
               ))}
@@ -215,7 +215,7 @@ export default function LoginPage() {
                           setEmail(e.target.value);
                           setError(null);
                         }}
-                        className="pl-10 bg-neutral-900/80 border-neutral-800 text-white placeholder:text-neutral-600 focus-visible:ring-[#d4a017] rounded-xl h-12 text-base"
+                        className="pl-10 bg-neutral-900/80 border-neutral-800 text-white placeholder:text-neutral-600 focus-visible:ring-gold rounded-xl h-12 text-base"
                       />
                     </div>
                   </div>
@@ -237,7 +237,7 @@ export default function LoginPage() {
                     setPassword(e.target.value);
                     setError(null);
                   }}
-                  className="pl-10 pr-11 bg-neutral-900/80 border-neutral-800 text-white placeholder:text-neutral-600 focus-visible:ring-[#d4a017] rounded-xl h-12 text-base"
+                  className="pl-10 pr-11 bg-neutral-900/80 border-neutral-800 text-white placeholder:text-neutral-600 focus-visible:ring-gold rounded-xl h-12 text-base"
                 />
                 <button
                   type="button"
@@ -255,7 +255,7 @@ export default function LoginPage() {
                 type="submit"
                 disabled={isLoading}
                 glowColor="rgba(212, 160, 23, 0.4)"
-                className="w-full h-12 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-semibold rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                className="w-full h-12 bg-gradient-to-r from-gold to-gold-deep text-ink font-semibold rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
@@ -271,7 +271,7 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-5 border-t border-neutral-900 text-center text-sm text-neutral-400">
             Pas encore de boutique ?{' '}
-            <Link href="/register" className="text-[#d4a017] hover:underline font-semibold">
+            <Link href="/register" className="text-gold hover:underline font-semibold">
               Créer ma boutique gratuitement
             </Link>
           </div>

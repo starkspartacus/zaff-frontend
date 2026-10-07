@@ -58,7 +58,7 @@ function ContractView() {
               </a>
               <button
                 onClick={() => window.print()}
-                className="h-11 px-4 rounded-xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black text-sm font-bold flex items-center gap-1.5"
+                className="h-11 px-4 rounded-xl bg-gradient-to-r from-gold to-gold-deep text-ink text-sm font-bold flex items-center gap-1.5"
               >
                 <Printer className="w-4 h-4" /> Imprimer / PDF
               </button>

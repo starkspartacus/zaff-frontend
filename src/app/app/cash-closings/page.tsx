@@ -46,7 +46,7 @@ export default function OwnerCashClosingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Wallet className="w-6 h-6 text-[#d4a017]" /> Clôtures de caisse
+            <Wallet className="w-6 h-6 text-gold" /> Clôtures de caisse
           </h1>
           <p className="text-xs text-neutral-400 mt-0.5">Ce que chaque vendeur doit vous remettre, et les caisses à valider</p>
         </div>
@@ -64,7 +64,7 @@ export default function OwnerCashClosingsPage() {
       {/* À valider */}
       <section className="space-y-3">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <Lock className="w-4 h-4 text-[#d4a017]" /> À valider ({pending.length})
+          <Lock className="w-4 h-4 text-gold" /> À valider ({pending.length})
         </h2>
         {pending.length === 0 ? (
           <p className="text-sm text-neutral-500 rounded-2xl border border-dashed border-neutral-800 p-6 text-center">
@@ -74,7 +74,7 @@ export default function OwnerCashClosingsPage() {
           <AnimatedList>
             {pending.map((c) => (
               <AnimatedListItem key={c._id}>
-                <div className="rounded-3xl border border-[#d4a017]/30 bg-neutral-950 p-5 space-y-4">
+                <div className="rounded-3xl border border-gold/30 bg-neutral-950 p-5 space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <Avatar name={c.sellerName} />
@@ -85,7 +85,7 @@ export default function OwnerCashClosingsPage() {
                         </p>
                       </div>
                     </div>
-                    <p className="text-lg font-black text-[#f5d77f] shrink-0">{money(c.totalAmount, currency)}</p>
+                    <p className="text-lg font-black text-gold-soft shrink-0">{money(c.totalAmount, currency)}</p>
                   </div>
                   <PaymentBreakdown totals={c.totals} currency={currency} compact />
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-400">
@@ -98,7 +98,7 @@ export default function OwnerCashClosingsPage() {
                   <button
                     onClick={() => confirm(c)}
                     disabled={busyId === c._id}
-                    className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     <CheckCircle2 className="w-4 h-4" /> J&apos;ai reçu {money(c.declaredCash, currency)} en espèces
                     {c.totals.mobile > 0 && ` + ${money(c.totals.mobile, currency)} Mobile Money`}
@@ -113,7 +113,7 @@ export default function OwnerCashClosingsPage() {
       {/* Caisses ouvertes */}
       <section className="space-y-3">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <Clock className="w-4 h-4 text-[#d4a017]" /> Caisses encore ouvertes ({open.length})
+          <Clock className="w-4 h-4 text-gold" /> Caisses encore ouvertes ({open.length})
         </h2>
         {open.length === 0 ? (
           <p className="text-sm text-neutral-500 rounded-2xl border border-dashed border-neutral-800 p-6 text-center">
@@ -133,7 +133,7 @@ export default function OwnerCashClosingsPage() {
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold text-[#f5d77f]">{money(r.totalAmount, currency)}</p>
+                  <p className="text-sm font-bold text-gold-soft">{money(r.totalAmount, currency)}</p>
                 </div>
                 <PaymentBreakdown totals={r.totals} currency={currency} compact />
               </BlurFade>
@@ -145,7 +145,7 @@ export default function OwnerCashClosingsPage() {
       {/* Historique */}
       <section className="space-y-3">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <HandCoins className="w-4 h-4 text-[#d4a017]" /> Validées (30 derniers jours)
+          <HandCoins className="w-4 h-4 text-gold" /> Validées (30 derniers jours)
         </h2>
         <div className="rounded-3xl border border-neutral-800 bg-neutral-950 overflow-hidden">
           {validated.length === 0 ? (
@@ -162,7 +162,7 @@ export default function OwnerCashClosingsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     {c.cashDifference !== 0 && <DifferenceBadge difference={c.cashDifference} currency={currency} className="text-[10px] py-0.5" />}
-                    <p className="text-sm font-bold text-[#f5d77f]">{money(c.totalAmount, currency)}</p>
+                    <p className="text-sm font-bold text-gold-soft">{money(c.totalAmount, currency)}</p>
                   </div>
                 </div>
               ))}
@@ -176,9 +176,9 @@ export default function OwnerCashClosingsPage() {
 
 function Kpi({ label, value, currency, highlight = false }: { label: string; value: number; currency?: string; highlight?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-4 ${highlight ? 'border-[#d4a017]/40 bg-[#d4a017]/5' : 'border-neutral-800 bg-neutral-950'}`}>
+    <div className={`rounded-2xl border p-4 ${highlight ? 'border-gold/40 bg-gold/5' : 'border-neutral-800 bg-neutral-950'}`}>
       <p className="text-[11px] uppercase tracking-wider text-neutral-500">{label}</p>
-      <p className={`text-2xl font-black mt-1 ${highlight ? 'text-[#f5d77f]' : 'text-white'}`}>
+      <p className={`text-2xl font-black mt-1 ${highlight ? 'text-gold-soft' : 'text-white'}`}>
         <NumberTicker value={value} suffix={currency} />
       </p>
     </div>
@@ -187,7 +187,7 @@ function Kpi({ label, value, currency, highlight = false }: { label: string; val
 
 function Avatar({ name }: { name: string }) {
   return (
-    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#d4a017] to-amber-200 text-black font-bold text-xs flex items-center justify-center shrink-0">
+    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-gold to-amber-200 text-ink font-bold text-xs flex items-center justify-center shrink-0">
       {name.charAt(0).toUpperCase()}
     </div>
   );

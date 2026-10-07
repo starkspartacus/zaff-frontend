@@ -34,7 +34,7 @@ function Verify() {
         {!code && <Notice tone="error" icon={XCircle} title="Lien incomplet" text="Scannez à nouveau le QR code de la fiche de garantie." />}
         {code && isLoading && (
           <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-10 text-center">
-            <div className="w-8 h-8 mx-auto rounded-full border-2 border-[#d4a017] border-t-transparent animate-spin" />
+            <div className="w-8 h-8 mx-auto rounded-full border-2 border-gold border-t-transparent animate-spin" />
             <p className="text-sm text-neutral-400 mt-4">Vérification de la garantie…</p>
           </div>
         )}
@@ -89,7 +89,7 @@ function Result({ r }: { r: WarrantyCheck }) {
       </div>
 
       <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-5 space-y-3">
-        <p className="text-xs font-bold uppercase tracking-wider text-[#d4a017]">Appareil</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-gold">Appareil</p>
         <p className="text-lg font-bold text-white">{r.product.brand && !r.product.name.toLowerCase().startsWith(r.product.brand.toLowerCase()) ? `${r.product.brand} ${r.product.name}` : r.product.name}</p>
         <dl className="grid grid-cols-2 gap-y-2 text-sm">
           {r.product.model && <Item label="Version" value={r.product.model} />}
@@ -106,15 +106,15 @@ function Result({ r }: { r: WarrantyCheck }) {
       </div>
 
       <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-5 flex items-center gap-3">
-        <div className="w-11 h-11 rounded-2xl bg-[#d4a017]/10 border border-[#d4a017]/30 flex items-center justify-center shrink-0">
-          <Store className="w-5 h-5 text-[#d4a017]" />
+        <div className="w-11 h-11 rounded-2xl bg-gold/10 border border-gold/30 flex items-center justify-center shrink-0">
+          <Store className="w-5 h-5 text-gold" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-white truncate">{r.shop.name}</p>
           {r.shop.city && <p className="text-xs text-neutral-500 truncate">{r.shop.city}</p>}
         </div>
         {r.shop.phone && (
-          <a href={`tel:${r.shop.phone}`} className="h-11 px-4 rounded-2xl bg-[#d4a017] text-black text-sm font-bold flex items-center gap-1.5 shrink-0">
+          <a href={`tel:${r.shop.phone}`} className="h-11 px-4 rounded-2xl bg-gold text-ink text-sm font-bold flex items-center gap-1.5 shrink-0">
             <Phone className="w-4 h-4" /> <span className="hidden min-[380px]:inline">{formatInternational(r.shop.phone)}</span>
           </a>
         )}
@@ -138,7 +138,7 @@ function Notice({ tone, icon: Icon, title, text }: { tone: 'error'; icon: React.
       <Icon className="w-12 h-12 mx-auto text-red-400" />
       <p className="text-xl font-black text-white mt-3">{title}</p>
       <p className="text-sm text-neutral-400 mt-1">{text}</p>
-      <Link href="/" className="inline-block mt-4 text-xs text-[#d4a017] hover:underline">
+      <Link href="/" className="inline-block mt-4 text-xs text-gold hover:underline">
         Découvrir ZAFF
       </Link>
     </div>

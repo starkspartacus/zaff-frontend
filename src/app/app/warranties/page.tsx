@@ -82,7 +82,7 @@ export default function WarrantiesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-[#d4a017]" />
+            <ShieldCheck className="w-6 h-6 text-gold" />
             Garanties & Traçabilité IMEI / N° Série
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
@@ -120,7 +120,7 @@ export default function WarrantiesPage() {
               {isLoading ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-neutral-500">
-                    <div className="w-6 h-6 border-2 border-[#d4a017] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     Chargement du registre des garanties...
                   </td>
                 </tr>
@@ -137,7 +137,7 @@ export default function WarrantiesPage() {
 
                   return (
                     <tr key={w._id} className="hover:bg-neutral-900/40 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-[#f5d77f]">
+                      <td className="py-3.5 px-4 font-mono font-bold text-gold-soft">
                         {w.serialNumber || '—'}
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-white">

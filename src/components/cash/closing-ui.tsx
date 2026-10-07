@@ -31,11 +31,11 @@ export function PaymentBreakdown({ totals, currency, compact = false }: { totals
               key={k}
               className={cn(
                 'rounded-2xl border p-3',
-                k === 'cash' ? 'border-[#d4a017]/40 bg-[#d4a017]/5' : 'border-sky-500/30 bg-sky-500/5'
+                k === 'cash' ? 'border-gold/40 bg-gold/5' : 'border-sky-500/30 bg-sky-500/5'
               )}
             >
               <p className="text-[11px] text-neutral-400 flex items-center gap-1.5">
-                <Icon className={cn('w-3.5 h-3.5', k === 'cash' ? 'text-[#d4a017]' : 'text-sky-400')} /> {PAYMENT_LABELS[k]}
+                <Icon className={cn('w-3.5 h-3.5', k === 'cash' ? 'text-gold' : 'text-sky-400')} /> {PAYMENT_LABELS[k]}
               </p>
               <p className={cn('font-black text-white mt-0.5', compact ? 'text-base' : 'text-xl')}>{money(totals[k], currency)}</p>
             </div>

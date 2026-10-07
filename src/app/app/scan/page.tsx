@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
+import { ProductVisual } from '@/components/products/product-visual';
 import { scanFeedback } from '@/components/scan/feedback';
 import { errorMessage, type CreditNoteInfo, type Product, type Sale, type ScanLookup } from '@/lib/types';
 import { lookupCreditNote, useCreateSale, useMyStats, useSellUnit } from '@/lib/queries';
@@ -53,7 +54,10 @@ export default function ScanSellPage() {
 
 function ScanSell() {
   const { establishment } = useAuth();
-  const creditParam = useSearchParams().get('credit');
+  const params = useSearchParams();
+  const creditParam = params.get('credit');
+  /** `?code=` : appareil choisi dans la vitrine, recherché comme s'il venait d'être scanné */
+  const codeParam = params.get('code');
   const currency = establishment?.currency || 'F CFA';
   const formatPrice = (v: number) => `${(v || 0).toLocaleString('fr-FR')} ${currency}`;
 
@@ -116,6 +120,12 @@ function ScanSell() {
       setStep({ kind: 'error', message: errorMessage(err) });
     }
   };
+  useEffect(() => {
+    if (!codeParam) return;
+    const t = setTimeout(() => handleScan(codeParam), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule recherche à l'ouverture
+  }, [codeParam]);
 
   const handleSell = async () => {
     if (step.kind !== 'found') return;
@@ -171,16 +181,16 @@ function ScanSell() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <ScanLine className="w-6 h-6 text-[#d4a017]" /> Vendre
+            <ScanLine className="w-6 h-6 text-gold" /> Vendre
           </h1>
           <p className="text-xs text-neutral-400 mt-0.5">Scannez l&apos;appareil à vendre</p>
         </div>
         <Link
           href="/app/my-activity"
-          className="text-right px-3 py-2 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-[#d4a017] transition-colors"
+          className="text-right px-3 py-2 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-gold transition-colors"
         >
           <p className="text-[10px] uppercase tracking-wider text-neutral-500">Mes ventes du jour</p>
-          <p className="text-sm font-bold text-[#f5d77f]">
+          <p className="text-sm font-bold text-gold-soft">
             {today ? (
               <>
                 {today.count} · <NumberTicker value={today.revenue} suffix={currency} />
@@ -195,15 +205,15 @@ function ScanSell() {
       <BarcodeScanner onScan={handleScan} paused={busy} autoStartCamera={false} />
 
       {credit && (
-        <BlurFade className="rounded-2xl border border-[#d4a017]/40 bg-[#d4a017]/5 px-4 py-3 flex items-center justify-between gap-3">
+        <BlurFade className="rounded-2xl border border-gold/40 bg-gold/5 px-4 py-3 flex items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-sm text-white min-w-0">
-            <Ticket className="w-4 h-4 text-[#d4a017] shrink-0" />
+            <Ticket className="w-4 h-4 text-gold shrink-0" />
             <span className="truncate">
               Avoir <strong className="font-mono whitespace-nowrap">{credit.code}</strong> appliqué
             </span>
           </span>
           <span className="flex items-center gap-2 shrink-0">
-            <strong className="text-[#f5d77f] whitespace-nowrap">{formatPrice(credit.balance)}</strong>
+            <strong className="text-gold-soft whitespace-nowrap">{formatPrice(credit.balance)}</strong>
             <button onClick={() => setCredit(null)} className="p-1 text-neutral-500 hover:text-white" aria-label="Retirer l'avoir">
               <X className="w-4 h-4" />
             </button>
@@ -222,7 +232,7 @@ function ScanSell() {
 
       {step.kind === 'loading' && (
         <div className="rounded-3xl border border-neutral-800 p-8 text-center text-neutral-400 text-sm">
-          <div className="w-6 h-6 border-2 border-[#d4a017] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-2" />
           Recherche de <span className="font-mono text-white">{step.code}</span>…
         </div>
       )}
@@ -271,7 +281,7 @@ function ScanSell() {
           <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto" />
           <div>
             <p className="text-2xl font-black text-white">Vendu !</p>
-            <p className="text-3xl font-black text-[#f5d77f] mt-1">{formatPrice(step.sale.total)}</p>
+            <p className="text-3xl font-black text-gold-soft mt-1">{formatPrice(step.sale.total)}</p>
           </div>
           <p className="text-sm text-neutral-300">
             {step.productName}
@@ -280,14 +290,14 @@ function ScanSell() {
           <p className="text-xs text-neutral-400">
             Facture <span className="font-mono text-white">#{step.sale.invoiceNumber}</span> · stock mis à jour
             {step.sale.creditNoteAmount ? (
-              <span className="block mt-1 text-[#f5d77f]">
+              <span className="block mt-1 text-gold-soft">
                 Avoir {step.sale.creditNoteCode} : −{formatPrice(step.sale.creditNoteAmount)} · encaissé {formatPrice(step.sale.total - step.sale.creditNoteAmount)}
               </span>
             ) : null}
           </p>
           <Link
             href={`/contract?sale=${step.sale._id}`}
-            className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-sm flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-sm flex items-center justify-center gap-2"
           >
             <FileSignature className="w-4 h-4" /> Contrat et garantie du client
           </Link>
@@ -321,9 +331,9 @@ function ScanAgainButton({ onClick, label = 'Scanner à nouveau' }: { onClick: (
     <button
       onClick={onClick}
       autoFocus
-      className="w-full h-12 rounded-2xl bg-neutral-900 border border-neutral-700 text-white font-semibold text-sm hover:border-[#d4a017] flex items-center justify-center gap-2"
+      className="w-full h-12 rounded-2xl bg-neutral-900 border border-neutral-700 text-white font-semibold text-sm hover:border-gold flex items-center justify-center gap-2"
     >
-      <ScanLine className="w-4 h-4 text-[#d4a017]" /> {label}
+      <ScanLine className="w-4 h-4 text-gold" /> {label}
     </button>
   );
 }
@@ -407,11 +417,12 @@ function FoundCard(props: {
   }
 
   return (
-    <div className="relative rounded-3xl border border-[#d4a017]/40 bg-neutral-950 p-5 sm:p-6 space-y-5 shadow-xl shadow-[#d4a017]/5">
+    <div className="relative rounded-3xl border border-gold/40 bg-neutral-950 p-5 sm:p-6 space-y-5 shadow-xl shadow-gold/5">
       <BorderBeam size={120} duration={5} />
       {/* Fiche produit */}
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <ProductVisual imageId={product.imageId} category={product.category} brand={product.brand} name={product.name} className="w-20 h-20 shrink-0" />
+        <div className="min-w-0 flex-1">
           <p className="text-lg font-bold text-white leading-tight">{product.name}</p>
           {details && <p className="text-sm text-neutral-400 mt-0.5">{details}</p>}
           {data.type === 'unit' && (
@@ -433,11 +444,11 @@ function FoundCard(props: {
             min={0}
             value={props.price || ''}
             onChange={(e) => props.setPrice(Number(e.target.value) || 0)}
-            className="w-full h-14 text-center text-2xl font-black rounded-2xl bg-neutral-900 border border-[#d4a017] text-[#f5d77f] focus:outline-none"
+            className="w-full h-14 text-center text-2xl font-black rounded-2xl bg-neutral-900 border border-gold text-gold-soft focus:outline-none"
             autoFocus
           />
         ) : (
-          <p className="text-4xl font-black text-[#f5d77f]">{formatPrice(props.price)}</p>
+          <p className="text-4xl font-black text-gold-soft">{formatPrice(props.price)}</p>
         )}
         <button
           onClick={() => props.setEditPrice(!props.editPrice)}
@@ -449,7 +460,7 @@ function FoundCard(props: {
 
       {/* Avoir */}
       {props.creditBalance > 0 ? (
-        <div className="rounded-2xl bg-[#d4a017]/5 border border-[#d4a017]/30 px-4 py-3 space-y-1 text-sm">
+        <div className="rounded-2xl bg-gold/5 border border-gold/30 px-4 py-3 space-y-1 text-sm">
           <div className="flex items-center justify-between gap-3 text-neutral-300">
             <span>Avoir déduit</span>
             <span className="whitespace-nowrap">−{formatPrice(Math.min(props.creditBalance, props.price))}</span>
@@ -465,7 +476,7 @@ function FoundCard(props: {
             value={creditCode}
             onChange={(e) => setCreditCode(e.target.value.toUpperCase())}
             placeholder="Code de l'avoir (ex. AV-1001)"
-            className="flex-1 h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm font-mono text-white focus:outline-none focus:border-[#d4a017]"
+            className="flex-1 h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm font-mono text-white focus:outline-none focus:border-gold"
           />
           <button
             onClick={() => creditCode.trim() && props.onApplyCredit(creditCode.trim())}
@@ -476,7 +487,7 @@ function FoundCard(props: {
         </div>
       ) : (
         <button onClick={() => setShowCredit(true)} className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5">
-          <Ticket className="w-4 h-4 text-[#d4a017]" /> Le client a un avoir
+          <Ticket className="w-4 h-4 text-gold" /> Le client a un avoir
         </button>
       )}
 
@@ -490,7 +501,7 @@ function FoundCard(props: {
               key={m.id}
               onClick={() => props.setPaymentMethod(m.id)}
               className={`h-14 rounded-2xl border text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-all ${
-                active ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+                active ? 'bg-gold/15 border-gold text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
               }`}
             >
               <Icon className="w-4 h-4" /> {m.label}
@@ -506,7 +517,7 @@ function FoundCard(props: {
           className="w-full px-4 py-3 flex items-center justify-between text-xs text-neutral-300"
         >
           <span className="flex items-center gap-2">
-            <UserPlus className="w-4 h-4 text-[#d4a017]" /> Client et garantie (facultatif)
+            <UserPlus className="w-4 h-4 text-gold" /> Client et garantie (facultatif)
           </span>
           <ChevronDown className={`w-4 h-4 transition-transform ${props.showCustomer ? 'rotate-180' : ''}`} />
         </button>
@@ -516,20 +527,20 @@ function FoundCard(props: {
               value={props.customerName}
               onChange={(e) => props.setCustomerName(e.target.value)}
               placeholder="Nom du client"
-              className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-[#d4a017]"
+              className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold"
             />
             <input
               type="tel"
               value={props.customerPhone}
               onChange={(e) => props.setCustomerPhone(e.target.value)}
               placeholder="Téléphone"
-              className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-[#d4a017]"
+              className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold"
             />
             {data.type === 'unit' && (
               <select
                 value={props.warrantyMonths}
                 onChange={(e) => props.setWarrantyMonths(Number(e.target.value))}
-                className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-[#d4a017]"
+                className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold"
               >
                 <option value={0}>Sans garantie</option>
                 <option value={3}>Garantie 3 mois</option>
@@ -556,7 +567,7 @@ function FoundCard(props: {
           <button
             onClick={props.onSell}
             disabled={props.isSelling}
-            className="col-span-2 h-14 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold text-base hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#d4a017]/20"
+            className="col-span-2 h-14 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-base hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-gold/20"
           >
             {props.isSelling ? (
               <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />

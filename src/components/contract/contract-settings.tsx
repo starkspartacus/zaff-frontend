@@ -105,8 +105,8 @@ function ContractForm({ saved, defaults }: { saved: ContractSettings; defaults: 
       {/* Choix du modèle */}
       <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-5 space-y-4">
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/30 flex items-center justify-center shrink-0">
-            <FileSignature className="w-4 h-4 text-[#d4a017]" />
+          <div className="w-9 h-9 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center shrink-0">
+            <FileSignature className="w-4 h-4 text-gold" />
           </div>
           <div>
             <h2 className="text-sm font-bold text-white">Contrat de vente et garantie</h2>
@@ -137,7 +137,7 @@ function ContractForm({ saved, defaults }: { saved: ContractSettings; defaults: 
       {/* Informations légales */}
       <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-5 space-y-3">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-[#d4a017]" /> Informations légales de la boutique
+          <Building2 className="w-4 h-4 text-gold" /> Informations légales de la boutique
         </h2>
         <p className="text-xs text-neutral-500">Imprimées à l&apos;article « Identification du vendeur ». Laissez vide ce que vous n&apos;avez pas : une ligne en pointillés sera imprimée.</p>
         <div className="grid sm:grid-cols-2 gap-3">
@@ -161,7 +161,7 @@ function ContractForm({ saved, defaults }: { saved: ContractSettings; defaults: 
           >
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-sm font-bold text-white">Texte du contrat</h2>
-              <button onClick={resetAll} className="text-xs text-neutral-400 hover:text-[#f5d77f] flex items-center gap-1">
+              <button onClick={resetAll} className="text-xs text-neutral-400 hover:text-gold-soft flex items-center gap-1">
                 <RotateCcw className="w-3.5 h-3.5" /> Revenir au modèle
               </button>
             </div>
@@ -175,7 +175,7 @@ function ContractForm({ saved, defaults }: { saved: ContractSettings; defaults: 
               <p className="flex flex-wrap gap-x-3 gap-y-1">
                 {VARIABLES.map(([v, l]) => (
                   <span key={v}>
-                    <code className="text-[#f5d77f]">{v}</code> {l}
+                    <code className="text-gold-soft">{v}</code> {l}
                   </span>
                 ))}
               </p>
@@ -198,14 +198,14 @@ function ContractForm({ saved, defaults }: { saved: ContractSettings; defaults: 
                         role="switch"
                         aria-checked={a.enabled}
                         aria-label={`Imprimer l'article ${a.title}`}
-                        className={cn('relative w-9 h-5 rounded-full shrink-0 transition-colors', a.enabled ? 'bg-[#d4a017]' : 'bg-neutral-700', auto && 'opacity-50')}
+                        className={cn('relative w-9 h-5 rounded-full shrink-0 transition-colors', a.enabled ? 'bg-gold' : 'bg-neutral-700', auto && 'opacity-50')}
                       >
                         <span className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all', a.enabled ? 'left-[18px]' : 'left-0.5')} />
                       </button>
                       <button onClick={() => setOpen(isOpen ? null : a.id)} className="flex-1 min-w-0 text-left">
                         <span className="block truncate text-sm text-white">{a.title}</span>
                         {(auto || a.kind === 'returns') && (
-                          <span className="text-[10px] text-[#f5d77f] flex items-center gap-1">
+                          <span className="text-[10px] text-gold-soft flex items-center gap-1">
                             <Lock className="w-3 h-3" /> {a.kind === 'returns' ? 'Rempli depuis vos règles de retour' : 'Rempli automatiquement à chaque vente'}
                           </span>
                         )}
@@ -249,7 +249,7 @@ function ContractForm({ saved, defaults }: { saved: ContractSettings; defaults: 
                   </div>
                 );
               })}
-              <button onClick={addArticle} className="w-full h-11 rounded-2xl border border-dashed border-neutral-700 text-sm text-neutral-300 hover:border-[#d4a017] flex items-center justify-center gap-2">
+              <button onClick={addArticle} className="w-full h-11 rounded-2xl border border-dashed border-neutral-700 text-sm text-neutral-300 hover:border-gold flex items-center justify-center gap-2">
                 <Plus className="w-4 h-4" /> Ajouter un article
               </button>
             </div>
@@ -267,7 +267,7 @@ function ContractForm({ saved, defaults }: { saved: ContractSettings; defaults: 
             role="switch"
             aria-checked={c.warrantyCard}
             onClick={() => update({ warrantyCard: !c.warrantyCard })}
-            className={cn('relative w-11 h-6 rounded-full transition-colors shrink-0', c.warrantyCard ? 'bg-[#d4a017]' : 'bg-neutral-700')}
+            className={cn('relative w-11 h-6 rounded-full transition-colors shrink-0', c.warrantyCard ? 'bg-gold' : 'bg-neutral-700')}
           >
             <span className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all', c.warrantyCard ? 'left-[22px]' : 'left-0.5')} />
           </button>
@@ -288,7 +288,7 @@ function ContractForm({ saved, defaults }: { saved: ContractSettings; defaults: 
             <button
               onClick={submit}
               disabled={!dirty || save.isPending}
-              className="h-11 px-5 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-sm disabled:opacity-40"
+              className="h-11 px-5 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-sm disabled:opacity-40"
             >
               {save.isPending ? 'Enregistrement…' : 'Enregistrer'}
             </button>
@@ -329,18 +329,18 @@ function ModeCard({ active, onClick, icon: Icon, title, text }: { active: boolea
       aria-pressed={active}
       className={cn(
         'relative text-left rounded-2xl border p-4 transition-colors',
-        active ? 'border-[#d4a017] bg-[#d4a017]/10' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-600'
+        active ? 'border-gold bg-gold/10' : 'border-neutral-800 bg-neutral-900/50 hover:border-neutral-600'
       )}
     >
-      {active && <CheckCircle2 className="absolute top-3 right-3 w-5 h-5 text-[#d4a017]" />}
-      <Icon className={cn('w-5 h-5 mb-2', active ? 'text-[#f5d77f]' : 'text-neutral-500')} />
+      {active && <CheckCircle2 className="absolute top-3 right-3 w-5 h-5 text-gold" />}
+      <Icon className={cn('w-5 h-5 mb-2', active ? 'text-gold-soft' : 'text-neutral-500')} />
       <p className="text-sm font-bold text-white">{title}</p>
       <p className="text-xs text-neutral-400 mt-0.5">{text}</p>
     </button>
   );
 }
 
-const inputCls = 'w-full px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#d4a017]';
+const inputCls = 'w-full px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-gold';
 
 function Field({ label, value, onChange, placeholder, max }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; max: number }) {
   return (

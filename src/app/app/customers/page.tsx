@@ -133,7 +133,7 @@ export default function CustomersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Users className="w-6 h-6 text-[#d4a017]" />
+            <Users className="w-6 h-6 text-gold" />
             Clients & Partenaires Revendeurs
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
@@ -156,7 +156,7 @@ export default function CustomersPage() {
           <GlowButton
             onClick={openCreateModal}
             glowColor="rgba(212, 160, 23, 0.4)"
-            className="px-4 py-2 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shrink-0 shadow-md shadow-[#d4a017]/20"
+            className="px-4 py-2 bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shrink-0 shadow-md shadow-gold/20"
           >
             <UserPlus className="w-4 h-4" />
             Nouveau Client
@@ -176,7 +176,7 @@ export default function CustomersPage() {
             onClick={() => setFilterType(tab.id as any)}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               filterType === tab.id
-                ? 'bg-[#d4a017] text-black'
+                ? 'bg-gold text-ink'
                 : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
             }`}
           >
@@ -203,7 +203,7 @@ export default function CustomersPage() {
               {isLoading ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-neutral-500">
-                    <div className="w-6 h-6 border-2 border-[#d4a017] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     Chargement des contacts...
                   </td>
                 </tr>
@@ -220,13 +220,13 @@ export default function CustomersPage() {
                       <div className="font-semibold text-white">{c.name}</div>
                       {c.companyName && (
                         <div className="text-[11px] text-neutral-400 flex items-center gap-1">
-                          <Building className="w-3 h-3 text-[#d4a017]" /> {c.companyName}
+                          <Building className="w-3 h-3 text-gold" /> {c.companyName}
                         </div>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
                       {c.isReseller ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#d4a017]/15 text-[#f5d77f] border border-[#d4a017]/30">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gold/15 text-gold-soft border border-gold/30">
                           <Star className="w-3 h-3 fill-current" /> Revendeur B2B
                         </span>
                       ) : (
@@ -347,7 +347,7 @@ export default function CustomersPage() {
                   id="isResellerBox"
                   checked={isReseller}
                   onChange={(e) => setIsReseller(e.target.checked)}
-                  className="w-4 h-4 accent-[#d4a017]"
+                  className="w-4 h-4 accent-gold"
                 />
                 <label htmlFor="isResellerBox" className="text-xs text-neutral-300">
                   Attribuer le statut Revendeur (Tarif Préférentiel Grossiste)
@@ -365,7 +365,7 @@ export default function CustomersPage() {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-[#d4a017] text-black font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-[#d4a017]/20"
+                className="px-5 py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-gold/20"
               >
                 Enregistrer Contact
               </button>

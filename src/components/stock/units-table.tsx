@@ -45,7 +45,7 @@ export function UnitsTable({ search, canManage }: { search: string; canManage: b
             key={f.id}
             onClick={() => setStatus(f.id)}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap ${
-              status === f.id ? 'bg-[#d4a017] text-black' : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
+              status === f.id ? 'bg-gold text-ink' : 'bg-neutral-900 text-neutral-400 border border-neutral-800 hover:text-white'
             }`}
           >
             {f.label}

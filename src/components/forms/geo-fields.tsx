@@ -91,7 +91,7 @@ export function PhoneInput({
           aria-invalid={invalid}
           className={cn(
             'w-full h-12 pl-3.5 pr-10 rounded-xl bg-neutral-900 border text-base font-semibold tracking-wide text-white placeholder:text-neutral-600 placeholder:font-normal focus:outline-none',
-            invalid ? 'border-red-500/60' : 'border-neutral-800 focus:border-[#d4a017]'
+            invalid ? 'border-red-500/60' : 'border-neutral-800 focus:border-gold'
           )}
         />
         {valid && <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-400" aria-label="Numéro valide" />}
@@ -112,7 +112,7 @@ export function CommunePicker({ communes, value, onChange, invalid }: { communes
           aria-pressed={value === c}
           className={cn(
             'h-11 px-2 rounded-xl border text-sm font-medium transition-colors',
-            value === c ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-600'
+            value === c ? 'bg-gold/15 border-gold text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-600'
           )}
         >
           {c}

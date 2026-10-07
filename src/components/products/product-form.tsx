@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -27,12 +27,18 @@ import {
   Watch,
   Cable,
   Wand2,
+  Camera,
+  ImageOff,
+  Loader2,
+  Globe2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useBrands, useCategories, useDeviceCatalog, useProducts, useReferenceCatalog, type CategoryProfile, type DeviceModel } from '@/lib/queries';
 import { CONDITION_LABELS, type ProductCondition } from '@/lib/contract';
 import { errorMessage, type Category, type Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { imageUrl, uploadSharedImage, useSharedImages } from '@/lib/images';
+import { ProductVisual } from './product-visual';
 import { fieldErrors, ProductFormSchema } from '@/lib/schemas';
 
 /**
@@ -141,6 +147,12 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   const [hasSerialNumbers, setHasSerialNumbers] = useState(compact ? true : initial ? !!initial.hasSerialNumbers : true);
   const [stockQuantity, setStockQuantity] = useState(String(initial?.stockQuantity ?? 0));
   const [minStockAlert, setMinStockAlert] = useState(String(initial?.minStockAlert ?? 3));
+  const [chosenImage, setChosenImage] = useState<string | null>(initial?.imageId || null);
+  /** L'utilisateur a choisi lui-même (photo ou « sans photo ») : plus de choix automatique */
+  const [imageTouched, setImageTouched] = useState(!!initial);
+  const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -169,6 +181,37 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   const effectiveName = nameTouched ? name : autoName(brand, model);
   const effectiveSku = skuTouched ? sku : `${autoSku([brand, model, variant, color])}-${skuSuffix}`;
   const fullDesignation = [effectiveName, variant, color].filter(Boolean).join(' · ');
+
+  // Photos partagées par toutes les boutiques pour ce modèle (la bonne couleur d'abord)
+  const shared = useSharedImages({ brand, model: effectiveName, color, category: slug });
+  const sharedImages = shared.data ?? [];
+  // Tant que l'utilisateur n'a rien choisi : la meilleure photo partagée de ce modèle
+  const imageId = imageTouched ? chosenImage : sharedImages[0]?.id ?? null;
+  const setImageId = (id: string | null) => {
+    setChosenImage(id);
+    setImageTouched(true);
+  };
+
+  const onPhoto = async (file?: File | null) => {
+    if (!file) return;
+    if (!brand.trim() || !effectiveName.trim()) {
+      setImageError("Choisissez d'abord la marque et le modèle : la photo leur sera associée.");
+      return;
+    }
+    setUploading(true);
+    setImageError(null);
+    try {
+      const img = await uploadSharedImage(file, { brand: brand.trim(), model: effectiveName.trim(), color: color.trim() || undefined, category: slug || undefined });
+      setImageId(img.id);
+      setImageTouched(true);
+      await queryClient.invalidateQueries({ queryKey: ['images'] });
+    } catch (err) {
+      setImageError(errorMessage(err));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
   const duplicate = !initial
     ? products.find(
@@ -247,6 +290,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
         color: color.trim() || undefined,
         condition,
         accessories: accessories.join(', ') || undefined,
+        imageId: imageId || (initial?.imageId ? null : undefined),
         purchasePrice: cost,
         salePrice: sale,
         resellerPrice: Number(resellerPrice) || 0,
@@ -273,10 +317,8 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
     <form onSubmit={submit} className="space-y-5" noValidate>
       {/* Aperçu vivant de la fiche */}
       <div className="sticky top-0 z-10 -mx-1 px-1 pb-2 bg-neutral-950">
-        <div className="rounded-2xl border border-[#d4a017]/30 bg-[#d4a017]/5 px-4 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#d4a017]/15 flex items-center justify-center shrink-0">
-            <CategoryIcon icon={refCat?.icon} className="w-5 h-5 text-[#f5d77f]" />
-          </div>
+        <div className="rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3 flex items-center gap-3">
+          <ProductVisual imageId={imageId} category={slug} brand={brand} name={fullDesignation} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className={cn('text-sm font-bold truncate', fullDesignation ? 'text-white' : 'text-neutral-500')}>
               {fullDesignation || 'Votre produit apparaîtra ici'}
@@ -294,7 +336,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
           <div className="flex-1">
             Ce produit existe déjà : <strong>{[duplicate.name, duplicate.model, duplicate.color].filter(Boolean).join(' · ')}</strong> ({duplicate.stockQuantity} en stock).
             {onUseExisting && (
-              <button type="button" onClick={() => onUseExisting(duplicate)} className="block mt-1.5 font-bold text-[#f5d77f] underline">
+              <button type="button" onClick={() => onUseExisting(duplicate)} className="block mt-1.5 font-bold text-gold-soft underline">
                 Utiliser ce produit
               </button>
             )}
@@ -315,7 +357,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
                 aria-pressed={on}
                 className={cn(
                   'h-[4.5rem] rounded-2xl border px-1 flex flex-col items-center justify-center gap-1 text-[11px] font-semibold leading-tight text-center transition-colors',
-                  on ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-600'
+                  on ? 'bg-gold/15 border-gold text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-600'
                 )}
               >
                 <CategoryIcon icon={r.icon} className="w-5 h-5" />
@@ -355,8 +397,78 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
         <Picker label="Couleur" icon={Palette} value={color} onChange={setColor} options={colorOptions} placeholder={`Ex. : ${colorOptions[0] || 'Noir'}`} max={12} />
       </Section>
 
+      {/* 4. Photo (base partagée par toutes les boutiques) */}
+      <Section
+        n={4}
+        title="Photo"
+        subtitle="Partagée avec toutes les boutiques ZAFF : une photo ajoutée une fois sert à tout le monde"
+        done={!!imageId}
+        locked={!brand || !effectiveName}
+        lockedText="Choisissez la marque et le modèle pour voir les photos disponibles."
+      >
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {sharedImages.map((img) => {
+            const on = imageId === img.id;
+            return (
+              <button
+                key={img.id}
+                type="button"
+                onClick={() => {
+                  setImageId(img.id);
+                  setImageTouched(true);
+                }}
+                aria-pressed={on}
+                title={[img.color, img.establishmentName && `ajoutée par ${img.establishmentName}`].filter(Boolean).join(' · ')}
+                className={cn('relative aspect-square rounded-2xl border-2 overflow-hidden transition-colors', on ? 'border-gold' : 'border-neutral-800 hover:border-neutral-600')}
+              >
+                <ProductVisual src={imageUrl(img.id)} className="absolute inset-0" rounded="rounded-none" name={img.model} />
+                {img.color && <span className="absolute bottom-1 left-1 right-1 truncate rounded-md bg-black/60 px-1 text-[9px] font-semibold text-white theme-fixed">{img.color}</span>}
+                {on && (
+                  <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
+                    <Check className="w-3 h-3 text-ink" />
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="aspect-square rounded-2xl border-2 border-dashed border-neutral-700 text-neutral-400 hover:border-gold hover:text-gold flex flex-col items-center justify-center gap-1 text-[11px] font-semibold"
+          >
+            {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
+            {uploading ? 'Envoi…' : 'Prendre / ajouter'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setImageId(null);
+              setImageTouched(true);
+            }}
+            aria-pressed={!imageId}
+            className={cn(
+              'aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 text-[11px] font-semibold',
+              !imageId ? 'border-gold text-gold-soft' : 'border-neutral-800 text-neutral-500 hover:border-neutral-600'
+            )}
+          >
+            <ImageOff className="w-6 h-6" /> Sans photo
+          </button>
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
+        <p className="text-[11px] text-neutral-500 flex items-start gap-1.5">
+          <Globe2 className="w-3.5 h-3.5 shrink-0 mt-px text-gold" />
+          {shared.isLoading
+            ? 'Recherche des photos de ce modèle…'
+            : sharedImages.length
+              ? `${sharedImages.length} photo${sharedImages.length > 1 ? 's' : ''} disponible${sharedImages.length > 1 ? 's' : ''} pour ce modèle. Sans photo, une illustration colorée est affichée.`
+              : "Pas encore de photo pour ce modèle : prenez l'appareil (ou sa boîte) en photo sur fond clair, elle servira à toutes les boutiques."}
+        </p>
+        {imageError && <p className="text-xs text-red-400">{imageError}</p>}
+      </Section>
+
       {/* 4. Désignation et codes */}
-      <Section n={4} title="Désignation et codes" done={!!effectiveName} invalid={!!errors.sku || !!errors.barcode}>
+      <Section n={5} title="Désignation et codes" done={!!effectiveName} invalid={!!errors.sku || !!errors.barcode}>
         <TextField
           label="Désignation"
           value={effectiveName}
@@ -367,7 +479,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
           placeholder="Remplie automatiquement"
           action={
             nameTouched && !initial ? (
-              <button type="button" onClick={() => setNameTouched(false)} className="text-[11px] text-[#d4a017] flex items-center gap-1">
+              <button type="button" onClick={() => setNameTouched(false)} className="text-[11px] text-gold flex items-center gap-1">
                 <Wand2 className="w-3 h-3" /> Automatique
               </button>
             ) : null
@@ -389,7 +501,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       </Section>
 
       {/* 5. État et accessoires */}
-      <Section n={5} title="État et accessoires" done subtitle="Imprimés sur le contrat de garantie du client">
+      <Section n={6} title="État et accessoires" done subtitle="Imprimés sur le contrat de garantie du client">
         <div className="grid grid-cols-3 gap-2">
           {(Object.keys(CONDITION_LABELS) as ProductCondition[]).map((k) => (
             <Chip key={k} on={condition === k} onClick={() => setCondition(k)} big>
@@ -411,7 +523,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       </Section>
 
       {/* 6. Prix */}
-      <Section n={6} title="Prix" done={sale > 0} invalid={!!errors.salePrice}>
+      <Section n={7} title="Prix" done={sale > 0} invalid={!!errors.salePrice}>
         <div className={cn('grid gap-3', compact ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3')}>
           <MoneyField label="Prix d'achat" value={purchasePrice} onChange={setPurchasePrice} />
           <MoneyField label="Prix de vente *" value={salePrice} onChange={(v) => { setSalePrice(v); setErrors((e) => ({ ...e, salePrice: '' })); }} error={errors.salePrice} />
@@ -427,9 +539,9 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
 
       {/* 7. Stock */}
       {!compact && (
-        <Section n={7} title="Stock" done>
+        <Section n={8} title="Stock" done>
           <label className="flex items-start gap-3 rounded-2xl border border-neutral-800 bg-neutral-900/50 p-3 cursor-pointer">
-            <input type="checkbox" checked={hasSerialNumbers} onChange={(e) => setHasSerialNumbers(e.target.checked)} className="mt-0.5 w-4 h-4 accent-[#d4a017]" />
+            <input type="checkbox" checked={hasSerialNumbers} onChange={(e) => setHasSerialNumbers(e.target.checked)} className="mt-0.5 w-4 h-4 accent-gold" />
             <span className="text-xs text-neutral-300">
               <strong className="text-white">Suivi par N° de série / IMEI</strong> — chaque appareil est scanné à la mise en stock et à la vente
               {refCat && <span className="block text-neutral-500 mt-0.5">{refCat.serialTracked ? 'Recommandé pour cette catégorie.' : 'Facultatif pour cette catégorie (accessoires, consommables).'}</span>}
@@ -460,7 +572,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
         <button
           type="submit"
           disabled={saving}
-          className="flex-1 sm:flex-none px-6 h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+          className="flex-1 sm:flex-none px-6 h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {saving ? <span className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Check className="w-4 h-4" />}
           {initial ? 'Enregistrer' : compact ? 'Créer et scanner les appareils' : 'Créer le produit'}
@@ -503,14 +615,14 @@ function Section({
       data-invalid={invalid ? 'true' : undefined}
       className={cn(
         'rounded-3xl border p-4 space-y-3 transition-colors',
-        invalid ? 'border-red-500/50' : active ? 'border-[#d4a017]/50 bg-[#d4a017]/[0.03]' : 'border-neutral-800'
+        invalid ? 'border-red-500/50' : active ? 'border-gold/50 bg-gold/[0.03]' : 'border-neutral-800'
       )}
     >
       <div className="flex items-center gap-2.5">
         <span
           className={cn(
             'w-6 h-6 rounded-full text-[11px] font-black flex items-center justify-center shrink-0',
-            done && !locked ? 'bg-[#d4a017] text-black' : 'bg-neutral-800 text-neutral-400'
+            done && !locked ? 'bg-gold text-ink' : 'bg-neutral-800 text-neutral-400'
           )}
         >
           {done && !locked ? <Check className="w-3.5 h-3.5" /> : n}
@@ -534,7 +646,7 @@ function Chip({ on, onClick, children, big }: { on: boolean; onClick: () => void
       className={cn(
         'rounded-xl border font-semibold flex items-center justify-center gap-1 transition-colors',
         big ? 'h-11 text-xs' : 'h-9 px-3 text-xs',
-        on ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-600'
+        on ? 'bg-gold/15 border-gold text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:border-neutral-600'
       )}
     >
       {children}
@@ -542,7 +654,7 @@ function Chip({ on, onClick, children, big }: { on: boolean; onClick: () => void
   );
 }
 
-const inputCls = 'w-full h-11 px-3 rounded-xl bg-neutral-900 border text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-[#d4a017]';
+const inputCls = 'w-full h-11 px-3 rounded-xl bg-neutral-900 border text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-gold';
 
 /**
  * Choix dans une liste de suggestions (pastilles) ou saisie libre : taper filtre les pastilles,
@@ -578,7 +690,7 @@ function Picker({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-neutral-300 flex items-center gap-1.5">
-          <Icon className="w-3.5 h-3.5 text-[#d4a017]" /> {label}
+          <Icon className="w-3.5 h-3.5 text-gold" /> {label}
         </p>
         {value && (
           <button type="button" onClick={() => onChange('')} className="text-[11px] text-neutral-500 hover:text-white">
@@ -593,7 +705,7 @@ function Picker({
             setQuery(value);
             onChange('');
           }}
-          className="w-full h-11 px-3 rounded-xl bg-[#d4a017]/10 border border-[#d4a017] text-sm font-semibold text-[#f5d77f] flex items-center justify-between"
+          className="w-full h-11 px-3 rounded-xl bg-gold/10 border border-gold text-sm font-semibold text-gold-soft flex items-center justify-between"
           title="Changer"
         >
           {value}
@@ -639,7 +751,7 @@ function Picker({
                 </Chip>
               ))}
               {filtered.length > max && (
-                <button type="button" onClick={() => setAll(!all)} className="h-9 px-2 text-xs text-[#d4a017]">
+                <button type="button" onClick={() => setAll(!all)} className="h-9 px-2 text-xs text-gold">
                   {all ? 'Moins' : `+ ${filtered.length - max} autres`}
                 </button>
               )}

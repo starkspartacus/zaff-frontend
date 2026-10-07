@@ -21,7 +21,7 @@ export default function SettingsPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          <Settings className="w-6 h-6 text-[#d4a017]" /> Paramètres de la boutique
+          <Settings className="w-6 h-6 text-gold" /> Paramètres de la boutique
         </h1>
         <p className="text-xs text-neutral-400 mt-0.5">
           {tab === 'returns'
@@ -38,10 +38,10 @@ export default function SettingsPage() {
             onClick={() => setTab(id)}
             className={cn(
               'relative h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors',
-              tab === id ? 'text-black' : 'text-neutral-400 hover:text-white'
+              tab === id ? 'text-ink' : 'text-neutral-400 hover:text-white'
             )}
           >
-            {tab === id && <motion.span layoutId="settings-tab" className="absolute inset-0 -z-0 rounded-xl bg-gradient-to-r from-[#d4a017] to-[#f5d77f]" />}
+            {tab === id && <motion.span layoutId="settings-tab" className="absolute inset-0 -z-0 rounded-xl bg-gradient-to-r from-gold to-gold-soft" />}
             <Icon className="relative w-4 h-4" />
             <span className="relative">{label}</span>
           </button>
@@ -136,7 +136,7 @@ function ReturnPolicyForm({ saved }: { saved: ReturnPolicy }) {
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCondition())}
                   placeholder="Ex. : Facture d'achat présentée"
                   maxLength={120}
-                  className="flex-1 h-10 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-[#d4a017]"
+                  className="flex-1 h-10 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold"
                 />
                 <button onClick={addCondition} className="h-10 px-3 rounded-xl bg-neutral-900 border border-neutral-700 text-white text-xs font-semibold flex items-center gap-1">
                   <Plus className="w-4 h-4" /> Ajouter
@@ -161,7 +161,7 @@ function ReturnPolicyForm({ saved }: { saved: ReturnPolicy }) {
                   onClick={() => set('refundMethods', on ? p.refundMethods.filter((x) => x !== m) : [...p.refundMethods, m])}
                   className={cn(
                     'px-4 h-10 rounded-xl border text-xs font-semibold',
-                    on ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+                    on ? 'bg-gold/15 border-gold text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                   )}
                 >
                   {m === 'cash' ? 'Espèces' : 'Mobile Money'}
@@ -219,7 +219,7 @@ function ReturnPolicyForm({ saved }: { saved: ReturnPolicy }) {
             <button
               onClick={save}
               disabled={!dirty || update.isPending}
-              className="h-11 px-5 rounded-xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-sm disabled:opacity-40"
+              className="h-11 px-5 rounded-xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-sm disabled:opacity-40"
             >
               {update.isPending ? 'Enregistrement…' : 'Enregistrer'}
             </button>
@@ -234,8 +234,8 @@ function ReturnPolicyForm({ saved }: { saved: ReturnPolicy }) {
 function Summary({ p }: { p: ReturnPolicy }) {
   const list = (t: ActionToggles) => [t.exchange && 'échange', t.creditNote && 'avoir', t.refund && 'remboursement'].filter(Boolean).join(', ') || 'aucune solution';
   return (
-    <BlurFade className="rounded-3xl border border-[#d4a017]/30 bg-[#d4a017]/5 p-4 space-y-1.5 text-sm text-neutral-200">
-      <p className="text-[11px] uppercase tracking-wider text-[#d4a017] font-semibold">Ce que vos clients entendront</p>
+    <BlurFade className="rounded-3xl border border-gold/30 bg-gold/5 p-4 space-y-1.5 text-sm text-neutral-200">
+      <p className="text-[11px] uppercase tracking-wider text-gold font-semibold">Ce que vos clients entendront</p>
       <p>
         {p.returnsEnabled
           ? `Retour accepté sous ${p.returnWindowDays} jours si l'appareil est en parfait état : ${list(p.changeOfMind)}${p.restockingFeePercent ? ` (frais de ${p.restockingFeePercent} %)` : ''}.`
@@ -254,7 +254,7 @@ function Card({ icon: Icon, title, subtitle, children }: { icon: React.ElementTy
   return (
     <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-5 space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/30 flex items-center justify-center text-[#d4a017]">
+        <div className="w-9 h-9 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold">
           <Icon className="w-4 h-4" />
         </div>
         <div>
@@ -277,7 +277,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
         aria-checked={checked}
         aria-label={label}
         onClick={() => onChange(!checked)}
-        className={cn('relative w-11 h-6 rounded-full transition-colors shrink-0', checked ? 'bg-[#d4a017]' : 'bg-neutral-700')}
+        className={cn('relative w-11 h-6 rounded-full transition-colors shrink-0', checked ? 'bg-gold' : 'bg-neutral-700')}
       >
         <span className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all', checked ? 'left-[22px]' : 'left-0.5')} />
       </button>
@@ -297,7 +297,7 @@ function NumberField({ label, suffix, value, min, max, onChange }: { label: stri
           max={max}
           value={value}
           onChange={(e) => onChange(Math.min(max, Math.max(min, Math.round(Number(e.target.value) || 0))))}
-          className="w-20 h-10 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm font-bold text-white focus:outline-none focus:border-[#d4a017]"
+          className="w-20 h-10 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm font-bold text-white focus:outline-none focus:border-gold"
         />
         <span className="text-xs text-neutral-400">{suffix}</span>
       </span>
@@ -322,7 +322,7 @@ function Actions({ label, value, onChange }: { label: string; value: ActionToggl
             aria-pressed={value[k]}
             className={cn(
               'px-4 h-10 rounded-xl border text-xs font-semibold',
-              value[k] ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+              value[k] ? 'bg-gold/15 border-gold text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
             )}
           >
             {l}

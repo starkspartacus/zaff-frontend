@@ -90,7 +90,7 @@ export function SearchSelect({
         className={cn(
           'flex items-center gap-2 rounded-xl bg-neutral-900 border text-left text-white transition-colors disabled:opacity-50',
           compact ? 'h-12 px-3 shrink-0' : 'w-full h-12 px-3.5',
-          invalid ? 'border-red-500/60' : 'border-neutral-800 hover:border-neutral-600 focus:border-[#d4a017] focus:outline-none'
+          invalid ? 'border-red-500/60' : 'border-neutral-800 hover:border-neutral-600 focus:border-gold focus:outline-none'
         )}
       >
         {selected ? (
@@ -153,7 +153,7 @@ export function SearchSelect({
                     role="combobox"
                     aria-controls={listId}
                     aria-expanded
-                    className="w-full h-11 pl-9 pr-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#d4a017]"
+                    className="w-full h-11 pl-9 pr-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-gold"
                   />
                 </div>
               </div>
@@ -170,7 +170,7 @@ export function SearchSelect({
                         className={cn(
                           'w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left text-sm',
                           i === active ? 'bg-neutral-900' : '',
-                          isSelected ? 'text-[#f5d77f]' : 'text-white'
+                          isSelected ? 'text-gold-soft' : 'text-white'
                         )}
                       >
                         {o.prefix && <span className="text-xl leading-none w-7 text-center">{o.prefix}</span>}

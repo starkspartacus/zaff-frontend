@@ -75,7 +75,7 @@ export default function InvoicesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Receipt className="w-6 h-6 text-[#d4a017]" />
+            <Receipt className="w-6 h-6 text-gold" />
             Factures & Historique des Ventes
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
@@ -114,7 +114,7 @@ export default function InvoicesPage() {
               {isLoading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-neutral-500">
-                    <div className="w-6 h-6 border-2 border-[#d4a017] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     Chargement des factures...
                   </td>
                 </tr>
@@ -127,7 +127,7 @@ export default function InvoicesPage() {
               ) : (
                 filteredSales.map((sale) => (
                   <tr key={sale._id} className="hover:bg-neutral-900/40 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#f5d77f]">
+                    <td className="py-3.5 px-4 font-mono font-bold text-gold-soft">
                       {sale.invoiceNumber}
                     </td>
                     <td className="py-3.5 px-4 text-neutral-300">
@@ -150,7 +150,7 @@ export default function InvoicesPage() {
                         {paymentLabel(sale.paymentMethod)}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-right font-extrabold text-[#f5d77f]">
+                    <td className="py-3.5 px-4 text-right font-extrabold text-gold-soft">
                       {formatPrice(sale.total)}
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -159,7 +159,7 @@ export default function InvoicesPage() {
                         className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors inline-flex items-center gap-1.5"
                         title="Voir / Imprimer"
                       >
-                        <Eye className="w-4 h-4 text-[#d4a017]" />
+                        <Eye className="w-4 h-4 text-gold" />
                         <span className="text-[11px]">Détails</span>
                       </button>
                       <Link
@@ -167,7 +167,7 @@ export default function InvoicesPage() {
                         className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors inline-flex items-center gap-1.5"
                         title="Contrat de vente et garantie"
                       >
-                        <FileSignature className="w-4 h-4 text-[#d4a017]" />
+                        <FileSignature className="w-4 h-4 text-gold" />
                         <span className="text-[11px]">Contrat</span>
                       </Link>
                     </td>
@@ -206,7 +206,7 @@ export default function InvoicesPage() {
                   onClick={() => setPrintFormat('thermal')}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                     printFormat === 'thermal'
-                      ? 'bg-[#d4a017] text-black shadow-sm'
+                      ? 'bg-gold text-ink shadow-sm'
                       : 'text-neutral-400 hover:text-white'
                   }`}
                 >
@@ -216,7 +216,7 @@ export default function InvoicesPage() {
                   onClick={() => setPrintFormat('a4')}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                     printFormat === 'a4'
-                      ? 'bg-[#d4a017] text-black shadow-sm'
+                      ? 'bg-gold text-ink shadow-sm'
                       : 'text-neutral-400 hover:text-white'
                   }`}
                 >
@@ -236,7 +236,7 @@ export default function InvoicesPage() {
                     </p>
                     <p className="text-[10px] text-neutral-400">{establishment?.phone || '+225 ...'}</p>
                     <p className="text-[10px] text-neutral-400">{establishment?.address || 'Abidjan, Côte d’Ivoire'}</p>
-                    <p className="text-[11px] text-[#f5d77f] font-bold mt-1">
+                    <p className="text-[11px] text-gold-soft font-bold mt-1">
                       TICKET DE CAISSE
                     </p>
                     <p className="text-[10px] text-neutral-500">
@@ -269,7 +269,7 @@ export default function InvoicesPage() {
                     )}
                     <div className="flex justify-between text-sm font-extrabold text-white pt-1">
                       <span>TOTAL TTC:</span>
-                      <span className="text-[#f5d77f]">{formatPrice(selectedSale.total)}</span>
+                      <span className="text-gold-soft">{formatPrice(selectedSale.total)}</span>
                     </div>
                     <div className="flex justify-between text-neutral-400 text-[10px]">
                       <span>Règlement ({paymentLabel(selectedSale.paymentMethod)}):</span>
@@ -294,7 +294,7 @@ export default function InvoicesPage() {
                       <p className="text-neutral-400">{establishment?.address || 'Abidjan'}</p>
                     </div>
                     <div className="text-right">
-                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#d4a017]/10 text-[#d4a017] border border-[#d4a017]/30">
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-gold/10 text-gold border border-gold/30">
                         FACTURE OFFICIELLE
                       </span>
                       <p className="font-mono font-bold text-white text-sm mt-2">
@@ -351,7 +351,7 @@ export default function InvoicesPage() {
                           <span>-{formatPrice(selectedSale.discount)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between text-base font-extrabold text-[#f5d77f] pt-1 border-t border-neutral-800">
+                      <div className="flex justify-between text-base font-extrabold text-gold-soft pt-1 border-t border-neutral-800">
                         <span>Net à Payer:</span>
                         <span>{formatPrice(selectedSale.total)}</span>
                       </div>
@@ -371,7 +371,7 @@ export default function InvoicesPage() {
               </button>
               <button
                 onClick={() => window.print()}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-xs hover:brightness-110 transition-all flex items-center gap-2 shadow-lg shadow-[#d4a017]/20"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs hover:brightness-110 transition-all flex items-center gap-2 shadow-lg shadow-gold/20"
               >
                 <Printer className="w-4 h-4" /> Imprimer Document
               </button>

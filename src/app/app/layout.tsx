@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { AppHeader } from '@/components/layout/app-header';
 import { canAccess, ROLE_HOME } from '@/lib/roles';
+import { applyTheme, useThemeStore } from '@/stores/theme-store';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, token, isLoading } = useAuth();
@@ -14,6 +15,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const allowed = !!user && canAccess(user.role, pathname);
+
+  // Thème de l'application connectée (clair par défaut) ; les pages publiques gardent leur style
+  const theme = useThemeStore((s) => s.theme);
+  useEffect(() => {
+    applyTheme(theme);
+    return () => applyTheme(null);
+  }, [theme]);
 
   useEffect(() => {
     if (!isLoading && (!token || !user)) {
@@ -28,7 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center">
-        <div className="w-10 h-10 rounded-full border-2 border-[#d4a017] border-t-transparent animate-spin mb-4" />
+        <div className="w-10 h-10 rounded-full border-2 border-gold border-t-transparent animate-spin mb-4" />
         <p className="text-xs uppercase tracking-widest text-neutral-400 font-medium">
           Chargement de l'espace boutique...
         </p>
@@ -61,7 +69,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-gradient-to-b from-neutral-950 to-black">
+      <div className="app-main flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-gradient-to-b from-neutral-950 to-black">
         <AppHeader onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)} />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scrollbar-thin scrollbar-thumb-neutral-800">
           {children}

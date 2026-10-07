@@ -83,7 +83,7 @@ export default function CashClosingPage() {
             <button onClick={() => setDone(null)} className="h-12 rounded-2xl bg-neutral-900 border border-neutral-700 text-white text-sm font-semibold">
               Mes clôtures
             </button>
-            <Link href="/app/scan" className="h-12 rounded-2xl bg-[#d4a017] text-black text-sm font-bold flex items-center justify-center gap-2">
+            <Link href="/app/scan" className="h-12 rounded-2xl bg-gold text-ink text-sm font-bold flex items-center justify-center gap-2">
               <ScanLine className="w-4 h-4" /> Nouvelle vente
             </Link>
           </div>
@@ -96,7 +96,7 @@ export default function CashClosingPage() {
     <div className="max-w-xl mx-auto space-y-5">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          <Lock className="w-6 h-6 text-[#d4a017]" /> Ma caisse
+          <Lock className="w-6 h-6 text-gold" /> Ma caisse
         </h1>
         <p className="text-xs text-neutral-400 mt-0.5">
           {register?.since
@@ -122,7 +122,7 @@ export default function CashClosingPage() {
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-[11px] uppercase tracking-wider text-neutral-500">Total encaissé</p>
-                <p className="text-3xl font-black text-[#f5d77f]">
+                <p className="text-3xl font-black text-gold-soft">
                   <NumberTicker value={register.totalAmount} suffix={currency} />
                 </p>
               </div>
@@ -157,7 +157,7 @@ export default function CashClosingPage() {
           </BlurFade>
 
           {/* Comptage */}
-          <form onSubmit={askConfirm} className="relative rounded-3xl border border-[#d4a017]/40 bg-neutral-950 p-5 space-y-4">
+          <form onSubmit={askConfirm} className="relative rounded-3xl border border-gold/40 bg-neutral-950 p-5 space-y-4">
             <BorderBeam size={110} duration={7} />
             <div>
               <label htmlFor="counted" className="text-sm font-semibold text-white">
@@ -176,7 +176,7 @@ export default function CashClosingPage() {
                   setError(null);
                 }}
                 placeholder="Montant compté"
-                className="w-full h-14 pl-4 pr-16 rounded-2xl bg-neutral-900 border border-neutral-800 text-2xl font-black text-white placeholder:text-base placeholder:font-normal placeholder:text-neutral-500 focus:outline-none focus:border-[#d4a017]"
+                className="w-full h-14 pl-4 pr-16 rounded-2xl bg-neutral-900 border border-neutral-800 text-2xl font-black text-white placeholder:text-base placeholder:font-normal placeholder:text-neutral-500 focus:outline-none focus:border-gold"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-neutral-500">{currency}</span>
             </div>
@@ -197,13 +197,13 @@ export default function CashClosingPage() {
                   setError(null);
                 }}
                 placeholder="Expliquez l'écart (ex. monnaie rendue en trop, billet abîmé…)"
-                className="w-full rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-sm text-white focus:outline-none focus:border-[#d4a017]"
+                className="w-full rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-sm text-white focus:outline-none focus:border-gold"
               />
             )}
             {error && <p className="text-xs text-red-400">{error}</p>}
             <button
               type="submit"
-              className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold text-base hover:brightness-110 flex items-center justify-center gap-2 shadow-lg shadow-[#d4a017]/20"
+              className="w-full h-14 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-base hover:brightness-110 flex items-center justify-center gap-2 shadow-lg shadow-gold/20"
             >
               <Lock className="w-5 h-5" /> Clôturer ma caisse
             </button>
@@ -221,7 +221,7 @@ export default function CashClosingPage() {
             <div key={c._id} className="rounded-2xl border border-neutral-800 bg-neutral-950 px-4 py-3 space-y-1.5">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-white">{dateTime(c.closedAt)}</p>
-                <p className="text-sm font-bold text-[#f5d77f]">{money(c.totalAmount, currency)}</p>
+                <p className="text-sm font-bold text-gold-soft">{money(c.totalAmount, currency)}</p>
               </div>
               <div className="flex items-center justify-between gap-2 text-[11px] text-neutral-400">
                 <span>
@@ -244,7 +244,7 @@ export default function CashClosingPage() {
             </button>
             <h2 className="text-lg font-bold text-white">Confirmer la clôture ?</h2>
             <p className="text-sm text-neutral-300">
-              Vous remettez <strong className="text-[#f5d77f]">{money(confirming.declaredCash, currency)}</strong> en espèces
+              Vous remettez <strong className="text-gold-soft">{money(confirming.declaredCash, currency)}</strong> en espèces
               {register.totals.mobile > 0 && (
                 <>
                   {' '}et <strong className="text-sky-300">{money(register.totals.mobile, currency)}</strong> en Mobile Money
@@ -261,7 +261,7 @@ export default function CashClosingPage() {
               <button
                 onClick={submit}
                 disabled={closeRegister.isPending}
-                className="col-span-2 h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                className="col-span-2 h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {closeRegister.isPending ? (
                   <span className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />

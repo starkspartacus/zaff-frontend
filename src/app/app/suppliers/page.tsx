@@ -140,7 +140,7 @@ export default function SuppliersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Truck className="w-6 h-6 text-[#d4a017]" />
+            <Truck className="w-6 h-6 text-gold" />
             Fournisseurs & Approvisionnements
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
@@ -151,7 +151,7 @@ export default function SuppliersPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsSupplierModalOpen(true)}
-            className="px-4 py-2 bg-neutral-900 border border-neutral-800 hover:border-[#d4a017] text-white text-xs font-semibold rounded-xl transition-all"
+            className="px-4 py-2 bg-neutral-900 border border-neutral-800 hover:border-gold text-white text-xs font-semibold rounded-xl transition-all"
           >
             + Nouveau Fournisseur
           </button>
@@ -163,7 +163,7 @@ export default function SuppliersPage() {
               setIsOrderModalOpen(true);
             }}
             glowColor="rgba(212, 160, 23, 0.4)"
-            className="px-4 py-2 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shadow-md shadow-[#d4a017]/20"
+            className="px-4 py-2 bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shadow-md shadow-gold/20"
           >
             <Plus className="w-4 h-4" />
             Créer Bon de Commande
@@ -177,7 +177,7 @@ export default function SuppliersPage() {
           onClick={() => setActiveTab('suppliers')}
           className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
             activeTab === 'suppliers'
-              ? 'bg-[#d4a017] text-black'
+              ? 'bg-gold text-ink'
               : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
           }`}
         >
@@ -187,7 +187,7 @@ export default function SuppliersPage() {
           onClick={() => setActiveTab('orders')}
           className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
             activeTab === 'orders'
-              ? 'bg-[#d4a017] text-black'
+              ? 'bg-gold text-ink'
               : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
           }`}
         >
@@ -259,7 +259,7 @@ export default function SuppliersPage() {
                     const isReceived = po.status === 'received';
                     return (
                       <tr key={po._id} className="hover:bg-neutral-900/40 transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold text-[#f5d77f]">
+                        <td className="py-3.5 px-4 font-mono font-bold text-gold-soft">
                           {po.orderNumber || po._id.slice(-6).toUpperCase()}
                         </td>
                         <td className="py-3.5 px-4 text-neutral-400">
@@ -271,7 +271,7 @@ export default function SuppliersPage() {
                         <td className="py-3.5 px-4 text-neutral-300">
                           {po.items?.map((it: any) => `${it.quantity}x ${it.productId?.name || 'Article'}`).join(', ')}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-bold text-[#f5d77f]">
+                        <td className="py-3.5 px-4 text-right font-bold text-gold-soft">
                           {formatPrice(po.totalAmount)}
                         </td>
                         <td className="py-3.5 px-4 text-center">
@@ -392,7 +392,7 @@ export default function SuppliersPage() {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-[#d4a017] text-black font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-[#d4a017]/20"
+                className="px-5 py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-gold/20"
               >
                 Enregistrer Fournisseur
               </button>
@@ -425,7 +425,7 @@ export default function SuppliersPage() {
                   value={orderSupplierId}
                   onChange={(e) => setOrderSupplierId(e.target.value)}
                   required
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#d4a017] h-10"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold h-10"
                 >
                   {suppliers.map((s) => (
                     <option key={s._id} value={s._id}>
@@ -445,7 +445,7 @@ export default function SuppliersPage() {
                     if (p) setOrderUnitCost(p.purchasePrice || 0);
                   }}
                   required
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#d4a017] h-10"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold h-10"
                 >
                   {products.map((p) => (
                     <option key={p._id} value={p._id}>
@@ -481,7 +481,7 @@ export default function SuppliersPage() {
 
               <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between text-xs">
                 <span className="text-neutral-400">Total Commande :</span>
-                <span className="text-base font-bold text-[#f5d77f]">
+                <span className="text-base font-bold text-gold-soft">
                   {formatPrice(orderQuantity * orderUnitCost)}
                 </span>
               </div>
@@ -497,7 +497,7 @@ export default function SuppliersPage() {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-[#d4a017] text-black font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-[#d4a017]/20"
+                className="px-5 py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-gold/20"
               >
                 Générer Bon de Commande
               </button>

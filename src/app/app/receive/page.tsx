@@ -135,14 +135,14 @@ export default function ReceiveStockPage() {
           <ArrowLeft className="w-4 h-4" /> Changer de modèle
         </button>
 
-        <div className="rounded-3xl border border-[#d4a017]/40 bg-neutral-950 p-5 flex items-center justify-between gap-4">
+        <div className="rounded-3xl border border-gold/40 bg-neutral-950 p-5 flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wider text-neutral-500">Modèle en cours</p>
             <p className="text-lg font-bold text-white truncate">{selected.name}</p>
             {details && <p className="text-xs text-neutral-400 truncate">{details}</p>}
           </div>
           <div className="text-right shrink-0">
-            <p className="text-3xl font-black text-[#f5d77f]">
+            <p className="text-3xl font-black text-gold-soft">
               +<NumberTicker value={added} />
             </p>
             <p className="text-[10px] text-neutral-500">ajouté(s) · {stockQuantity ?? '—'} en stock</p>
@@ -165,11 +165,11 @@ export default function ReceiveStockPage() {
               value={pasteText}
               onChange={(e) => setPasteText(e.target.value)}
               placeholder={'Un N° par ligne\n356789104523871\n356789104523889'}
-              className="w-full rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-sm font-mono text-white focus:outline-none focus:border-[#d4a017]"
+              className="w-full rounded-2xl bg-neutral-900 border border-neutral-800 p-3 text-sm font-mono text-white focus:outline-none focus:border-gold"
             />
             <button
               onClick={handlePaste}
-              className="w-full h-11 rounded-2xl bg-[#d4a017] text-black font-bold text-sm hover:brightness-110"
+              className="w-full h-11 rounded-2xl bg-gold text-ink font-bold text-sm hover:brightness-110"
             >
               Mettre en stock la liste
             </button>
@@ -224,7 +224,7 @@ export default function ReceiveStockPage() {
         {added > 0 && (
           <button
             onClick={() => setSelected(null)}
-            className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-extrabold text-sm"
+            className="w-full h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-sm"
           >
             Terminer ({added} appareil{added > 1 ? 's' : ''} mis en stock)
           </button>
@@ -239,13 +239,13 @@ export default function ReceiveStockPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <PackagePlus className="w-6 h-6 text-[#d4a017]" /> Mise en stock
+            <PackagePlus className="w-6 h-6 text-gold" /> Mise en stock
           </h1>
           <p className="text-xs text-neutral-400 mt-0.5">1. Choisissez le modèle · 2. Scannez chaque appareil</p>
         </div>
         <button
           onClick={() => setCreateOpen(true)}
-          className="px-3 py-2 rounded-xl bg-[#d4a017] text-black font-bold text-xs flex items-center gap-1.5 shrink-0"
+          className="px-3 py-2 rounded-xl bg-gold text-ink font-bold text-xs flex items-center gap-1.5 shrink-0"
         >
           <Plus className="w-4 h-4" /> Nouveau modèle
         </button>
@@ -260,7 +260,7 @@ export default function ReceiveStockPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="…ou cherchez le modèle (nom, marque, couleur)"
-          className="w-full h-11 pl-10 pr-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#d4a017]"
+          className="w-full h-11 pl-10 pr-3 rounded-2xl bg-neutral-900 border border-neutral-800 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-gold"
         />
       </div>
 
@@ -274,7 +274,7 @@ export default function ReceiveStockPage() {
             <button
               key={p._id}
               onClick={() => selectProduct(p)}
-              className="w-full text-left rounded-2xl border border-neutral-800 bg-neutral-950 hover:border-[#d4a017] px-4 py-3 flex items-center justify-between gap-3 transition-colors"
+              className="w-full text-left rounded-2xl border border-neutral-800 bg-neutral-950 hover:border-gold px-4 py-3 flex items-center justify-between gap-3 transition-colors"
             >
               <div className="min-w-0">
                 <p className="font-semibold text-white truncate">{p.name}</p>

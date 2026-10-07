@@ -47,7 +47,7 @@ export function PushToggle() {
     <div className="px-4 py-3 border-t border-neutral-900 space-y-1.5">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-2 text-xs text-neutral-300">
-          <Smartphone className="w-4 h-4 text-[#d4a017]" /> Notifications sur cet appareil
+          <Smartphone className="w-4 h-4 text-gold" /> Notifications sur cet appareil
         </span>
         {canToggle && (
           <button
@@ -55,7 +55,7 @@ export function PushToggle() {
             disabled={busy}
             role="switch"
             aria-checked={state === 'on'}
-            className={cn('relative w-10 h-6 rounded-full transition-colors disabled:opacity-50', state === 'on' ? 'bg-[#d4a017]' : 'bg-neutral-700')}
+            className={cn('relative w-10 h-6 rounded-full transition-colors disabled:opacity-50', state === 'on' ? 'bg-gold' : 'bg-neutral-700')}
           >
             <span className={cn('absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all', state === 'on' ? 'left-[18px]' : 'left-0.5')} />
           </button>
@@ -92,11 +92,11 @@ export function PushPrompt() {
   };
 
   return (
-    <div className="relative rounded-3xl border border-[#d4a017]/40 bg-[#d4a017]/5 p-4 pr-10 flex flex-col sm:flex-row sm:items-center gap-3">
+    <div className="relative rounded-3xl border border-gold/40 bg-gold/5 p-4 pr-10 flex flex-col sm:flex-row sm:items-center gap-3">
       <button onClick={dismiss} className="absolute top-3 right-3 p-1 text-neutral-500 hover:text-white" aria-label="Plus tard">
         <X className="w-4 h-4" />
       </button>
-      <div className="w-10 h-10 rounded-2xl bg-[#d4a017]/15 border border-[#d4a017]/40 flex items-center justify-center text-[#d4a017] shrink-0">
+      <div className="w-10 h-10 rounded-2xl bg-gold/15 border border-gold/40 flex items-center justify-center text-gold shrink-0">
         <BellRing className="w-5 h-5" />
       </div>
       <div className="flex-1">
@@ -110,7 +110,7 @@ export function PushPrompt() {
         <button
           onClick={toggle}
           disabled={busy}
-          className="h-10 px-4 rounded-xl bg-[#d4a017] text-black font-bold text-xs disabled:opacity-50 flex items-center gap-2 shrink-0"
+          className="h-10 px-4 rounded-xl bg-gold text-ink font-bold text-xs disabled:opacity-50 flex items-center gap-2 shrink-0"
         >
           <BellRing className="w-4 h-4" /> Activer
         </button>

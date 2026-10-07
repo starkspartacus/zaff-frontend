@@ -90,7 +90,7 @@ export default function UsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <UserCheck className="w-6 h-6 text-[#d4a017]" />
+            <UserCheck className="w-6 h-6 text-gold" />
             Équipe du Magasin & Permissions
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
@@ -101,7 +101,7 @@ export default function UsersPage() {
         <GlowButton
           onClick={() => setIsModalOpen(true)}
           glowColor="rgba(212, 160, 23, 0.4)"
-          className="px-4 py-2 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shadow-md shadow-[#d4a017]/20"
+          className="px-4 py-2 bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shadow-md shadow-gold/20"
         >
           <UserPlus className="w-4 h-4" />
           Ajouter un Collaborateur
@@ -125,7 +125,7 @@ export default function UsersPage() {
               {isLoading ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-neutral-500">
-                    <div className="w-6 h-6 border-2 border-[#d4a017] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     Chargement de l'équipe...
                   </td>
                 </tr>
@@ -140,7 +140,7 @@ export default function UsersPage() {
                   <tr key={u._id} className="hover:bg-neutral-900/40 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#d4a017] to-amber-200 text-black font-bold flex items-center justify-center text-xs">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gold to-amber-200 text-ink font-bold flex items-center justify-center text-xs">
                           {u.name?.charAt(0).toUpperCase()}
                         </div>
                         <span className="font-semibold text-white">{u.name}</span>
@@ -150,7 +150,7 @@ export default function UsersPage() {
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                           u.role === 'admin' || u.role === 'superadmin'
-                            ? 'bg-[#d4a017]/15 text-[#f5d77f] border border-[#d4a017]/30'
+                            ? 'bg-gold/15 text-gold-soft border border-gold/30'
                             : normalizeRole(u.role) === 'storekeeper'
                             ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                             : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
@@ -231,11 +231,11 @@ export default function UsersPage() {
                       onClick={() => setRole(r)}
                       className={`w-full p-3 rounded-xl border text-left transition-all ${
                         role === r
-                          ? 'bg-[#d4a017]/15 border-[#d4a017]'
+                          ? 'bg-gold/15 border-gold'
                           : 'bg-neutral-900 border-neutral-800 hover:border-neutral-600'
                       }`}
                     >
-                      <span className={`block text-xs font-bold ${role === r ? 'text-[#f5d77f]' : 'text-white'}`}>
+                      <span className={`block text-xs font-bold ${role === r ? 'text-gold-soft' : 'text-white'}`}>
                         {ROLE_LABELS[r]}
                       </span>
                       <span className="block text-[11px] text-neutral-400 mt-0.5">{ROLE_DESCRIPTIONS[r]}</span>
@@ -269,7 +269,7 @@ export default function UsersPage() {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-[#d4a017] text-black font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-[#d4a017]/20"
+                className="px-5 py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-gold/20"
               >
                 Créer l'Accès
               </button>

@@ -16,7 +16,7 @@ export function ContractDocument({ doc }: { doc: RenderedContract }) {
   const city = doc.shop.address?.split(', ').slice(-2, -1)[0] || '';
 
   return (
-    <article className="contract-paper mx-auto w-full max-w-[210mm] bg-white text-neutral-900 shadow-2xl print:shadow-none rounded-sm print:rounded-none px-6 py-8 sm:px-12 sm:py-12 print:p-0 text-[13px] leading-relaxed">
+    <article className="theme-fixed contract-paper mx-auto w-full max-w-[210mm] bg-white text-neutral-900 shadow-2xl print:shadow-none rounded-sm print:rounded-none px-6 py-8 sm:px-12 sm:py-12 print:p-0 text-[13px] leading-relaxed">
       {doc.sample && (
         <p className="mb-6 rounded-md border border-amber-400 bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-800 print:hidden">
           Aperçu avec une vente fictive — le vrai contrat reprend la vente, le client et l&apos;appareil.
@@ -24,10 +24,10 @@ export function ContractDocument({ doc }: { doc: RenderedContract }) {
       )}
 
       {/* En-tête */}
-      <header className="text-center border-b-2 border-[#b8860b] pb-6">
+      <header className="text-center border-b-2 border-gold-deep pb-6">
         <p className="text-2xl sm:text-3xl font-black tracking-wide uppercase">{doc.shop.displayName}</p>
         {legal.legalForm && <p className="text-xs tracking-[0.4em] text-neutral-600 mt-1">{legal.legalForm.toUpperCase().split('').join(' ')}</p>}
-        <h1 className="mt-5 text-lg sm:text-xl font-extrabold uppercase leading-snug text-[#7a5a00]">{doc.title}</h1>
+        <h1 className="mt-5 text-lg sm:text-xl font-extrabold uppercase leading-snug text-gold-ink">{doc.title}</h1>
         {doc.subtitle && <p className="mt-1 text-sm italic text-neutral-600">{doc.subtitle}</p>}
         {doc.countryLine && <p className="mt-3 text-xs font-bold uppercase tracking-wider">{doc.countryLine}</p>}
         {doc.lawReference && <p className="text-xs text-neutral-600">{doc.lawReference}</p>}
@@ -43,7 +43,7 @@ export function ContractDocument({ doc }: { doc: RenderedContract }) {
 
       {/* Sommaire */}
       <section className="mt-6 rounded border border-neutral-300 p-4 break-inside-avoid">
-        <p className="text-xs font-bold uppercase tracking-wider text-[#7a5a00] mb-2">Sommaire</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-gold-ink mb-2">Sommaire</p>
         <ol className="columns-1 sm:columns-2 print:columns-2 gap-6 text-[11px] text-neutral-700">
           {doc.articles.map((a) => (
             <li key={a.id} className="break-inside-avoid">
@@ -57,7 +57,7 @@ export function ContractDocument({ doc }: { doc: RenderedContract }) {
       <div className="mt-6 space-y-6">
         {doc.articles.map((a) => (
           <section key={a.id} className="space-y-2">
-            <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#7a5a00] border-b border-neutral-200 pb-1 break-after-avoid">
+            <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-gold-ink border-b border-neutral-200 pb-1 break-after-avoid">
               Article {a.number} — {a.title}
             </h2>
             {a.kind === 'seller' && <SellerBox doc={doc} />}
@@ -72,7 +72,7 @@ export function ContractDocument({ doc }: { doc: RenderedContract }) {
 
       {/* Signatures */}
       <section className="mt-10 break-inside-avoid">
-        <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#7a5a00] border-b border-neutral-200 pb-1">Signatures</h2>
+        <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-gold-ink border-b border-neutral-200 pb-1">Signatures</h2>
         <p className="mt-3">
           Fait à <Fill value={city} width="10rem" />, le <Fill value={formatDate(doc.sale.date)} width="8rem" />, en deux exemplaires.
         </p>
@@ -93,11 +93,11 @@ export function ContractDocument({ doc }: { doc: RenderedContract }) {
         doc.items.map((item, i) => (
           <section key={i} className="mt-10 break-before-page break-inside-avoid">
             <div className="border-t-2 border-dashed border-neutral-400 pt-1 text-center text-[10px] text-neutral-400 print:hidden">✂ à découper et à conserver</div>
-            <div className="mt-4 rounded-lg border-2 border-[#b8860b] p-5">
+            <div className="mt-4 rounded-lg border-2 border-gold-deep p-5">
               <div className="flex items-start justify-between gap-3 border-b border-neutral-200 pb-3">
                 <div>
                   <p className="text-lg font-black uppercase">{doc.shop.displayName}</p>
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#7a5a00]">Fiche de garantie</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-gold-ink">Fiche de garantie</p>
                 </div>
                 <div className="text-right text-[11px] text-neutral-600">
                   <p>Facture n° {doc.sale.invoiceNumber}</p>
@@ -147,7 +147,7 @@ function VerifyBlock({ code }: { code: string | null }) {
         </div>
       )}
       <div className="text-[11px] text-neutral-700 space-y-1">
-        <p className="font-bold uppercase tracking-wider text-[#7a5a00]">Vérifier la garantie</p>
+        <p className="font-bold uppercase tracking-wider text-gold-ink">Vérifier la garantie</p>
         <p>Scannez ce code avec l&apos;appareil photo d&apos;un téléphone : il affiche l&apos;appareil, la boutique et la date de fin de garantie, sans aucune donnée personnelle.</p>
         <p className="text-neutral-500">Code infalsifiable, propre à cet appareil et à cette vente.</p>
       </div>

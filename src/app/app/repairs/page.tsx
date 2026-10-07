@@ -161,7 +161,7 @@ export default function RepairsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Wrench className="w-6 h-6 text-[#d4a017]" />
+            <Wrench className="w-6 h-6 text-gold" />
             Atelier SAV & Réparations
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
@@ -184,7 +184,7 @@ export default function RepairsPage() {
           <GlowButton
             onClick={() => setIsCreateOpen(true)}
             glowColor="rgba(212, 160, 23, 0.4)"
-            className="px-4 py-2 bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shrink-0 shadow-md shadow-[#d4a017]/20"
+            className="px-4 py-2 bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs rounded-xl hover:brightness-110 transition-all flex items-center gap-2 shrink-0 shadow-md shadow-gold/20"
           >
             <Plus className="w-4 h-4" />
             Nouveau Ticket SAV
@@ -208,7 +208,7 @@ export default function RepairsPage() {
             onClick={() => setFilterStatus(tab.id)}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
               filterStatus === tab.id
-                ? 'bg-[#d4a017] text-black'
+                ? 'bg-gold text-ink'
                 : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
             }`}
           >
@@ -236,7 +236,7 @@ export default function RepairsPage() {
               {isLoading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-neutral-500">
-                    <div className="w-6 h-6 border-2 border-[#d4a017] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     Chargement des dossiers atelier...
                   </td>
                 </tr>
@@ -249,7 +249,7 @@ export default function RepairsPage() {
               ) : (
                 filtered.map((r) => (
                   <tr key={r._id} className="hover:bg-neutral-900/40 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#f5d77f]">
+                    <td className="py-3.5 px-4 font-mono font-bold text-gold-soft">
                       {ticketLabel(r)}
                     </td>
                     <td className="py-3.5 px-4 text-neutral-400">
@@ -261,7 +261,7 @@ export default function RepairsPage() {
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="font-medium text-white flex items-center gap-1.5">
-                        <Smartphone className="w-3.5 h-3.5 text-[#d4a017]" />
+                        <Smartphone className="w-3.5 h-3.5 text-gold" />
                         {r.deviceName}
                       </div>
                       <div className="text-[11px] text-neutral-400 line-clamp-1 mt-0.5">
@@ -290,7 +290,7 @@ export default function RepairsPage() {
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex justify-center">{getStatusBadge(r.status)}</div>
                     </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-[#f5d77f]">
+                    <td className="py-3.5 px-4 text-right font-bold text-gold-soft">
                       {formatPrice(r.actualCost || r.estimatedCost || (r.laborCost || 0) + (r.partsCost || 0))}
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -300,7 +300,7 @@ export default function RepairsPage() {
                           setUpdateStatusVal(r.status);
                           setUpdateNotes(r.repairNotes || '');
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-[#d4a017] text-neutral-300 hover:text-white text-[11px] transition-colors"
+                        className="px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-gold text-neutral-300 hover:text-white text-[11px] transition-colors"
                       >
                         Gérer Statut
                       </button>
@@ -399,7 +399,7 @@ export default function RepairsPage() {
                   value={issueDescription}
                   onChange={(e) => setIssueDescription(e.target.value)}
                   required
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#d4a017]"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-gold"
                 />
               </div>
 
@@ -426,7 +426,7 @@ export default function RepairsPage() {
 
               <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between text-xs">
                 <span className="text-neutral-400">Total Devis Estimé :</span>
-                <span className="text-base font-bold text-[#f5d77f]">
+                <span className="text-base font-bold text-gold-soft">
                   {formatPrice((Number(partsCost) || 0) + (Number(laborCost) || 0))}
                 </span>
               </div>
@@ -442,7 +442,7 @@ export default function RepairsPage() {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-[#d4a017] text-black font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-[#d4a017]/20"
+                className="px-5 py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-gold/20"
               >
                 Créer Ticket SAV
               </button>
@@ -479,7 +479,7 @@ export default function RepairsPage() {
                 <select
                   value={updateStatusVal}
                   onChange={(e) => setUpdateStatusVal(e.target.value)}
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#d4a017] h-10"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold h-10"
                 >
                   <option value="received">Reçu à l&apos;atelier</option>
                   <option value="diagnosing">Diagnostic en cours</option>
@@ -498,7 +498,7 @@ export default function RepairsPage() {
                   value={updateNotes}
                   onChange={(e) => setUpdateNotes(e.target.value)}
                   placeholder="Notes du technicien, référence de l'écran remplacé..."
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#d4a017]"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-gold"
                 />
               </div>
             </div>
@@ -513,7 +513,7 @@ export default function RepairsPage() {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-xl bg-[#d4a017] text-black font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-[#d4a017]/20"
+                className="px-5 py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-gold/20"
               >
                 Mettre à Jour
               </button>

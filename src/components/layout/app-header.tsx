@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { isOwner, ROLE_LABELS } from '@/lib/roles';
 import { LiveStatus, NotificationBell } from '@/components/notifications/notification-bell';
-import { Menu, ShoppingCart, Wrench, Sparkles, ScanLine, PackagePlus } from 'lucide-react';
+import { ThemeToggle } from './theme-toggle';
+import { Menu, ShoppingCart, Wrench, Sparkles, ScanLine, PackagePlus, LayoutGrid } from 'lucide-react';
 
 interface AppHeaderProps {
   onToggleSidebar?: () => void;
@@ -22,7 +23,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
   });
 
   return (
-    <header className="h-16 px-6 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-800/80 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-16 px-3 sm:px-6 bg-neutral-950/80 backdrop-blur-md border-b border-neutral-800/80 flex items-center justify-between sticky top-0 z-30">
       <div className="flex items-center gap-4">
         {/* Mobile menu button */}
         <button
@@ -34,7 +35,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
 
         {/* Store Title & Breadcrumb */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-[#d4a017]/10 border border-[#d4a017]/30 text-[#d4a017] text-xs font-medium">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-gold/10 border border-gold/30 text-gold text-xs font-medium">
             <Sparkles className="w-3 h-3" />
             <span className="font-semibold">{establishment?.name || 'Zaff'}</span>
             <span className="text-neutral-500">•</span>
@@ -48,43 +49,53 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
       </div>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <LiveStatus className="hidden md:flex" />
 
         {/* Action rapide selon le rôle */}
         {user?.role === 'storekeeper' ? (
           <QuickAction href="/app/receive" icon={PackagePlus} label="Mise en stock" />
         ) : user?.role === 'seller' ? (
-          <QuickAction href="/app/scan" icon={ScanLine} label="Vendre" />
+          <>
+            <Link
+              href="/app/showcase"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 text-neutral-200 hover:border-gold/50 font-medium text-xs"
+              aria-label="Vitrine"
+            >
+              <LayoutGrid className="w-3.5 h-3.5 text-gold" /> <span className="hidden sm:inline">Vitrine</span>
+            </Link>
+            <QuickAction href="/app/scan" icon={ScanLine} label="Vendre" />
+          </>
         ) : (
           <>
             <QuickAction href="/app/scan" icon={ScanLine} label="Vendre" />
             <Link
               href="/app/sales"
-              className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 text-neutral-200 hover:text-white hover:border-[#d4a017]/50 font-medium text-xs transition-all"
+              className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 text-neutral-200 hover:text-white hover:border-gold/50 font-medium text-xs transition-all"
             >
-              <ShoppingCart className="w-3.5 h-3.5 text-[#d4a017]" />
+              <ShoppingCart className="w-3.5 h-3.5 text-gold" />
               <span>Caisse</span>
             </Link>
             {isOwner(user?.role) && (
               <Link
                 href="/app/repairs"
-                className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 text-neutral-200 hover:text-white hover:border-[#d4a017]/50 font-medium text-xs transition-all"
+                className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 text-neutral-200 hover:text-white hover:border-gold/50 font-medium text-xs transition-all"
               >
-                <Wrench className="w-3.5 h-3.5 text-[#d4a017]" />
+                <Wrench className="w-3.5 h-3.5 text-gold" />
                 <span>Atelier SAV</span>
               </Link>
             )}
           </>
         )}
 
+        <ThemeToggle />
         <NotificationBell />
 
         {/* User Mini Tag */}
         <div className="hidden lg:flex items-center gap-2.5 pl-3 border-l border-neutral-800">
           <div className="text-right">
             <p className="text-xs font-medium text-white">{user?.name || 'Admin'}</p>
-            <p className="text-[10px] text-[#d4a017] uppercase tracking-wider font-semibold">{user ? ROLE_LABELS[user.role] : ''}</p>
+            <p className="text-[10px] text-gold uppercase tracking-wider font-semibold">{user ? ROLE_LABELS[user.role] : ''}</p>
           </div>
         </div>
       </div>
@@ -96,7 +107,7 @@ function QuickAction({ href, icon: Icon, label }: { href: string; icon: React.El
   return (
     <Link
       href={href}
-      className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-semibold text-xs hover:brightness-110 transition-all shadow-sm shadow-[#d4a017]/20"
+      className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-gold to-gold-deep text-ink font-semibold text-xs hover:brightness-110 transition-all shadow-sm shadow-gold/20"
     >
       <Icon className="w-3.5 h-3.5" />
       <span>{label}</span>

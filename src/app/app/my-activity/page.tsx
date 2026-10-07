@@ -41,7 +41,7 @@ export default function MyActivityPage() {
     <div className="max-w-xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          <CalendarCheck className="w-6 h-6 text-[#d4a017]" /> Mon activité
+          <CalendarCheck className="w-6 h-6 text-gold" /> Mon activité
         </h1>
         <button onClick={load} className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900" title="Rafraîchir">
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -54,7 +54,7 @@ export default function MyActivityPage() {
             key={p.id}
             onClick={() => changePeriod(p.id)}
             className={`py-2 rounded-xl text-xs font-semibold transition-all ${
-              period === p.id ? 'bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black' : 'text-neutral-400 hover:text-white'
+              period === p.id ? 'bg-gradient-to-r from-gold to-gold-deep text-ink' : 'text-neutral-400 hover:text-white'
             }`}
           >
             {p.label}
@@ -66,11 +66,11 @@ export default function MyActivityPage() {
         <>
           <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6 text-center">
             <p className="text-xs uppercase tracking-wider text-neutral-500">Appareils mis en stock {periodLabel}</p>
-            <p className="text-5xl font-black text-[#f5d77f] mt-1">
+            <p className="text-5xl font-black text-gold-soft mt-1">
               <NumberTicker value={data?.stocking?.unitsAdded ?? 0} />
             </p>
           </div>
-          <Link href="/app/receive" className="w-full h-12 rounded-2xl bg-[#d4a017] text-black font-bold text-sm flex items-center justify-center gap-2">
+          <Link href="/app/receive" className="w-full h-12 rounded-2xl bg-gold text-ink font-bold text-sm flex items-center justify-center gap-2">
             <PackagePlus className="w-4 h-4" /> Mettre des appareils en stock
           </Link>
           <List
@@ -94,19 +94,19 @@ export default function MyActivityPage() {
                 <NumberTicker value={data?.sales?.count ?? 0} />
               </p>
             </div>
-            <div className="rounded-3xl border border-[#d4a017]/30 bg-[#d4a017]/5 p-5 text-center">
+            <div className="rounded-3xl border border-gold/30 bg-gold/5 p-5 text-center">
               <p className="text-[11px] uppercase tracking-wider text-neutral-500">Montant encaissé</p>
-              <p className="text-xl font-black text-[#f5d77f] mt-2">
+              <p className="text-xl font-black text-gold-soft mt-2">
                 <NumberTicker value={data?.sales?.revenue ?? 0} suffix={currency} />
               </p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Link href="/app/scan" className="h-12 rounded-2xl bg-[#d4a017] text-black font-bold text-sm flex items-center justify-center gap-2">
+            <Link href="/app/scan" className="h-12 rounded-2xl bg-gold text-ink font-bold text-sm flex items-center justify-center gap-2">
               <ScanLine className="w-4 h-4" /> Nouvelle vente
             </Link>
             <Link href="/app/cash-closing" className="h-12 rounded-2xl bg-neutral-900 border border-neutral-700 text-white font-bold text-sm flex items-center justify-center gap-2">
-              <Lock className="w-4 h-4 text-[#d4a017]" /> Clôturer ma caisse
+              <Lock className="w-4 h-4 text-gold" /> Clôturer ma caisse
             </Link>
           </div>
           <List
@@ -149,9 +149,9 @@ function List({ title, empty, items }: { title: string; empty: string; items: { 
               <p className="text-[11px] text-neutral-500 font-mono truncate">{i.sub}</p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-sm font-bold text-[#f5d77f]">{i.right}</p>
+              <p className="text-sm font-bold text-gold-soft">{i.right}</p>
               <p className="text-[10px] text-neutral-500">{i.when}</p>
-              {i.href && <p className="text-[10px] text-[#d4a017] flex items-center justify-end gap-1"><FileSignature className="w-3 h-3" /> Contrat</p>}
+              {i.href && <p className="text-[10px] text-gold flex items-center justify-end gap-1"><FileSignature className="w-3 h-3" /> Contrat</p>}
             </div>
           </Row>
           );
