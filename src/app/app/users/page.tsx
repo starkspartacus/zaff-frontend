@@ -66,7 +66,7 @@ export default function UsersPage() {
       setPassword('');
       fetchUsers();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la création du compte');
+      alert(err.message || 'Erreur lors de la création du compte');
     }
   };
 
@@ -145,7 +145,7 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-neutral-300">{u.phone}</td>
-                    <td className="py-3.5 px-4 text-neutral-400">{u.email || ''}</td>
+                    <td className="py-3.5 px-4 text-neutral-400">{u.email || '—'}</td>
                     <td className="py-3.5 px-4 text-center">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         Actif
@@ -244,7 +244,7 @@ export default function UsersPage() {
                 <label className="text-xs text-neutral-400 block mb-1">Mot de passe temporaire *</label>
                 <Input
                   type="password"
-                  placeholder=""
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required

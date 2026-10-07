@@ -29,7 +29,7 @@ export default function AppPage() {
     const fetchData = async () => {
       try {
         const [dashRes, salesRes] = await Promise.allSettled([
-          api.get('/analytics/dashboard'),
+          api.get('/analytics/dashboard?period=day'),
           api.get('/sales'),
         ]);
 
@@ -65,7 +65,7 @@ export default function AppPage() {
               Cockpit Direction & Caisse
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              Bienvenue, <span className="text-[#f5d77f]">{user?.name}</span> ??
+              Bienvenue, <span className="text-[#f5d77f]">{user?.name}</span> 👋
             </h1>
             <p className="text-neutral-400 text-sm mt-1 max-w-xl">
               Votre établissement <span className="text-white font-medium">{establishment?.name}</span> est actif.
@@ -96,7 +96,7 @@ export default function AppPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <SpotlightCard className="p-5 rounded-2xl bg-neutral-950/70 border-neutral-800/80">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-neutral-400">Chiffre d'Affaires</span>
+            <span className="text-xs font-medium text-neutral-400">Chiffre d'Affaires du jour</span>
             <div className="w-9 h-9 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/30 flex items-center justify-center text-[#d4a017]">
               <TrendingUp className="w-4 h-4" />
             </div>
@@ -112,16 +112,16 @@ export default function AppPage() {
 
         <SpotlightCard className="p-5 rounded-2xl bg-neutral-950/70 border-neutral-800/80">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-neutral-400">Tickets de Caisse</span>
+            <span className="text-xs font-medium text-neutral-400">Ventes du jour</span>
             <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
               <Receipt className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-bold text-white tracking-tight">
-            {stats?.sales?.count || recentSales.length || 0}
+            {stats?.sales?.count || 0}
           </div>
           <p className="text-[11px] text-neutral-400 mt-1">
-            Ventes finalisées enregistrées
+            Tickets encaissés aujourd&apos;hui
           </p>
         </SpotlightCard>
 
@@ -219,7 +219,7 @@ export default function AppPage() {
                     Atelier SAV & Réparations
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
-                    Suivi des pannes, pièces utilisées, main-d'uvre et devis clients.
+                    Suivi des pannes, pièces utilisées, main-d'œuvre et devis clients.
                   </p>
                 </div>
               </div>
@@ -276,12 +276,12 @@ export default function AppPage() {
                       {sale.invoiceNumber}
                     </p>
                     <p className="text-[11px] text-neutral-400 truncate">
-                      {sale.customerName || 'Client Comptant'}  {new Date(sale.createdAt).toLocaleDateString('fr-FR')}
+                      {sale.customerId?.name || 'Client Comptant'} • {new Date(sale.createdAt).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xs font-bold text-[#f5d77f]">
-                      {formatPrice(sale.totalAmount)}
+                      {formatPrice(sale.total)}
                     </p>
                     <span className="text-[9px] uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
                       Payé

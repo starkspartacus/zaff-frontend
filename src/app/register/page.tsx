@@ -38,8 +38,11 @@ export default function RegisterPage() {
     const generatedSlug = val
       .toLowerCase()
       .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-');
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
     setSlug(generatedSlug);
   };
 
@@ -49,7 +52,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await registerEstablishment({
+      const created: { slug?: string } = await registerEstablishment({
         name,
         slug: slug.trim(),
         phone: storePhone,
@@ -72,7 +75,8 @@ export default function RegisterPage() {
       // Automatically log the user in after 1.5s
       setTimeout(async () => {
         try {
-          await login(adminPhone || storePhone, adminPassword, slug.trim());
+          // Le backend normalise le slug (accents, espaces) : on utilise celui qu'il a créé
+          await login(adminPhone || storePhone, adminPassword, created?.slug || slug.trim());
         } catch {
           router.push('/login');
         }
@@ -80,7 +84,7 @@ export default function RegisterPage() {
     } catch (err: any) {
       console.error(err);
       setError(
-        err.response?.data?.message ||
+        err.message ||
         'Une erreur est survenue lors de la création de la boutique. Vérifiez les informations.'
       );
       setIsLoading(false);

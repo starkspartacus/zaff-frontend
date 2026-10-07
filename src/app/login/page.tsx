@@ -29,7 +29,7 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error(err);
       setError(
-        err.response?.data?.message ||
+        err.message ||
         'Identifiants incorrects ou établissement introuvable. Vérifiez vos accès.'
       );
     }
@@ -118,7 +118,7 @@ export default function LoginPage() {
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                 <Input
                   type="password"
-                  placeholder=""
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 bg-neutral-900/80 border-neutral-800 text-white placeholder:text-neutral-600 focus-visible:ring-[#d4a017] rounded-xl h-11"

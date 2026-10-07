@@ -99,7 +99,7 @@ export default function CustomersPage() {
       setIsModalOpen(false);
       fetchCustomers();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de lenregistrement');
+      alert(err.message || 'Erreur lors de l’enregistrement');
     }
   };
 
@@ -109,7 +109,7 @@ export default function CustomersPage() {
       await api.delete(`/customers/${id}`);
       fetchCustomers();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la suppression');
+      alert(err.message || 'Erreur lors de la suppression');
     }
   };
 
@@ -236,8 +236,8 @@ export default function CustomersPage() {
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-neutral-300">{c.phone}</td>
-                    <td className="py-3.5 px-4 text-neutral-400">{c.email || ''}</td>
-                    <td className="py-3.5 px-4 text-neutral-400">{c.address || ''}</td>
+                    <td className="py-3.5 px-4 text-neutral-400">{c.email || '—'}</td>
+                    <td className="py-3.5 px-4 text-neutral-400">{c.address || '—'}</td>
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button

@@ -45,12 +45,12 @@ export default function WarrantiesPage() {
     return (
       w.serialNumber?.toLowerCase().includes(q) ||
       w.productName?.toLowerCase().includes(q) ||
-      w.customerName?.toLowerCase().includes(q)
+      w.customerId?.name?.toLowerCase().includes(q)
     );
   });
 
   const getWarrantyStatus = (endDateStr: string, status: string) => {
-    if (status === 'voided') {
+    if (status === 'cancelled') {
       return {
         label: 'Garantie Annulée',
         color: 'bg-red-500/15 text-red-400 border-red-500/30',
@@ -132,25 +132,25 @@ export default function WarrantiesPage() {
                 </tr>
               ) : (
                 filtered.map((w) => {
-                  const stat = getWarrantyStatus(w.endDate, w.status);
+                  const stat = getWarrantyStatus(w.warrantyEnd, w.status);
                   const Icon = stat.icon;
 
                   return (
                     <tr key={w._id} className="hover:bg-neutral-900/40 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-[#f5d77f]">
-                        {w.serialNumber}
+                        {w.serialNumber || '—'}
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-white">
                         {w.productName}
                       </td>
                       <td className="py-3.5 px-4 text-neutral-300">
-                        {w.customerName || 'Client Comptant'}
+                        {w.customerId?.name || 'Client Comptant'}
                       </td>
                       <td className="py-3.5 px-4 text-neutral-400">
-                        {new Date(w.startDate).toLocaleDateString('fr-FR')}
+                        {new Date(w.warrantyStart).toLocaleDateString('fr-FR')}
                       </td>
                       <td className="py-3.5 px-4 text-neutral-400">
-                        {new Date(w.endDate).toLocaleDateString('fr-FR')}
+                        {new Date(w.warrantyEnd).toLocaleDateString('fr-FR')}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span

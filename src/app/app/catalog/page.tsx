@@ -36,8 +36,8 @@ export default function CatalogPage() {
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [barcode, setBarcode] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [brandId, setBrandId] = useState('');
+  const [categoryName, setCategoryName] = useState('');
+  const [brandName, setBrandName] = useState('');
   const [purchasePrice, setPurchasePrice] = useState<number>(0);
   const [price, setPrice] = useState<number>(0);
   const [resellerPrice, setResellerPrice] = useState<number>(0);
@@ -53,9 +53,9 @@ export default function CatalogPage() {
     setIsLoading(true);
     try {
       const [prodRes, catRes, brandRes] = await Promise.allSettled([
-        api.get('/products'),
-        api.get('/categories'),
-        api.get('/brands'),
+        api.get('/catalog/products'),
+        api.get('/catalog/categories'),
+        api.get('/catalog/brands'),
       ]);
 
       if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
@@ -82,8 +82,8 @@ export default function CatalogPage() {
     setName('');
     setSku(`SKU-${Math.floor(1000 + Math.random() * 9000)}`);
     setBarcode('');
-    setCategoryId(categories[0]?._id || '');
-    setBrandId(brands[0]?._id || '');
+    setCategoryName(categories[0]?.name || '');
+    setBrandName('');
     setPurchasePrice(0);
     setPrice(0);
     setResellerPrice(0);
@@ -98,13 +98,13 @@ export default function CatalogPage() {
     setName(p.name);
     setSku(p.sku);
     setBarcode(p.barcode || '');
-    setCategoryId(p.categoryId || '');
-    setBrandId(p.brandId || '');
+    setCategoryName(categories.find((c) => c.slug === p.category)?.name || p.category || '');
+    setBrandName(p.brand || '');
     setPurchasePrice(p.purchasePrice || 0);
-    setPrice(p.price || 0);
+    setPrice(p.salePrice || 0);
     setResellerPrice(p.resellerPrice || 0);
     setStockQuantity(p.stockQuantity || 0);
-    setMinStockThreshold(p.minStockThreshold || 3);
+    setMinStockThreshold(p.minStockAlert ?? 3);
     setHasSerialNumbers(p.hasSerialNumbers || false);
     setIsModalOpen(true);
   };
@@ -112,46 +112,60 @@ export default function CatalogPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Catégorie / marque : réutilise l'existante ou la crée à la volée
+      const findByName = <T extends { name: string }>(list: T[], value: string) =>
+        list.find((x) => x.name.toLowerCase() === value.trim().toLowerCase());
+
+      let category = findByName(categories, categoryName);
+      if (!category) {
+        category = await api.post('/catalog/categories', { name: categoryName.trim() });
+      }
+      let brand = brandName.trim() ? findByName(brands, brandName) : null;
+      if (brandName.trim() && !brand) {
+        brand = await api.post('/catalog/brands', { name: brandName.trim(), categoryId: category._id });
+      }
+
       const payload = {
         name,
         sku,
         barcode: barcode || undefined,
-        categoryId: categoryId || undefined,
-        brandId: brandId || undefined,
+        category: category.slug,
+        brand: brand?.name || undefined,
+        brandId: brand?._id || undefined,
         purchasePrice: Number(purchasePrice) || 0,
-        price: Number(price) || 0,
+        salePrice: Number(price) || 0,
         resellerPrice: Number(resellerPrice) || 0,
         stockQuantity: Number(stockQuantity) || 0,
-        minStockThreshold: Number(minStockThreshold) || 3,
+        minStockAlert: Number(minStockThreshold) || 0,
         hasSerialNumbers,
       };
 
       if (editingProduct) {
-        await api.put(`/products/${editingProduct._id}`, payload);
+        await api.put(`/catalog/products/${editingProduct._id}`, payload);
       } else {
-        await api.post('/products', payload);
+        await api.post('/catalog/products', payload);
       }
 
       setIsModalOpen(false);
       fetchData();
     } catch (err: any) {
       console.error('Failed to save product:', err);
-      alert(err.response?.data?.message || 'Erreur lors de lenregistrement');
+      alert(err.message || 'Erreur lors de l’enregistrement');
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
     try {
-      await api.delete(`/products/${id}`);
+      await api.delete(`/catalog/products/${id}`);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la suppression');
+      alert(err.message || 'Erreur lors de la suppression');
     }
   };
 
   const filteredProducts = products.filter((p) => {
-    const matchesCat = selectedCat === 'all' || p.categoryId === selectedCat;
+    const matchesCat = selectedCat === 'all' || p.category === selectedCat;
     const q = search.toLowerCase();
     const matchesQuery =
       !q ||
@@ -213,9 +227,9 @@ export default function CatalogPage() {
         {categories.map((c) => (
           <button
             key={c._id}
-            onClick={() => setSelectedCat(c._id)}
+            onClick={() => setSelectedCat(c.slug)}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-              selectedCat === c._id
+              selectedCat === c.slug
                 ? 'bg-[#d4a017] text-black font-semibold'
                 : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
             }`}
@@ -256,7 +270,7 @@ export default function CatalogPage() {
                 </tr>
               ) : (
                 filteredProducts.map((p) => {
-                  const isLow = p.stockQuantity <= (p.minStockThreshold || 3);
+                  const isLow = p.stockQuantity <= (p.minStockAlert ?? 3);
                   const isOut = p.stockQuantity <= 0;
 
                   return (
@@ -277,7 +291,7 @@ export default function CatalogPage() {
                         {formatPrice(p.purchasePrice)}
                       </td>
                       <td className="py-3.5 px-4 font-bold text-white">
-                        {formatPrice(p.price)}
+                        {formatPrice(p.salePrice)}
                       </td>
                       <td className="py-3.5 px-4 font-bold text-[#f5d77f]">
                         {formatPrice(p.resellerPrice)}
@@ -379,34 +393,37 @@ export default function CatalogPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Catégorie</label>
-                  <select
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#d4a017] h-10"
-                  >
-                    <option value="">Sélectionner</option>
+                  <label className="text-xs text-neutral-400 block mb-1">Catégorie *</label>
+                  <Input
+                    type="text"
+                    list="catalog-categories"
+                    placeholder="Ex: Smartphones"
+                    value={categoryName}
+                    onChange={(e) => setCategoryName(e.target.value)}
+                    required
+                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
+                  />
+                  <datalist id="catalog-categories">
                     {categories.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.name}
-                      </option>
+                      <option key={c._id} value={c.name} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
                 <div>
                   <label className="text-xs text-neutral-400 block mb-1">Marque</label>
-                  <select
-                    value={brandId}
-                    onChange={(e) => setBrandId(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#d4a017] h-10"
-                  >
-                    <option value="">Sélectionner</option>
+                  <Input
+                    type="text"
+                    list="catalog-brands"
+                    placeholder="Ex: Apple"
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
+                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
+                  />
+                  <datalist id="catalog-brands">
                     {brands.map((b) => (
-                      <option key={b._id} value={b._id}>
-                        {b.name}
-                      </option>
+                      <option key={b._id} value={b.name} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
 
@@ -457,7 +474,7 @@ export default function CatalogPage() {
                   <Input
                     type="number"
                     value={minStockThreshold}
-                    onChange={(e) => setMinStockThreshold(Number(e.target.value) || 3)}
+                    onChange={(e) => setMinStockThreshold(Number(e.target.value) || 0)}
                     required
                     className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
                   />

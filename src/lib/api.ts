@@ -35,7 +35,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (path.startsWith('/app')) {
-        localStorage.removeItem('zaff_token');
+        ['zaff_token', 'zaff_user', 'zaff_establishment', 'zaff_tenant_slug'].forEach((k) =>
+          localStorage.removeItem(k)
+        );
         window.location.href = '/login';
       }
     }

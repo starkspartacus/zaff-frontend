@@ -51,8 +51,8 @@ export default function SuppliersPage() {
     try {
       const [supRes, orderRes, prodRes] = await Promise.allSettled([
         api.get('/suppliers'),
-        api.get('/purchase-orders'),
-        api.get('/products'),
+        api.get('/suppliers/orders'),
+        api.get('/catalog/products'),
       ]);
 
       if (supRes.status === 'fulfilled' && Array.isArray(supRes.value)) {
@@ -87,10 +87,13 @@ export default function SuppliersPage() {
 
       setIsSupplierModalOpen(false);
       setSupName('');
+      setSupContactPerson('');
       setSupPhone('');
+      setSupEmail('');
+      setSupAddress('');
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la création du fournisseur');
+      alert(err.message || 'Erreur lors de la création du fournisseur');
     }
   };
 
@@ -99,19 +102,14 @@ export default function SuppliersPage() {
     if (!orderSupplierId || !orderProductId) return;
 
     try {
-      const product = products.find((p) => p._id === orderProductId);
-      const supplier = suppliers.find((s) => s._id === orderSupplierId);
-
-      await api.post('/purchase-orders', {
+      await api.post('/suppliers/orders', {
         supplierId: orderSupplierId,
-        supplierName: supplier?.name,
         items: [
           {
             productId: orderProductId,
-            productName: product?.name,
             quantity: Number(orderQuantity),
             unitPrice: Number(orderUnitCost),
-            totalPrice: Number(orderQuantity) * Number(orderUnitCost),
+            total: Number(orderQuantity) * Number(orderUnitCost),
           },
         ],
         totalAmount: Number(orderQuantity) * Number(orderUnitCost),
@@ -121,18 +119,18 @@ export default function SuppliersPage() {
       setIsOrderModalOpen(false);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la commande');
+      alert(err.message || 'Erreur lors de la commande');
     }
   };
 
   const handleReceiveOrder = async (orderId: string) => {
     if (!confirm('Confirmez-vous la réception complète des marchandises en stock ?')) return;
     try {
-      await api.patch(`/purchase-orders/${orderId}/receive`, {});
+      await api.patch(`/suppliers/orders/${orderId}/receive`, {});
       alert('Articles réceptionnés ! Les stocks ont été automatiquement incrémentés.');
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la réception');
+      alert(err.message || 'Erreur lors de la réception');
     }
   };
 
@@ -222,10 +220,10 @@ export default function SuppliersPage() {
                   suppliers.map((s) => (
                     <tr key={s._id} className="hover:bg-neutral-900/40 transition-colors">
                       <td className="py-3.5 px-4 font-semibold text-white">{s.name}</td>
-                      <td className="py-3.5 px-4 text-neutral-300">{s.contactPerson || ''}</td>
+                      <td className="py-3.5 px-4 text-neutral-300">{s.contactPerson || '—'}</td>
                       <td className="py-3.5 px-4 font-mono text-neutral-300">{s.phone}</td>
-                      <td className="py-3.5 px-4 text-neutral-400">{s.email || ''}</td>
-                      <td className="py-3.5 px-4 text-neutral-400">{s.address || ''}</td>
+                      <td className="py-3.5 px-4 text-neutral-400">{s.email || '—'}</td>
+                      <td className="py-3.5 px-4 text-neutral-400">{s.address || '—'}</td>
                     </tr>
                   ))
                 )}
@@ -268,10 +266,10 @@ export default function SuppliersPage() {
                           {new Date(po.createdAt).toLocaleDateString('fr-FR')}
                         </td>
                         <td className="py-3.5 px-4 font-semibold text-white">
-                          {po.supplierName || 'Fournisseur'}
+                          {po.supplierId?.name || 'Fournisseur'}
                         </td>
                         <td className="py-3.5 px-4 text-neutral-300">
-                          {po.items?.map((it: any) => `${it.quantity}x ${it.productName}`).join(', ')}
+                          {po.items?.map((it: any) => `${it.quantity}x ${it.productId?.name || 'Article'}`).join(', ')}
                         </td>
                         <td className="py-3.5 px-4 text-right font-bold text-[#f5d77f]">
                           {formatPrice(po.totalAmount)}

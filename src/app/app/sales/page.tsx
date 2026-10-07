@@ -42,7 +42,7 @@ export default function SalesPosPage() {
 
   // Checkout modal
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile_money' | 'bank_transfer'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'bank_transfer'>('cash');
   const [amountPaid, setAmountPaid] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completedSale, setCompletedSale] = useState<any>(null);
@@ -60,8 +60,8 @@ export default function SalesPosPage() {
   const fetchInitialData = async () => {
     try {
       const [prodRes, catRes, custRes] = await Promise.allSettled([
-        api.get('/products'),
-        api.get('/categories'),
+        api.get('/catalog/products'),
+        api.get('/catalog/categories'),
         api.get('/customers'),
       ]);
 
@@ -85,7 +85,7 @@ export default function SalesPosPage() {
   // Filter products
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchesCat = selectedCategory === 'all' || p.categoryId === selectedCategory;
+      const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;
       const q = searchQuery.toLowerCase().trim();
       const matchesQuery =
         !q ||
@@ -99,7 +99,7 @@ export default function SalesPosPage() {
   // Add to cart
   const addToCart = (product: any) => {
     const existingIndex = cart.findIndex((item) => item.product._id === product._id);
-    const unitPrice = isResellerPricing && product.resellerPrice ? product.resellerPrice : product.price;
+    const unitPrice = isResellerPricing && product.resellerPrice ? product.resellerPrice : product.salePrice;
 
     if (existingIndex > -1) {
       const updated = [...cart];
@@ -149,7 +149,7 @@ export default function SalesPosPage() {
         unitPrice:
           reseller && item.product.resellerPrice
             ? item.product.resellerPrice
-            : item.product.price,
+            : item.product.salePrice,
       }))
     );
   };
@@ -196,22 +196,24 @@ export default function SalesPosPage() {
   const handleFinalizeSale = async () => {
     setIsSubmitting(true);
     try {
+      // Sans client sélectionné : vente comptant, aucun client n'est créé
       const payload = {
         customerId: selectedCustomer?._id || undefined,
-        customerName: selectedCustomer?.name || 'Client Comptant',
-        customerPhone: selectedCustomer?.phone || undefined,
         items: cart.map((item) => ({
           productId: item.product._id,
           productName: item.product.name,
+          productSku: item.product.sku || undefined,
+          productCategory: item.product.category || undefined,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          purchasePrice: item.product.purchasePrice || 0,
-          totalPrice: item.unitPrice * item.quantity,
-          serialNumbers: item.serialNumbers || [],
+          total: item.unitPrice * item.quantity,
         })),
-        paymentMethod,
+        subtotal,
         discount: Number(discount) || 0,
-        paidAmount: Number(amountPaid) || total,
+        total,
+        paidAmount: paymentMethod === 'cash' ? Number(amountPaid) || total : total,
+        paymentMethod,
+        saleType: isResellerPricing ? 'reseller' : 'purchase',
       };
 
       const result: any = await api.post('/sales', payload);
@@ -230,7 +232,7 @@ export default function SalesPosPage() {
       fetchInitialData(); // reload stock
     } catch (err: any) {
       console.error('Failed to submit sale:', err);
-      alert(err.response?.data?.message || 'Erreur lors de lencaissement.');
+      alert(err.message || 'Erreur lors de l’encaissement.');
     } finally {
       setIsSubmitting(false);
     }
@@ -296,9 +298,9 @@ export default function SalesPosPage() {
             {categories.map((c) => (
               <button
                 key={c._id}
-                onClick={() => setSelectedCategory(c._id)}
+                onClick={() => setSelectedCategory(c.slug)}
                 className={`px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                  selectedCategory === c._id
+                  selectedCategory === c.slug
                     ? 'bg-[#d4a017] text-black font-semibold'
                     : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
                 }`}
@@ -313,7 +315,7 @@ export default function SalesPosPage() {
         <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5 scrollbar-thin scrollbar-thumb-neutral-800">
           {filteredProducts.map((p) => {
             const isOutOfStock = p.stockQuantity <= 0;
-            const displayPrice = isResellerPricing && p.resellerPrice ? p.resellerPrice : p.price;
+            const displayPrice = isResellerPricing && p.resellerPrice ? p.resellerPrice : p.salePrice;
 
             return (
               <button
@@ -335,7 +337,7 @@ export default function SalesPosPage() {
                       className={`px-2 py-0.5 rounded-full font-semibold ${
                         isOutOfStock
                           ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                          : p.stockQuantity <= (p.minStockThreshold || 3)
+                          : p.stockQuantity <= (p.minStockAlert ?? 3)
                           ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                           : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                       }`}
@@ -391,7 +393,7 @@ export default function SalesPosPage() {
             <option value="">Client Comptant (Passage)</option>
             {customers.map((c) => (
               <option key={c._id} value={c._id}>
-                {c.name} {c.isReseller ? '? (Revendeur)' : ''} ({c.phone})
+                {c.name} {c.isReseller ? '· Revendeur' : ''} ({c.phone})
               </option>
             ))}
           </select>
@@ -524,7 +526,7 @@ export default function SalesPosPage() {
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { id: 'cash', label: 'Espèces', icon: Banknote },
-                  { id: 'mobile_money', label: 'Wave / MoMo', icon: Smartphone },
+                  { id: 'mobile', label: 'Wave / MoMo', icon: Smartphone },
                   { id: 'card', label: 'Carte Bancaire', icon: CreditCard },
                   { id: 'bank_transfer', label: 'Virement', icon: Barcode },
                 ].map((m) => {
@@ -620,14 +622,14 @@ export default function SalesPosPage() {
                     <span>
                       {it.quantity}x {it.productName}
                     </span>
-                    <span>{formatPrice(it.totalPrice)}</span>
+                    <span>{formatPrice(it.total)}</span>
                   </div>
                 ))}
               </div>
 
               <div className="flex justify-between font-bold text-white pt-1">
                 <span>TOTAL PAYÉ:</span>
-                <span>{formatPrice(completedSale.totalAmount)}</span>
+                <span>{formatPrice(completedSale.total)}</span>
               </div>
               <div className="text-[10px] text-neutral-500 text-center pt-2">
                 Merci de votre visite et à bientôt !

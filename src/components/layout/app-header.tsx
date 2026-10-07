@@ -35,7 +35,7 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
           <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-[#d4a017]/10 border border-[#d4a017]/30 text-[#d4a017] text-xs font-medium">
             <Sparkles className="w-3 h-3" />
             <span className="font-semibold">{establishment?.name || 'Zaff'}</span>
-            <span className="text-neutral-500"></span>
+            <span className="text-neutral-500">•</span>
             <span className="text-[11px] text-neutral-400 uppercase tracking-wider">{establishment?.currency || 'F CFA'}</span>
           </div>
 

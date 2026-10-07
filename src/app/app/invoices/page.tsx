@@ -19,6 +19,15 @@ import {
   FileText,
 } from 'lucide-react';
 
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: 'Espèces',
+  mobile: 'Mobile Money',
+  card: 'Carte bancaire',
+  bank_transfer: 'Virement',
+  credit: 'Crédit',
+};
+const paymentLabel = (method?: string) => PAYMENT_LABELS[method || 'cash'] || method || 'Espèces';
+
 export default function InvoicesPage() {
   const { establishment } = useAuth();
   const [sales, setSales] = useState<any[]>([]);
@@ -51,9 +60,10 @@ export default function InvoicesPage() {
   const filteredSales = sales.filter((s) => {
     const q = search.toLowerCase();
     return (
-      s.invoiceNumber?.toLowerCase().includes(q) ||
-      s.customerName?.toLowerCase().includes(q) ||
-      s.paymentMethod?.toLowerCase().includes(q)
+      String(s.invoiceNumber ?? '').includes(q) ||
+      s.customerId?.name?.toLowerCase().includes(q) ||
+      s.customerId?.phone?.includes(q) ||
+      paymentLabel(s.paymentMethod).toLowerCase().includes(q)
     );
   });
 
@@ -128,18 +138,18 @@ export default function InvoicesPage() {
                       })}
                     </td>
                     <td className="py-3.5 px-4 font-medium text-white">
-                      {sale.customerName || 'Client Comptant'}
+                      {sale.customerId?.name || 'Client Comptant'}
                     </td>
                     <td className="py-3.5 px-4 text-neutral-400">
                       {sale.items?.length || 0} article(s)
                     </td>
                     <td className="py-3.5 px-4">
                       <span className="capitalize px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-900 text-neutral-300 border border-neutral-800">
-                        {sale.paymentMethod || 'Espèces'}
+                        {paymentLabel(sale.paymentMethod)}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right font-extrabold text-[#f5d77f]">
-                      {formatPrice(sale.totalAmount)}
+                      {formatPrice(sale.total)}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <button
@@ -215,7 +225,7 @@ export default function InvoicesPage() {
                       {establishment?.name || 'Zaff'}
                     </p>
                     <p className="text-[10px] text-neutral-400">{establishment?.phone || '+225 ...'}</p>
-                    <p className="text-[10px] text-neutral-400">{establishment?.address || 'Abidjan, Côte dIvoire'}</p>
+                    <p className="text-[10px] text-neutral-400">{establishment?.address || 'Abidjan, Côte d’Ivoire'}</p>
                     <p className="text-[11px] text-[#f5d77f] font-bold mt-1">
                       TICKET DE CAISSE
                     </p>
@@ -234,7 +244,7 @@ export default function InvoicesPage() {
                           </p>
                         </div>
                         <span className="font-bold text-white">
-                          {formatPrice(it.totalPrice)}
+                          {formatPrice(it.total)}
                         </span>
                       </div>
                     ))}
@@ -249,16 +259,16 @@ export default function InvoicesPage() {
                     )}
                     <div className="flex justify-between text-sm font-extrabold text-white pt-1">
                       <span>TOTAL TTC:</span>
-                      <span className="text-[#f5d77f]">{formatPrice(selectedSale.totalAmount)}</span>
+                      <span className="text-[#f5d77f]">{formatPrice(selectedSale.total)}</span>
                     </div>
                     <div className="flex justify-between text-neutral-400 text-[10px]">
-                      <span>Règlement ({selectedSale.paymentMethod}):</span>
-                      <span>{formatPrice(selectedSale.paidAmount || selectedSale.totalAmount)}</span>
+                      <span>Règlement ({paymentLabel(selectedSale.paymentMethod)}):</span>
+                      <span>{formatPrice(selectedSale.paidAmount || selectedSale.total)}</span>
                     </div>
                   </div>
 
                   <div className="text-center text-[10px] text-neutral-500 pt-1 space-y-0.5">
-                    <p>Client: {selectedSale.customerName || 'Client Comptant'}</p>
+                    <p>Client: {selectedSale.customerId?.name || 'Client Comptant'}</p>
                     <p>Merci pour votre confiance !</p>
                     <p className="italic">Conservez ce ticket pour la garantie.</p>
                   </div>
@@ -291,10 +301,10 @@ export default function InvoicesPage() {
                       Facturé à
                     </span>
                     <p className="text-sm font-bold text-white mt-0.5">
-                      {selectedSale.customerName || 'Client Comptant'}
+                      {selectedSale.customerId?.name || 'Client Comptant'}
                     </p>
-                    {selectedSale.customerPhone && (
-                      <p className="text-neutral-400">{selectedSale.customerPhone}</p>
+                    {selectedSale.customerId?.phone && (
+                      <p className="text-neutral-400">{selectedSale.customerId?.phone}</p>
                     )}
                   </div>
 
@@ -313,7 +323,7 @@ export default function InvoicesPage() {
                           <td className="py-2 font-medium text-white">{it.productName}</td>
                           <td className="py-2 text-center text-neutral-400">{it.quantity}</td>
                           <td className="py-2 text-right text-neutral-400">{formatPrice(it.unitPrice)}</td>
-                          <td className="py-2 text-right font-bold text-white">{formatPrice(it.totalPrice)}</td>
+                          <td className="py-2 text-right font-bold text-white">{formatPrice(it.total)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -323,7 +333,7 @@ export default function InvoicesPage() {
                     <div className="w-60 space-y-1.5 text-right">
                       <div className="flex justify-between text-neutral-400">
                         <span>Sous-total:</span>
-                        <span>{formatPrice(selectedSale.subtotalAmount || selectedSale.totalAmount)}</span>
+                        <span>{formatPrice(selectedSale.subtotal || selectedSale.total)}</span>
                       </div>
                       {selectedSale.discount > 0 && (
                         <div className="flex justify-between text-neutral-400">
@@ -333,7 +343,7 @@ export default function InvoicesPage() {
                       )}
                       <div className="flex justify-between text-base font-extrabold text-[#f5d77f] pt-1 border-t border-neutral-800">
                         <span>Net à Payer:</span>
-                        <span>{formatPrice(selectedSale.totalAmount)}</span>
+                        <span>{formatPrice(selectedSale.total)}</span>
                       </div>
                     </div>
                   </div>

@@ -20,6 +20,19 @@ import {
   User,
 } from 'lucide-react';
 
+// Statuts alignés sur l'enum RepairStatus du backend
+const STATUS_META: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+  received: { label: 'Reçu', color: 'bg-amber-500/15 text-amber-400 border-amber-500/30', icon: Clock },
+  diagnosing: { label: 'Diagnostic', color: 'bg-amber-500/15 text-amber-400 border-amber-500/30', icon: Search },
+  waiting_parts: { label: 'Attente pièces', color: 'bg-orange-500/15 text-orange-400 border-orange-500/30', icon: AlertCircle },
+  repairing: { label: 'En réparation', color: 'bg-blue-500/15 text-blue-400 border-blue-500/30', icon: Wrench },
+  completed: { label: 'Prêt (Réparé)', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30', icon: CheckCircle2 },
+  returned: { label: 'Remis au client', color: 'bg-purple-500/15 text-purple-400 border-purple-500/30', icon: Truck },
+  cancelled: { label: 'Annulé', color: 'bg-red-500/15 text-red-400 border-red-500/30', icon: X },
+};
+
+const ticketLabel = (r: { ticketNumber?: number; _id: string }) => (r.ticketNumber ? `SAV-${r.ticketNumber}` : `#${String(r._id).slice(-6).toUpperCase()}`);
+
 export default function RepairsPage() {
   const { establishment } = useAuth();
   const [repairs, setRepairs] = useState<any[]>([]);
@@ -41,7 +54,7 @@ export default function RepairsPage() {
 
   // Modal update status
   const [selectedRepair, setSelectedRepair] = useState<any>(null);
-  const [updateStatusVal, setUpdateStatusVal] = useState<string>('pending');
+  const [updateStatusVal, setUpdateStatusVal] = useState<string>('received');
   const [updateNotes, setUpdateNotes] = useState('');
 
   useEffect(() => {
@@ -71,14 +84,13 @@ export default function RepairsPage() {
       await api.post('/repairs', {
         customerName,
         customerPhone,
-        deviceModel,
-        deviceBrand: deviceBrand || undefined,
-        serialOrImei: serialOrImei || undefined,
+        deviceName: deviceBrand ? `${deviceBrand} ${deviceModel}` : deviceModel,
+        serialNumber: serialOrImei || undefined,
         issueDescription,
-        diagnostic: diagnostic || undefined,
+        diagnosis: diagnostic || undefined,
         laborCost: Number(laborCost) || 0,
         partsCost: Number(partsCost) || 0,
-        totalCost: (Number(laborCost) || 0) + (Number(partsCost) || 0),
+        estimatedCost: (Number(laborCost) || 0) + (Number(partsCost) || 0),
       });
 
       setIsCreateOpen(false);
@@ -92,7 +104,7 @@ export default function RepairsPage() {
       setPartsCost(0);
       fetchRepairs();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la création du ticket SAV');
+      alert(err.message || 'Erreur lors de la création du ticket SAV');
     }
   };
 
@@ -101,15 +113,15 @@ export default function RepairsPage() {
     if (!selectedRepair) return;
 
     try {
-      await api.patch(`/repairs/${selectedRepair._id}/status`, {
+      await api.put(`/repairs/${selectedRepair._id}`, {
         status: updateStatusVal,
-        diagnostic: updateNotes || undefined,
+        repairNotes: updateNotes || undefined,
       });
 
       setSelectedRepair(null);
       fetchRepairs();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la mise à jour du statut');
+      alert(err.message || 'Erreur lors de la mise à jour du statut');
     }
   };
 
@@ -118,46 +130,29 @@ export default function RepairsPage() {
     const q = search.toLowerCase();
     const matchesSearch =
       !q ||
-      r.ticketNumber?.toLowerCase().includes(q) ||
-      r.customerName?.toLowerCase().includes(q) ||
-      r.deviceModel?.toLowerCase().includes(q) ||
-      r.serialOrImei?.toLowerCase().includes(q);
+      ticketLabel(r).toLowerCase().includes(q) ||
+      r.customerId?.name?.toLowerCase().includes(q) ||
+      r.customerId?.phone?.includes(q) ||
+      r.deviceName?.toLowerCase().includes(q) ||
+      r.serialNumber?.toLowerCase().includes(q);
     return matchesStatus && matchesSearch;
   });
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1">
-            <Clock className="w-3 h-3" /> Diagnostic / Attente
-          </span>
-        );
-      case 'in_progress':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center gap-1">
-            <Wrench className="w-3 h-3" /> En cours
-          </span>
-        );
-      case 'completed':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Prêt (Réparé)
-          </span>
-        );
-      case 'delivered':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center gap-1">
-            <Truck className="w-3 h-3" /> Remis au client
-          </span>
-        );
-      default:
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-800 text-neutral-400 border border-neutral-700">
-            {status}
-          </span>
-        );
+    const meta = STATUS_META[status];
+    if (!meta) {
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-800 text-neutral-400 border border-neutral-700">
+          {status}
+        </span>
+      );
     }
+    const Icon = meta.icon;
+    return (
+      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${meta.color}`}>
+        <Icon className="w-3 h-3" /> {meta.label}
+      </span>
+    );
   };
 
   return (
@@ -201,10 +196,12 @@ export default function RepairsPage() {
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {[
           { id: 'all', label: `Tous (${repairs.length})` },
-          { id: 'pending', label: 'En attente' },
-          { id: 'in_progress', label: 'En cours' },
-          { id: 'completed', label: 'Prêt' },
-          { id: 'delivered', label: 'Livré' },
+          { id: 'received', label: 'Reçus' },
+          { id: 'diagnosing', label: 'Diagnostic' },
+          { id: 'waiting_parts', label: 'Attente pièces' },
+          { id: 'repairing', label: 'En réparation' },
+          { id: 'completed', label: 'Prêts' },
+          { id: 'returned', label: 'Remis' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -253,26 +250,26 @@ export default function RepairsPage() {
                 filtered.map((r) => (
                   <tr key={r._id} className="hover:bg-neutral-900/40 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-bold text-[#f5d77f]">
-                      {r.ticketNumber}
+                      {ticketLabel(r)}
                     </td>
                     <td className="py-3.5 px-4 text-neutral-400">
-                      {new Date(r.createdAt).toLocaleDateString('fr-FR')}
+                      {new Date(r.receivedDate || r.createdAt).toLocaleDateString('fr-FR')}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-white">{r.customerName}</div>
-                      <div className="text-[10px] text-neutral-400">{r.customerPhone}</div>
+                      <div className="font-semibold text-white">{r.customerId?.name || 'Client'}</div>
+                      <div className="text-[10px] text-neutral-400">{r.customerId?.phone}</div>
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="font-medium text-white flex items-center gap-1.5">
                         <Smartphone className="w-3.5 h-3.5 text-[#d4a017]" />
-                        {r.deviceBrand ? `${r.deviceBrand} ` : ''}{r.deviceModel}
+                        {r.deviceName}
                       </div>
                       <div className="text-[11px] text-neutral-400 line-clamp-1 mt-0.5">
                         {r.issueDescription}
                       </div>
-                      {r.serialOrImei && (
+                      {r.serialNumber && (
                         <div className="text-[10px] font-mono text-neutral-500">
-                          IMEI: {r.serialOrImei}
+                          IMEI: {r.serialNumber}
                         </div>
                       )}
                     </td>
@@ -280,14 +277,14 @@ export default function RepairsPage() {
                       <div className="flex justify-center">{getStatusBadge(r.status)}</div>
                     </td>
                     <td className="py-3.5 px-4 text-right font-bold text-[#f5d77f]">
-                      {formatPrice(r.totalCost || (r.laborCost || 0) + (r.partsCost || 0))}
+                      {formatPrice(r.actualCost || r.estimatedCost || (r.laborCost || 0) + (r.partsCost || 0))}
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <button
                         onClick={() => {
                           setSelectedRepair(r);
                           setUpdateStatusVal(r.status);
-                          setUpdateNotes(r.diagnostic || '');
+                          setUpdateNotes(r.repairNotes || '');
                         }}
                         className="px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-[#d4a017] text-neutral-300 hover:text-white text-[11px] transition-colors"
                       >
@@ -403,7 +400,7 @@ export default function RepairsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Main d'uvre ({currency})</label>
+                  <label className="text-xs text-neutral-400 block mb-1">Main d'œuvre ({currency})</label>
                   <Input
                     type="number"
                     value={laborCost || ''}
@@ -456,10 +453,10 @@ export default function RepairsPage() {
             </button>
 
             <h2 className="text-xl font-bold text-white">
-              Ticket {selectedRepair.ticketNumber}
+              Ticket {ticketLabel(selectedRepair)}
             </h2>
             <p className="text-xs text-neutral-400">
-              {selectedRepair.deviceModel}  {selectedRepair.customerName}
+              {selectedRepair.deviceName} • {selectedRepair.customerId?.name}
             </p>
 
             <div className="space-y-3 pt-2">
@@ -470,10 +467,12 @@ export default function RepairsPage() {
                   onChange={(e) => setUpdateStatusVal(e.target.value)}
                   className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#d4a017] h-10"
                 >
-                  <option value="pending">En attente / Diagnostic</option>
-                  <option value="in_progress">En cours de réparation</option>
+                  <option value="received">Reçu à l&apos;atelier</option>
+                  <option value="diagnosing">Diagnostic en cours</option>
+                  <option value="waiting_parts">En attente de pièces</option>
+                  <option value="repairing">En cours de réparation</option>
                   <option value="completed">Prêt / Réparé (Avertir client)</option>
-                  <option value="delivered">Délivré / Clôturé</option>
+                  <option value="returned">Remis au client / Clôturé</option>
                   <option value="cancelled">Annulé / Refus devis</option>
                 </select>
               </div>

@@ -41,7 +41,7 @@ export default function StockPage() {
     setIsLoading(true);
     try {
       const [prodRes, movRes] = await Promise.allSettled([
-        api.get('/products'),
+        api.get('/catalog/products'),
         api.get('/stock/movements'),
       ]);
 
@@ -63,11 +63,14 @@ export default function StockPage() {
     if (!selectedProductId) return;
 
     try {
+      // « Perte / Casse » est une sortie de stock dont le motif est tracé
+      const isLoss = type === 'loss';
       await api.post('/stock/movements', {
         productId: selectedProductId,
-        type,
+        movementType: isLoss ? 'out' : type,
         quantity: Number(quantity),
-        reason: reason || undefined,
+        referenceType: type === 'adjustment' ? 'adjustment' : 'manual',
+        notes: isLoss ? `Perte / Casse${reason ? ` : ${reason}` : ''}` : reason || undefined,
       });
 
       setIsModalOpen(false);
@@ -76,7 +79,7 @@ export default function StockPage() {
       setReason('');
       fetchStockData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors du mouvement de stock');
+      alert(err.message || 'Erreur lors du mouvement de stock');
     }
   };
 
@@ -91,7 +94,7 @@ export default function StockPage() {
     );
   });
 
-  const lowStockCount = products.filter((p) => p.stockQuantity <= (p.minStockThreshold || 3)).length;
+  const lowStockCount = products.filter((p) => p.stockQuantity <= (p.minStockAlert ?? 3)).length;
   const totalStockValue = products.reduce((sum, p) => sum + (p.purchasePrice || 0) * (p.stockQuantity || 0), 0);
 
   return (
@@ -196,7 +199,7 @@ export default function StockPage() {
               </thead>
               <tbody className="divide-y divide-neutral-900">
                 {filteredProducts.map((p) => {
-                  const isLow = p.stockQuantity <= (p.minStockThreshold || 3);
+                  const isLow = p.stockQuantity <= (p.minStockAlert ?? 3);
                   const isOut = p.stockQuantity <= 0;
 
                   return (
@@ -204,7 +207,7 @@ export default function StockPage() {
                       <td className="py-3.5 px-4 font-semibold text-white">{p.name}</td>
                       <td className="py-3.5 px-4 font-mono text-neutral-400">{p.sku}</td>
                       <td className="py-3.5 px-4 text-neutral-400">{formatPrice(p.purchasePrice)}</td>
-                      <td className="py-3.5 px-4 text-center text-neutral-400">{p.minStockThreshold || 3}</td>
+                      <td className="py-3.5 px-4 text-center text-neutral-400">{p.minStockAlert ?? 3}</td>
                       <td className="py-3.5 px-4 text-center font-bold text-white text-sm">
                         {p.stockQuantity}
                       </td>
@@ -266,24 +269,24 @@ export default function StockPage() {
                       <td className="py-3.5 px-4">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            m.type === 'in'
+                            m.movementType === 'in'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : m.type === 'out'
+                              : m.movementType === 'out'
                               ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                               : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                           }`}
                         >
-                          {m.type === 'in' ? 'Entrée (+)' : m.type === 'out' ? 'Sortie (-)' : m.type}
+                          {m.movementType === 'in' ? 'Entrée (+)' : m.movementType === 'out' ? 'Sortie (-)' : 'Ajustement'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-white">
-                        {m.productName || 'Article'}
+                        {m.productId?.name || 'Article supprimé'}
                       </td>
                       <td className="py-3.5 px-4 text-center font-bold text-white">
-                        {m.type === 'in' ? `+${m.quantity}` : `-${m.quantity}`}
+                        {m.movementType === 'in' ? `+${m.quantity}` : m.movementType === 'adjustment' ? `= ${m.quantity}` : `-${m.quantity}`}
                       </td>
                       <td className="py-3.5 px-4 text-neutral-400 italic">
-                        {m.reason || 'Mouvement standard'}
+                        {m.notes || 'Mouvement standard'}
                       </td>
                     </tr>
                   ))
@@ -355,12 +358,14 @@ export default function StockPage() {
               </div>
 
               <div>
-                <label className="text-xs text-neutral-400 block mb-1">Quantité concernée *</label>
+                <label className="text-xs text-neutral-400 block mb-1">
+                  {type === 'adjustment' ? 'Nouvelle quantité réelle en stock *' : 'Quantité concernée *'}
+                </label>
                 <Input
                   type="number"
-                  min="1"
+                  min={type === 'adjustment' ? '0' : '1'}
                   value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value) || 1)}
+                  onChange={(e) => setQuantity(Math.max(0, Number(e.target.value) || 0))}
                   required
                   className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
                 />
