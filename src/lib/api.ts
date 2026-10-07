@@ -1,6 +1,19 @@
 import axios from 'axios';
+import { env } from '@/lib/env';
+import { useAuthStore } from '@/stores/auth-store';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+export const API_BASE_URL = env.NEXT_PUBLIC_API_URL;
+
+/** Erreur API avec un message lisible et les détails éventuels du serveur */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+    public readonly details?: Record<string, unknown>
+  ) {
+    super(message);
+  }
+}
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -10,15 +23,12 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('zaff_token');
-    const tenantSlug = localStorage.getItem('zaff_tenant_slug');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    if (tenantSlug) {
-      config.headers['x-tenant-slug'] = tenantSlug;
-    }
+  const { token, establishment } = useAuthStore.getState();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (establishment?.slug) {
+    config.headers['x-tenant-slug'] = establishment.slug;
   }
   return config;
 });
@@ -35,13 +45,13 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       const path = window.location.pathname;
       if (path.startsWith('/app')) {
-        ['zaff_token', 'zaff_user', 'zaff_establishment', 'zaff_tenant_slug'].forEach((k) =>
-          localStorage.removeItem(k)
-        );
+        useAuthStore.getState().clear();
         window.location.href = '/login';
       }
     }
     const message = error.response?.data?.message || error.message || 'Une erreur est survenue';
-    return Promise.reject(new Error(Array.isArray(message) ? message.join(', ') : message));
+    return Promise.reject(
+      new ApiError(Array.isArray(message) ? message.join(', ') : message, error.response?.status, error.response?.data?.details)
+    );
   }
 );

@@ -3,8 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { ROLE_LABELS } from '@/lib/roles';
-import { Menu, ShoppingCart, Wrench, Bell, Sparkles } from 'lucide-react';
+import { isOwner, ROLE_LABELS } from '@/lib/roles';
+import { LiveStatus, NotificationBell } from '@/components/notifications/notification-bell';
+import { Menu, ShoppingCart, Wrench, Sparkles, ScanLine, PackagePlus } from 'lucide-react';
 
 interface AppHeaderProps {
   onToggleSidebar?: () => void;
@@ -48,29 +49,36 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
 
       {/* Right Actions */}
       <div className="flex items-center gap-3">
-        {/* Fast Action: POS */}
-        <Link
-          href="/app/sales"
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-semibold text-xs hover:brightness-110 transition-all shadow-sm shadow-[#d4a017]/20"
-        >
-          <ShoppingCart className="w-3.5 h-3.5" />
-          <span>Caisse POS</span>
-        </Link>
+        <LiveStatus className="hidden md:flex" />
 
-        {/* Fast Action: SAV */}
-        <Link
-          href="/app/repairs"
-          className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 text-neutral-200 hover:text-white hover:border-[#d4a017]/50 font-medium text-xs transition-all"
-        >
-          <Wrench className="w-3.5 h-3.5 text-[#d4a017]" />
-          <span>Atelier SAV</span>
-        </Link>
+        {/* Action rapide selon le rôle */}
+        {user?.role === 'storekeeper' ? (
+          <QuickAction href="/app/receive" icon={PackagePlus} label="Mise en stock" />
+        ) : user?.role === 'seller' ? (
+          <QuickAction href="/app/scan" icon={ScanLine} label="Vendre" />
+        ) : (
+          <>
+            <QuickAction href="/app/scan" icon={ScanLine} label="Vendre" />
+            <Link
+              href="/app/sales"
+              className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 text-neutral-200 hover:text-white hover:border-[#d4a017]/50 font-medium text-xs transition-all"
+            >
+              <ShoppingCart className="w-3.5 h-3.5 text-[#d4a017]" />
+              <span>Caisse</span>
+            </Link>
+            {isOwner(user?.role) && (
+              <Link
+                href="/app/repairs"
+                className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700/80 text-neutral-200 hover:text-white hover:border-[#d4a017]/50 font-medium text-xs transition-all"
+              >
+                <Wrench className="w-3.5 h-3.5 text-[#d4a017]" />
+                <span>Atelier SAV</span>
+              </Link>
+            )}
+          </>
+        )}
 
-        {/* Notification bell (visual) */}
-        <button className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-900 border border-neutral-800 transition-colors relative">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#d4a017]" />
-        </button>
+        <NotificationBell />
 
         {/* User Mini Tag */}
         <div className="hidden lg:flex items-center gap-2.5 pl-3 border-l border-neutral-800">
@@ -81,5 +89,17 @@ export function AppHeader({ onToggleSidebar }: AppHeaderProps) {
         </div>
       </div>
     </header>
+  );
+}
+
+function QuickAction({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-semibold text-xs hover:brightness-110 transition-all shadow-sm shadow-[#d4a017]/20"
+    >
+      <Icon className="w-3.5 h-3.5" />
+      <span>{label}</span>
+    </Link>
   );
 }

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { api } from '@/lib/api';
-import type { MyStats } from '@/lib/types';
+import { useMyStats } from '@/lib/queries';
+import { NumberTicker } from '@/components/magicui/number-ticker';
 import { CalendarCheck, PackagePlus, RefreshCw, ScanLine } from 'lucide-react';
 
 const PERIODS = [
@@ -30,31 +30,10 @@ export default function MyActivityPage() {
   const formatPrice = (v?: number) => `${(v || 0).toLocaleString('fr-FR')} ${currency}`;
 
   const [period, setPeriod] = useState('day');
-  const [data, setData] = useState<MyStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchStats = useCallback(
-    () =>
-      (api.get(`/analytics/me?period=${period}`) as unknown as Promise<MyStats>)
-        .then(setData)
-        .catch((err) => console.error('Error loading activity:', err))
-        .finally(() => setIsLoading(false)),
-    [period]
-  );
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
-
-  const load = () => {
-    setIsLoading(true);
-    fetchStats();
-  };
-
-  const changePeriod = (id: string) => {
-    setIsLoading(true);
-    setPeriod(id);
-  };
+  // Mis à jour automatiquement après chaque vente / mise en stock (WebSocket)
+  const { data, isFetching: isLoading, refetch } = useMyStats(period);
+  const load = () => refetch();
+  const changePeriod = (id: string) => setPeriod(id);
 
   const periodLabel = PERIODS.find((p) => p.id === period)?.label.toLowerCase();
 
@@ -87,7 +66,9 @@ export default function MyActivityPage() {
         <>
           <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-6 text-center">
             <p className="text-xs uppercase tracking-wider text-neutral-500">Appareils mis en stock {periodLabel}</p>
-            <p className="text-5xl font-black text-[#f5d77f] mt-1">{data?.stocking?.unitsAdded ?? '—'}</p>
+            <p className="text-5xl font-black text-[#f5d77f] mt-1">
+              <NumberTicker value={data?.stocking?.unitsAdded ?? 0} />
+            </p>
           </div>
           <Link href="/app/receive" className="w-full h-12 rounded-2xl bg-[#d4a017] text-black font-bold text-sm flex items-center justify-center gap-2">
             <PackagePlus className="w-4 h-4" /> Mettre des appareils en stock
@@ -109,11 +90,15 @@ export default function MyActivityPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-3xl border border-neutral-800 bg-neutral-950 p-5 text-center">
               <p className="text-[11px] uppercase tracking-wider text-neutral-500">Ventes</p>
-              <p className="text-4xl font-black text-white mt-1">{data?.sales?.count ?? '—'}</p>
+              <p className="text-4xl font-black text-white mt-1">
+                <NumberTicker value={data?.sales?.count ?? 0} />
+              </p>
             </div>
             <div className="rounded-3xl border border-[#d4a017]/30 bg-[#d4a017]/5 p-5 text-center">
               <p className="text-[11px] uppercase tracking-wider text-neutral-500">Montant encaissé</p>
-              <p className="text-xl font-black text-[#f5d77f] mt-2">{formatPrice(data?.sales?.revenue)}</p>
+              <p className="text-xl font-black text-[#f5d77f] mt-2">
+                <NumberTicker value={data?.sales?.revenue ?? 0} suffix={currency} />
+              </p>
             </div>
           </div>
           <Link href="/app/scan" className="w-full h-12 rounded-2xl bg-[#d4a017] text-black font-bold text-sm flex items-center justify-center gap-2">

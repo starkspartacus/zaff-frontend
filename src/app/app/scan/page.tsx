@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { scanFeedback } from '@/components/scan/feedback';
-import { errorMessage, type MyStats, type Product, type Sale, type ScanLookup } from '@/lib/types';
+import { errorMessage, type Product, type Sale, type ScanLookup } from '@/lib/types';
+import { useCreateSale, useMyStats, useSellUnit } from '@/lib/queries';
+import { NumberTicker } from '@/components/magicui/number-ticker';
+import { BlurFade } from '@/components/magicui/blur-fade';
+import { BorderBeam } from '@/components/magicui/border-beam';
 import {
   AlertTriangle,
   Banknote,
@@ -41,7 +45,10 @@ export default function ScanSellPage() {
   const formatPrice = (v: number) => `${(v || 0).toLocaleString('fr-FR')} ${currency}`;
 
   const [step, setStep] = useState<Step>({ kind: 'idle' });
-  const [today, setToday] = useState<{ count: number; revenue: number } | null>(null);
+  // Compteur du jour : mis à jour par React Query (après chaque vente et via le WebSocket)
+  const today = useMyStats('day').data?.sales;
+  const sellUnit = useSellUnit();
+  const createSale = useCreateSale();
 
   // Options de la vente
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
@@ -51,20 +58,7 @@ export default function ScanSellPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [warrantyMonths, setWarrantyMonths] = useState(12);
-  const [isSelling, setIsSelling] = useState(false);
-
-  const refreshToday = useCallback(
-    () =>
-      (api.get('/analytics/me?period=day') as unknown as Promise<MyStats>)
-        .then((res) => setToday({ count: res.sales.count, revenue: res.sales.revenue }))
-        // Le compteur est un plus : on n'interrompt pas la vente pour lui
-        .catch(() => undefined),
-    []
-  );
-
-  useEffect(() => {
-    refreshToday();
-  }, [refreshToday]);
+  const isSelling = sellUnit.isPending || createSale.isPending;
 
   const resetOptions = (product?: Product) => {
     setPaymentMethod('cash');
@@ -98,22 +92,21 @@ export default function ScanSellPage() {
     const customer = showCustomer && (customerName || customerPhone)
       ? { customerName: customerName || undefined, customerPhone: customerPhone || undefined }
       : {};
-    setIsSelling(true);
     try {
       let sale: Sale;
       if (data.type === 'unit') {
-        const res = (await api.post('/units/sell', {
+        const res = await sellUnit.mutateAsync({
           serialNumber: data.unit.serialNumber,
           paymentMethod,
           unitPrice: Number(price) || 0,
           warrantyMonths: customer.customerName || customer.customerPhone ? warrantyMonths : 0,
           ...customer,
-        })) as unknown as { sale: Sale };
+        });
         sale = res.sale;
       } else {
         // Article sans N° de série (accessoire) : vente d'une unité
         const p = data.product;
-        sale = (await api.post('/sales', {
+        sale = await createSale.mutateAsync({
           items: [{ productId: p._id, productName: p.name, quantity: 1, unitPrice: Number(price) || 0, total: Number(price) || 0 }],
           subtotal: Number(price) || 0,
           discount: 0,
@@ -121,7 +114,7 @@ export default function ScanSellPage() {
           paymentMethod,
           saleType: 'purchase',
           ...customer,
-        })) as unknown as Sale;
+        });
       }
       scanFeedback(true);
       setStep({
@@ -130,12 +123,9 @@ export default function ScanSellPage() {
         productName: data.product.name,
         serialNumber: data.type === 'unit' ? data.unit.serialNumber : undefined,
       });
-      refreshToday();
     } catch (err) {
       scanFeedback(false);
       setStep({ kind: 'error', message: errorMessage(err) });
-    } finally {
-      setIsSelling(false);
     }
   };
 
@@ -157,7 +147,13 @@ export default function ScanSellPage() {
         >
           <p className="text-[10px] uppercase tracking-wider text-neutral-500">Mes ventes du jour</p>
           <p className="text-sm font-bold text-[#f5d77f]">
-            {today ? `${today.count} · ${formatPrice(today.revenue)}` : '—'}
+            {today ? (
+              <>
+                {today.count} · <NumberTicker value={today.revenue} suffix={currency} />
+              </>
+            ) : (
+              '—'
+            )}
           </p>
         </Link>
       </div>
@@ -180,14 +176,17 @@ export default function ScanSellPage() {
       )}
 
       {step.kind === 'error' && (
+        <BlurFade key={`err-${step.message}`}>
         <ResultCard tone="error" onClose={() => setStep({ kind: 'idle' })}>
           <AlertTriangle className="w-10 h-10 text-red-400 mx-auto" />
           <p className="text-base font-semibold text-white">{step.message}</p>
           <ScanAgainButton onClick={() => setStep({ kind: 'idle' })} />
         </ResultCard>
+        </BlurFade>
       )}
 
       {step.kind === 'found' && (
+        <BlurFade>
         <FoundCard
           data={step.data}
           formatPrice={formatPrice}
@@ -209,9 +208,11 @@ export default function ScanSellPage() {
           warrantyMonths={warrantyMonths}
           setWarrantyMonths={setWarrantyMonths}
         />
+        </BlurFade>
       )}
 
       {step.kind === 'sold' && (
+        <BlurFade>
         <ResultCard tone="success">
           <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto" />
           <div>
@@ -227,6 +228,7 @@ export default function ScanSellPage() {
           </p>
           <ScanAgainButton onClick={() => setStep({ kind: 'idle' })} label="Scanner l'article suivant" />
         </ResultCard>
+        </BlurFade>
       )}
     </div>
   );
@@ -336,7 +338,8 @@ function FoundCard(props: {
   }
 
   return (
-    <div className="rounded-3xl border border-[#d4a017]/40 bg-neutral-950 p-5 sm:p-6 space-y-5 shadow-xl shadow-[#d4a017]/5">
+    <div className="relative rounded-3xl border border-[#d4a017]/40 bg-neutral-950 p-5 sm:p-6 space-y-5 shadow-xl shadow-[#d4a017]/5">
+      <BorderBeam size={120} duration={5} />
       {/* Fiche produit */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

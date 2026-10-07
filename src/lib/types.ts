@@ -55,6 +55,9 @@ export interface Sale {
   paymentMethod: string;
   saleDate: string;
   sellerName?: string | null;
+  /** Client (renvoyé peuplé par l'API) */
+  customerId?: { _id: string; name: string; phone?: string | null } | null;
+  createdAt?: string;
   items: SaleItem[];
 }
 

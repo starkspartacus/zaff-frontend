@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/auth-context';
+import { ApiError } from '@/lib/api';
+import { LoginSchema } from '@/lib/schemas';
 import { Logo } from '@/components/ui/logo';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
@@ -15,24 +17,32 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [tenantSlug, setTenantSlug] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Même compte dans plusieurs boutiques : l'utilisateur choisit laquelle ouvrir
+  const [shops, setShops] = useState<{ slug: string; name: string }[]>([]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async (slug?: string) => {
     setError(null);
-    if (!identifier || !password) {
-      setError('Veuillez renseigner votre identifiant et mot de passe.');
+    const parsed = LoginSchema.safeParse({ identifier, password, tenantSlug: slug ?? tenantSlug });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message || 'Vérifiez vos informations.');
       return;
     }
-
     try {
-      await login(identifier, password, tenantSlug.trim() || undefined);
-    } catch (err: any) {
-      console.error(err);
-      setError(
-        err.message ||
-        'Identifiants incorrects ou établissement introuvable. Vérifiez vos accès.'
-      );
+      await login(parsed.data.identifier, parsed.data.password, parsed.data.tenantSlug || undefined);
+    } catch (err) {
+      const choices = err instanceof ApiError ? (err.details?.establishments as { slug: string; name: string }[] | undefined) : undefined;
+      if (choices?.length) {
+        setShops(choices);
+        return;
+      }
+      setError(err instanceof Error ? err.message : 'Identifiants incorrects ou établissement introuvable.');
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShops([]);
+    submit();
   };
 
   const handleDemoFill = () => {
@@ -88,6 +98,32 @@ export default function LoginPage() {
             >
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <span>{error}</span>
+            </motion.div>
+          )}
+
+          {/* Choix de la boutique */}
+          {shops.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-2xl bg-[#d4a017]/5 border border-[#d4a017]/30 space-y-2"
+            >
+              <p className="text-xs text-neutral-300">Votre compte existe dans plusieurs boutiques. Laquelle ouvrir ?</p>
+              {shops.map((shop) => (
+                <button
+                  key={shop.slug}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => {
+                    setTenantSlug(shop.slug);
+                    submit(shop.slug);
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-[#d4a017] text-left transition-colors"
+                >
+                  <span className="text-sm font-semibold text-white">{shop.name}</span>
+                  <span className="text-[11px] font-mono text-neutral-500">{shop.slug}</span>
+                </button>
+              ))}
             </motion.div>
           )}
 

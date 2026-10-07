@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { api } from '@/lib/api';
+import { useDashboard, useRecentSales } from '@/lib/queries';
+import { useNotificationStore } from '@/stores/notification-store';
+import { ROLE_LABELS, normalizeRole } from '@/lib/roles';
+import { NumberTicker } from '@/components/magicui/number-ticker';
+import { BlurFade } from '@/components/magicui/blur-fade';
+import { LiveStatus } from '@/components/notifications/notification-bell';
 import { SpotlightCard } from '@/components/seraui/spotlight-card';
 import {
   ShoppingCart,
@@ -21,41 +26,10 @@ import {
 
 export default function AppPage() {
   const { user, establishment } = useAuth();
-  const [stats, setStats] = useState<any>(null);
-  const [recentSales, setRecentSales] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    const fetchData = async () => {
-      try {
-        const [dashRes, salesRes] = await Promise.allSettled([
-          api.get('/analytics/dashboard?period=day'),
-          api.get('/sales'),
-        ]);
-
-        if (!active) return;
-        if (dashRes.status === 'fulfilled') {
-          setStats(dashRes.value);
-        }
-        if (salesRes.status === 'fulfilled' && Array.isArray(salesRes.value)) {
-          setRecentSales(salesRes.value.slice(0, 5));
-        }
-      } catch (err) {
-        console.error('Error fetching dashboard preview:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-    // Suivi à distance : les chiffres du jour se mettent à jour tout seuls
-    const timer = setInterval(fetchData, 30_000);
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, []);
+  // Chiffres du jour : rafraîchis instantanément par le WebSocket à chaque vente
+  const { data: stats, isLoading } = useDashboard('day');
+  const { data: recentSales = [] } = useRecentSales();
+  const presence = useNotificationStore((s) => s.presence);
 
   const formatPrice = (amount: number) => {
     return `${(amount || 0).toLocaleString('fr-FR')} ${establishment?.currency || 'F CFA'}`;
@@ -110,7 +84,7 @@ export default function AppPage() {
             </div>
           </div>
           <div className="text-2xl font-bold text-white tracking-tight">
-            {formatPrice(stats?.sales?.revenue || 0)}
+            <NumberTicker value={stats?.sales?.revenue || 0} suffix={establishment?.currency || 'F CFA'} />
           </div>
           <p className="text-[11px] text-neutral-400 mt-1 flex items-center gap-1">
             <span className="text-emerald-400 font-medium">Bénéfice net estimé:</span>{' '}
@@ -126,7 +100,7 @@ export default function AppPage() {
             </div>
           </div>
           <div className="text-2xl font-bold text-white tracking-tight">
-            {stats?.sales?.count || 0}
+            <NumberTicker value={stats?.sales?.count || 0} />
           </div>
           <p className="text-[11px] text-neutral-400 mt-1">
             Tickets encaissés aujourd&apos;hui
@@ -164,15 +138,34 @@ export default function AppPage() {
         </SpotlightCard>
       </div>
 
+      {/* Équipe en ligne (présence temps réel) */}
+      {presence.length > 0 && (
+        <BlurFade className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] uppercase tracking-wider text-neutral-500 mr-1">En ligne</span>
+          {presence.map((p) => (
+            <span
+              key={p.userId}
+              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white"
+              title={`Connecté depuis ${new Date(p.since).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+            >
+              <span className="relative w-6 h-6 rounded-full bg-gradient-to-tr from-[#d4a017] to-amber-200 text-black font-bold text-[10px] flex items-center justify-center">
+                {p.name.charAt(0).toUpperCase()}
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-neutral-900" />
+              </span>
+              {p.name}
+              <span className="text-[10px] text-neutral-500">{ROLE_LABELS[normalizeRole(p.role)]}</span>
+            </span>
+          ))}
+        </BlurFade>
+      )}
+
       {/* Ventes du jour par vendeur */}
       <div className="rounded-3xl border border-neutral-800 bg-neutral-950/70 p-5 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-white flex items-center gap-2">
             <Users className="w-4 h-4 text-[#d4a017]" /> Ventes du jour par vendeur
           </h2>
-          <span className="text-[11px] text-neutral-500 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Mise à jour auto
-          </span>
+          <LiveStatus />
         </div>
         {!stats?.bySeller?.length ? (
           <p className="text-sm text-neutral-500 text-center py-4">
@@ -180,7 +173,7 @@ export default function AppPage() {
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {stats.bySeller.map((s: { sellerId: string | null; sellerName: string; count: number; revenue: number; lastSaleAt: string }) => (
+            {stats.bySeller.map((s) => (
               <div key={s.sellerId || 'none'} className="rounded-2xl border border-neutral-800 bg-neutral-900/50 px-4 py-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#d4a017] to-amber-200 text-black font-bold text-xs flex items-center justify-center shrink-0">
@@ -321,7 +314,7 @@ export default function AppPage() {
                       {sale.invoiceNumber}
                     </p>
                     <p className="text-[11px] text-neutral-400 truncate">
-                      {sale.customerId?.name || 'Client Comptant'}{sale.sellerName ? ` • ${sale.sellerName}` : ''} • {new Date(sale.createdAt).toLocaleDateString('fr-FR')}
+                      {sale.customerId?.name || 'Client Comptant'}{sale.sellerName ? ` • ${sale.sellerName}` : ''} • {new Date(sale.saleDate).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
                   <div className="text-right shrink-0">

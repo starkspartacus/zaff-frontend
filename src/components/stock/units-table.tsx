@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import React, { useDeferredValue, useState } from 'react';
 import { errorMessage, type ProductUnit } from '@/lib/types';
+import { useSetUnitStatus, useUnits } from '@/lib/queries';
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   in_stock: { label: 'En stock', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
@@ -14,29 +14,17 @@ const date = (d?: string | null) => (d ? new Date(d).toLocaleString('fr-FR', { d
 
 /** Traçabilité appareil par appareil (N° de série / IMEI) */
 export function UnitsTable({ search, canManage }: { search: string; canManage: boolean }) {
-  const [units, setUnits] = useState<ProductUnit[]>([]);
   const [status, setStatus] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
-
-  const load = useCallback(() => {
-    const params = new URLSearchParams({ status, limit: '300' });
-    if (search.trim()) params.set('search', search.trim());
-    return (api.get(`/units?${params}`) as unknown as Promise<ProductUnit[]>)
-      .then((res) => setUnits(Array.isArray(res) ? res : []))
-      .catch((err) => console.error('Error fetching units:', err))
-      .finally(() => setIsLoading(false));
-  }, [status, search]);
-
-  useEffect(() => {
-    const t = setTimeout(load, 250); // évite une requête par touche tapée
-    return () => clearTimeout(t);
-  }, [load]);
+  // La recherche suit la frappe sans bloquer l'affichage ; React Query met les résultats en cache
+  const q = useDeferredValue(search.trim());
+  const filters: Record<string, string> = { status, limit: '300', ...(q ? { search: q } : {}) };
+  const { data: units = [], isLoading } = useUnits(filters);
+  const setUnitStatusMutation = useSetUnitStatus();
 
   const setUnitStatus = async (u: ProductUnit, next: 'in_stock' | 'defective') => {
     const notes = next === 'defective' ? prompt('Motif (facultatif) :', '') ?? undefined : undefined;
     try {
-      await api.patch(`/units/${u._id}/status`, { status: next, notes: notes || undefined });
-      load();
+      await setUnitStatusMutation.mutateAsync({ id: u._id, status: next, notes: notes || undefined });
     } catch (err) {
       alert(errorMessage(err));
     }

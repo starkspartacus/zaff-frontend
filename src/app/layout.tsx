@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/contexts/auth-context";
+import { Providers } from "@/components/providers";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
@@ -33,9 +33,7 @@ export default function RootLayout({
       className={`${roboto.variable} ${robotoMono.variable} dark h-full antialiased font-sans`}
     >
       <body className="min-h-full flex flex-col bg-black text-white font-sans selection:bg-[#d4a017]/30 selection:text-[#f3d98b]">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

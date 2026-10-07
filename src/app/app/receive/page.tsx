@@ -1,10 +1,17 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { scanFeedback } from '@/components/scan/feedback';
-import { errorMessage, type AddUnitsResult, type Category, type Product } from '@/lib/types';
+import { errorMessage, type Category, type Product } from '@/lib/types';
+import { useAddUnits, useCategories, useDeleteUnit, useProducts, useReferenceCatalog } from '@/lib/queries';
+import { qk } from '@/lib/query-keys';
+import { fieldErrors, NewModelSchema } from '@/lib/schemas';
+import { BlurFade } from '@/components/magicui/blur-fade';
+import { NumberTicker } from '@/components/magicui/number-ticker';
+import { AnimatedList, AnimatedListItem } from '@/components/magicui/animated-list';
 import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardList, PackagePlus, Plus, Search, Undo2, X } from 'lucide-react';
 
 type ScanResult =
@@ -24,13 +31,17 @@ const emptyModel = {
 };
 
 export default function ReceiveStockPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const queryClient = useQueryClient();
+  const products = useProducts().data ?? [];
+  const categories = useCategories().data ?? [];
+  const reference = useReferenceCatalog().data ?? [];
+  const addUnits = useAddUnits();
+  const deleteUnit = useDeleteUnit();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Product | null>(null);
   const [results, setResults] = useState<ScanResult[]>([]);
   const [stockQuantity, setStockQuantity] = useState<number | null>(null);
-  const [isSending, setIsSending] = useState(false);
+  const isSending = addUnits.isPending;
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -39,16 +50,18 @@ export default function ReceiveStockPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newModel, setNewModel] = useState(emptyModel);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const loadProducts = () =>
-    Promise.allSettled([api.get('/catalog/products'), api.get('/catalog/categories')]).then(([prodRes, catRes]) => {
-      if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) setProducts(prodRes.value as Product[]);
-      if (catRes.status === 'fulfilled' && Array.isArray(catRes.value)) setCategories(catRes.value as Category[]);
-    });
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  // Suggestions : catégories de la boutique + catalogue de référence commun (base globale)
+  const categorySuggestions = useMemo(
+    () => [...new Set([...categories.map((c) => c.name), ...reference.map((r) => r.name)])],
+    [categories, reference]
+  );
+  const brandSuggestions = useMemo(() => {
+    const ref = reference.find((r) => r.name.toLowerCase() === newModel.category.trim().toLowerCase());
+    const shopBrands = products.map((p) => p.brand).filter((b): b is string => !!b);
+    return [...new Set([...(ref?.brands || []), ...shopBrands])];
+  }, [reference, products, newModel.category]);
 
   const serialProducts = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -88,9 +101,8 @@ export default function ReceiveStockPage() {
 
   const sendSerials = async (serialNumbers: string[]) => {
     if (!selected || serialNumbers.length === 0) return;
-    setIsSending(true);
     try {
-      const res = (await api.post('/units', { productId: selected._id, serialNumbers })) as unknown as AddUnitsResult;
+      const res = await addUnits.mutateAsync({ productId: selected._id, serialNumbers });
       const now = new Date();
       const ok: ScanResult[] = res.created.map((u) => ({ status: 'ok', serialNumber: u.serialNumber, unitId: u._id, at: now }));
       const ko: ScanResult[] = res.rejected.map((r) => ({ status: 'rejected', serialNumber: r.serialNumber, reason: r.reason, at: now }));
@@ -103,8 +115,6 @@ export default function ReceiveStockPage() {
         ...serialNumbers.map((s) => ({ status: 'rejected' as const, serialNumber: s, reason: errorMessage(err), at: new Date() })),
         ...prev,
       ]);
-    } finally {
-      setIsSending(false);
     }
   };
 
@@ -135,7 +145,7 @@ export default function ReceiveStockPage() {
 
   const undo = async (r: Extract<ScanResult, { status: 'ok' }>) => {
     try {
-      await api.delete(`/units/${r.unitId}`);
+      await deleteUnit.mutateAsync(r.unitId);
       setResults((prev) =>
         prev.map((x) => (x.status === 'ok' && x.unitId === r.unitId ? { status: 'undone', serialNumber: r.serialNumber, at: new Date() } : x))
       );
@@ -148,10 +158,17 @@ export default function ReceiveStockPage() {
   const createModel = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError(null);
+    const parsed = NewModelSchema.safeParse(newModel);
+    if (!parsed.success) {
+      setErrors(fieldErrors(parsed.error));
+      return;
+    }
+    setErrors({});
+    const m = parsed.data;
     try {
-      let category = categories.find((c) => c.name.toLowerCase() === newModel.category.trim().toLowerCase());
-      if (!category) category = (await api.post('/catalog/categories', { name: newModel.category.trim() })) as unknown as Category;
-      const sku = [newModel.brand, newModel.name, newModel.model, newModel.color]
+      let category = categories.find((c) => c.name.toLowerCase() === m.category.toLowerCase());
+      if (!category) category = (await api.post('/catalog/categories', { name: m.category })) as unknown as Category;
+      const sku = [m.brand, m.name, m.model, m.color]
         .filter(Boolean)
         .join('-')
         .normalize('NFD')
@@ -160,18 +177,18 @@ export default function ReceiveStockPage() {
         .toUpperCase()
         .slice(0, 40);
       const product = (await api.post('/catalog/products', {
-        name: newModel.name.trim(),
+        name: m.name,
         sku: `${sku}-${Math.floor(100 + Math.random() * 900)}`,
         category: category.slug,
-        brand: newModel.brand.trim() || undefined,
-        model: newModel.model.trim() || undefined,
-        color: newModel.color.trim() || undefined,
-        barcode: newModel.barcode.trim() || undefined,
-        purchasePrice: Number(newModel.purchasePrice) || 0,
-        salePrice: Number(newModel.salePrice) || 0,
+        brand: m.brand || undefined,
+        model: m.model || undefined,
+        color: m.color || undefined,
+        barcode: m.barcode || undefined,
+        purchasePrice: m.purchasePrice,
+        salePrice: m.salePrice,
         hasSerialNumbers: true,
       })) as unknown as Product;
-      await loadProducts();
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
       setCreateOpen(false);
       setNewModel(emptyModel);
       selectProduct(product);
@@ -184,7 +201,7 @@ export default function ReceiveStockPage() {
   if (selected) {
     const details = [selected.brand, selected.model, selected.color].filter(Boolean).join(' · ');
     return (
-      <div className="max-w-xl mx-auto space-y-5">
+      <BlurFade className="max-w-xl mx-auto space-y-5">
         <button onClick={() => setSelected(null)} className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5">
           <ArrowLeft className="w-4 h-4" /> Changer de modèle
         </button>
@@ -196,7 +213,9 @@ export default function ReceiveStockPage() {
             {details && <p className="text-xs text-neutral-400 truncate">{details}</p>}
           </div>
           <div className="text-right shrink-0">
-            <p className="text-3xl font-black text-[#f5d77f]">+{added}</p>
+            <p className="text-3xl font-black text-[#f5d77f]">
+              +<NumberTicker value={added} />
+            </p>
             <p className="text-[10px] text-neutral-500">ajouté(s) · {stockQuantity ?? '—'} en stock</p>
           </div>
         </div>
@@ -234,9 +253,10 @@ export default function ReceiveStockPage() {
               Scannez les appareils un par un : chaque scan est confirmé ici.
             </p>
           ) : (
-            results.map((r, i) => (
+            <AnimatedList>
+            {results.map((r) => (
+              <AnimatedListItem key={`${r.serialNumber}-${r.at.getTime()}-${r.status}`}>
               <div
-                key={`${r.serialNumber}-${i}`}
                 className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${
                   r.status === 'ok'
                     ? 'border-emerald-500/30 bg-emerald-500/5'
@@ -266,7 +286,9 @@ export default function ReceiveStockPage() {
                   </button>
                 )}
               </div>
-            ))
+              </AnimatedListItem>
+            ))}
+            </AnimatedList>
           )}
         </div>
 
@@ -278,7 +300,7 @@ export default function ReceiveStockPage() {
             Terminer ({added} appareil{added > 1 ? 's' : ''} mis en stock)
           </button>
         )}
-      </div>
+      </BlurFade>
     );
   }
 
@@ -350,17 +372,22 @@ export default function ReceiveStockPage() {
             <p className="text-xs text-neutral-400">Suivi par N° de série : le stock se remplit en scannant chaque appareil.</p>
 
             <Field label="Catégorie *">
-              <input list="receive-categories" required value={newModel.category} onChange={(e) => setNewModel({ ...newModel, category: e.target.value })} placeholder="Ex: Smartphones" className={inputCls} />
+              <input list="receive-categories" value={newModel.category} onChange={(e) => setNewModel({ ...newModel, category: e.target.value })} placeholder="Ex: Smartphones" className={inputCls} />
               <datalist id="receive-categories">
-                {categories.map((c) => <option key={c._id} value={c.name} />)}
+                {categorySuggestions.map((name) => <option key={name} value={name} />)}
               </datalist>
+              <FieldError msg={errors.category} />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Marque">
-                <input value={newModel.brand} onChange={(e) => setNewModel({ ...newModel, brand: e.target.value })} placeholder="Ex: Apple" className={inputCls} />
+                <input list="receive-brands" value={newModel.brand} onChange={(e) => setNewModel({ ...newModel, brand: e.target.value })} placeholder="Ex: Apple" className={inputCls} />
+                <datalist id="receive-brands">
+                  {brandSuggestions.map((b) => <option key={b} value={b} />)}
+                </datalist>
               </Field>
               <Field label="Nom *">
-                <input required value={newModel.name} onChange={(e) => setNewModel({ ...newModel, name: e.target.value })} placeholder="Ex: iPhone 15 Pro" className={inputCls} />
+                <input value={newModel.name} onChange={(e) => setNewModel({ ...newModel, name: e.target.value })} placeholder="Ex: iPhone 15 Pro" className={inputCls} />
+                <FieldError msg={errors.name} />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -373,6 +400,7 @@ export default function ReceiveStockPage() {
             </div>
             <Field label="Code-barres de la boîte (EAN)">
               <input value={newModel.barcode} onChange={(e) => setNewModel({ ...newModel, barcode: e.target.value })} placeholder="Facultatif" className={`${inputCls} font-mono`} />
+              <FieldError msg={errors.barcode} />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Prix d'achat">
@@ -404,4 +432,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
+}
+
+function FieldError({ msg }: { msg?: string }) {
+  return msg ? <span className="block text-[11px] text-red-400 mt-1">{msg}</span> : null;
 }

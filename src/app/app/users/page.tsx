@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
 import { normalizeRole, ROLE_DESCRIPTIONS, ROLE_LABELS } from '@/lib/roles';
+import { CreateUserSchema } from '@/lib/schemas';
+import { errorMessage } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import {
@@ -49,16 +51,18 @@ export default function UsersPage() {
     }
   };
 
+  const [formError, setFormError] = useState<string | null>(null);
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+    const parsed = CreateUserSchema.safeParse({ name, phone, email, role, password });
+    if (!parsed.success) {
+      setFormError(parsed.error.issues[0]?.message || 'Vérifiez les informations.');
+      return;
+    }
     try {
-      await api.post('/users', {
-        name,
-        phone,
-        email: email || undefined,
-        role,
-        password,
-      });
+      await api.post('/users', { ...parsed.data, email: parsed.data.email || undefined });
 
       setIsModalOpen(false);
       setName('');
@@ -66,8 +70,8 @@ export default function UsersPage() {
       setEmail('');
       setPassword('');
       fetchUsers();
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de la création du compte');
+    } catch (err) {
+      setFormError(errorMessage(err));
     }
   };
 
@@ -250,6 +254,8 @@ export default function UsersPage() {
                 />
               </div>
             </div>
+
+            {formError && <p className="text-xs text-red-400">{formError}</p>}
 
             <div className="pt-4 flex items-center justify-end gap-3 border-t border-neutral-800">
               <button

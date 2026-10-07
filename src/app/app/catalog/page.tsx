@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
+import { useReferenceCatalog } from '@/lib/queries';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import {
@@ -27,6 +28,7 @@ export default function CatalogPage() {
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const reference = useReferenceCatalog().data ?? [];
 
   // Modal create/edit
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -421,8 +423,8 @@ export default function CatalogPage() {
                     className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
                   />
                   <datalist id="catalog-categories">
-                    {categories.map((c) => (
-                      <option key={c._id} value={c.name} />
+                    {[...new Set([...categories.map((c) => c.name), ...reference.map((r) => r.name)])].map((name) => (
+                      <option key={name} value={name} />
                     ))}
                   </datalist>
                 </div>
@@ -437,8 +439,13 @@ export default function CatalogPage() {
                     className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
                   />
                   <datalist id="catalog-brands">
-                    {brands.map((b) => (
-                      <option key={b._id} value={b.name} />
+                    {[
+                      ...new Set([
+                        ...(reference.find((r) => r.name.toLowerCase() === categoryName.trim().toLowerCase())?.brands || []),
+                        ...brands.map((b) => b.name),
+                      ]),
+                    ].map((name) => (
+                      <option key={name} value={name} />
                     ))}
                   </datalist>
                 </div>
