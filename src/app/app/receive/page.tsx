@@ -1,15 +1,11 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { scanFeedback } from '@/components/scan/feedback';
-import { errorMessage, type Category, type Product } from '@/lib/types';
-import { useAddUnits, useCategories, useDeleteUnit, useProducts, useReferenceCatalog } from '@/lib/queries';
-import { qk } from '@/lib/query-keys';
-import { fieldErrors, NewModelSchema } from '@/lib/schemas';
-import { CONDITION_LABELS, type ProductCondition } from '@/lib/contract';
+import { errorMessage, type Product } from '@/lib/types';
+import { useAddUnits, useDeleteUnit, useProducts } from '@/lib/queries';
+import { ProductForm } from '@/components/products/product-form';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { AnimatedList, AnimatedListItem } from '@/components/magicui/animated-list';
@@ -20,24 +16,8 @@ type ScanResult =
   | { status: 'rejected'; serialNumber: string; reason: string; at: Date }
   | { status: 'undone'; serialNumber: string; at: Date };
 
-const emptyModel = {
-  name: '',
-  category: '',
-  brand: '',
-  model: '',
-  color: '',
-  barcode: '',
-  purchasePrice: '',
-  salePrice: '',
-  condition: 'new' as ProductCondition,
-  accessories: '',
-};
-
 export default function ReceiveStockPage() {
-  const queryClient = useQueryClient();
   const products = useProducts().data ?? [];
-  const categories = useCategories().data ?? [];
-  const reference = useReferenceCatalog().data ?? [];
   const addUnits = useAddUnits();
   const deleteUnit = useDeleteUnit();
   const [search, setSearch] = useState('');
@@ -51,20 +31,8 @@ export default function ReceiveStockPage() {
 
   // Création rapide d'un modèle
   const [createOpen, setCreateOpen] = useState(false);
-  const [newModel, setNewModel] = useState(emptyModel);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Suggestions : catégories de la boutique + catalogue de référence commun (base globale)
-  const categorySuggestions = useMemo(
-    () => [...new Set([...categories.map((c) => c.name), ...reference.map((r) => r.name)])],
-    [categories, reference]
-  );
-  const brandSuggestions = useMemo(() => {
-    const ref = reference.find((r) => r.name.toLowerCase() === newModel.category.trim().toLowerCase());
-    const shopBrands = products.map((p) => p.brand).filter((b): b is string => !!b);
-    return [...new Set([...(ref?.brands || []), ...shopBrands])];
-  }, [reference, products, newModel.category]);
+  // Code-barres scanné inconnu : repris dans la fiche du nouveau modèle
+  const [scannedBarcode, setScannedBarcode] = useState('');
 
   const serialProducts = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -98,7 +66,7 @@ export default function ReceiveStockPage() {
     } else {
       scanFeedback(false);
       setMessage(`Aucun modèle avec le code-barres ${code}. Créez-le avec « Nouveau modèle ».`);
-      setNewModel({ ...emptyModel, barcode: code.trim() });
+      setScannedBarcode(code.trim());
     }
   };
 
@@ -155,50 +123,6 @@ export default function ReceiveStockPage() {
       setStockQuantity((q) => (q === null ? q : q - 1));
     } catch (err) {
       alert(errorMessage(err));
-    }
-  };
-
-  const createModel = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreateError(null);
-    const parsed = NewModelSchema.safeParse(newModel);
-    if (!parsed.success) {
-      setErrors(fieldErrors(parsed.error));
-      return;
-    }
-    setErrors({});
-    const m = parsed.data;
-    try {
-      let category = categories.find((c) => c.name.toLowerCase() === m.category.toLowerCase());
-      if (!category) category = (await api.post('/catalog/categories', { name: m.category })) as unknown as Category;
-      const sku = [m.brand, m.name, m.model, m.color]
-        .filter(Boolean)
-        .join('-')
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
-        .replace(/[^a-zA-Z0-9]+/g, '-')
-        .toUpperCase()
-        .slice(0, 40);
-      const product = (await api.post('/catalog/products', {
-        name: m.name,
-        sku: `${sku}-${Math.floor(100 + Math.random() * 900)}`,
-        category: category.slug,
-        brand: m.brand || undefined,
-        model: m.model || undefined,
-        color: m.color || undefined,
-        barcode: m.barcode || undefined,
-        condition: m.condition,
-        accessories: m.accessories || undefined,
-        purchasePrice: m.purchasePrice,
-        salePrice: m.salePrice,
-        hasSerialNumbers: true,
-      })) as unknown as Product;
-      await queryClient.invalidateQueries({ queryKey: ['products'] });
-      setCreateOpen(false);
-      setNewModel(emptyModel);
-      selectProduct(product);
-    } catch (err) {
-      setCreateError(errorMessage(err));
     }
   };
 
@@ -365,100 +289,34 @@ export default function ReceiveStockPage() {
       </div>
 
       {createOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <form
-            onSubmit={createModel}
-            className="bg-neutral-950 border border-neutral-800 rounded-3xl p-6 max-w-md w-full space-y-3 relative max-h-[90vh] overflow-y-auto"
-          >
-            <button type="button" onClick={() => setCreateOpen(false)} className="absolute top-5 right-5 p-1 text-neutral-400 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
-            <h2 className="text-lg font-bold text-white">Nouveau modèle</h2>
-            <p className="text-xs text-neutral-400">Suivi par N° de série : le stock se remplit en scannant chaque appareil.</p>
-
-            <Field label="Catégorie *">
-              <input list="receive-categories" value={newModel.category} onChange={(e) => setNewModel({ ...newModel, category: e.target.value })} placeholder="Ex: Smartphones" className={inputCls} />
-              <datalist id="receive-categories">
-                {categorySuggestions.map((name) => <option key={name} value={name} />)}
-              </datalist>
-              <FieldError msg={errors.category} />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Marque">
-                <input list="receive-brands" value={newModel.brand} onChange={(e) => setNewModel({ ...newModel, brand: e.target.value })} placeholder="Ex: Apple" className={inputCls} />
-                <datalist id="receive-brands">
-                  {brandSuggestions.map((b) => <option key={b} value={b} />)}
-                </datalist>
-              </Field>
-              <Field label="Nom *">
-                <input value={newModel.name} onChange={(e) => setNewModel({ ...newModel, name: e.target.value })} placeholder="Ex: iPhone 15 Pro" className={inputCls} />
-                <FieldError msg={errors.name} />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Modèle / capacité">
-                <input value={newModel.model} onChange={(e) => setNewModel({ ...newModel, model: e.target.value })} placeholder="Ex: 256 Go" className={inputCls} />
-              </Field>
-              <Field label="Couleur">
-                <input value={newModel.color} onChange={(e) => setNewModel({ ...newModel, color: e.target.value })} placeholder="Ex: Titane naturel" className={inputCls} />
-              </Field>
-            </div>
-            <Field label="Code-barres de la boîte (EAN)">
-              <input value={newModel.barcode} onChange={(e) => setNewModel({ ...newModel, barcode: e.target.value })} placeholder="Facultatif" className={`${inputCls} font-mono`} />
-              <FieldError msg={errors.barcode} />
-            </Field>
-            <Field label="État (imprimé sur le contrat du client)">
-              <div className="grid grid-cols-3 gap-2">
-                {(Object.keys(CONDITION_LABELS) as ProductCondition[]).map((k) => (
-                  <button
-                    key={k}
-                    type="button"
-                    aria-pressed={newModel.condition === k}
-                    onClick={() => setNewModel({ ...newModel, condition: k })}
-                    className={`h-10 rounded-xl border text-xs font-semibold ${
-                      newModel.condition === k ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
-                    }`}
-                  >
-                    {CONDITION_LABELS[k]}
-                  </button>
-                ))}
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/85 backdrop-blur-md">
+          <div className="bg-neutral-950 border border-neutral-800 rounded-t-3xl sm:rounded-3xl px-5 pt-5 pb-3 max-w-xl w-full relative max-h-[94vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <h2 className="text-lg font-bold text-white">Nouveau modèle</h2>
+                <p className="text-xs text-neutral-400">Suivi par N° de série : le stock se remplit en scannant chaque appareil.</p>
               </div>
-            </Field>
-            <Field label="Accessoires fournis">
-              <input value={newModel.accessories} onChange={(e) => setNewModel({ ...newModel, accessories: e.target.value })} placeholder="Ex: Chargeur, câble, boîte" maxLength={300} className={inputCls} />
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Prix d'achat">
-                <input type="number" min={0} value={newModel.purchasePrice} onChange={(e) => setNewModel({ ...newModel, purchasePrice: e.target.value })} className={inputCls} />
-              </Field>
-              <Field label="Prix de vente">
-                <input type="number" min={0} value={newModel.salePrice} onChange={(e) => setNewModel({ ...newModel, salePrice: e.target.value })} className={inputCls} />
-              </Field>
+              <button type="button" onClick={() => setCreateOpen(false)} className="p-1 text-neutral-400 hover:text-white" aria-label="Fermer">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-
-            {createError && <p className="text-xs text-red-400">{createError}</p>}
-            <button type="submit" className="w-full h-12 rounded-2xl bg-[#d4a017] text-black font-bold text-sm hover:brightness-110">
-              Créer et commencer à scanner
-            </button>
-          </form>
+            <ProductForm
+              compact
+              defaults={{ barcode: scannedBarcode }}
+              onCancel={() => setCreateOpen(false)}
+              onSaved={(product) => {
+                setCreateOpen(false);
+                setScannedBarcode('');
+                selectProduct(product);
+              }}
+              onUseExisting={(product) => {
+                setCreateOpen(false);
+                selectProduct(product);
+              }}
+            />
+          </div>
         </div>
       )}
     </div>
   );
-}
-
-const inputCls =
-  'w-full h-10 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-[#d4a017]';
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="text-xs text-neutral-400 block mb-1">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function FieldError({ msg }: { msg?: string }) {
-  return msg ? <span className="block text-[11px] text-red-400 mt-1">{msg}</span> : null;
 }

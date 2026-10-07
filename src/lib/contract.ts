@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { warrantyVerifyUrl } from '@/lib/env';
 
 /** Contrat de vente et garantie (voir zaff-backend `contracts/contract-template.ts`) */
 
@@ -63,6 +64,8 @@ export interface ContractItem {
   warrantyMonths: number;
   warrantyStart: string;
   warrantyEnd: string | null;
+  /** Code du QR de vérification de garantie (null dans un aperçu) */
+  verifyCode: string | null;
 }
 
 export interface RenderedContract {
@@ -162,7 +165,7 @@ export function whatsappLink(doc: RenderedContract) {
       (i) =>
         `• ${i.productName}${i.serialNumber ? ` — N° de série ${i.serialNumber}` : ''} : ${
           i.warrantyMonths > 0 ? `garantie ${i.warrantyMonths} mois, jusqu'au ${formatDate(i.warrantyEnd)}` : 'sans garantie commerciale'
-        }`
+        }${i.verifyCode ? `\n  Vérifier la garantie : ${warrantyVerifyUrl(i.verifyCode)}` : ''}`
     ),
     'Conservez ce message et votre contrat : ils vous seront demandés pour toute prise en charge.',
     doc.shop.phone ? `Service client : ${doc.shop.phone}` : '',
@@ -170,3 +173,24 @@ export function whatsappLink(doc: RenderedContract) {
   const phone = (doc.customer?.phone || '').replace(/\D/g, '');
   return `https://wa.me/${phone.length >= 8 ? phone : ''}?text=${encodeURIComponent(lines.join('\n'))}`;
 }
+
+/** Résultat public du QR code de garantie (aucune donnée du client) */
+export interface WarrantyCheck {
+  status: 'active' | 'expired' | 'none' | 'returned';
+  device: 'with_customer' | 'in_repair' | 'returned';
+  daysLeft: number;
+  warrantyMonths: number;
+  purchaseDate: string;
+  warrantyEnd: string | null;
+  invoiceNumber: number;
+  product: { name: string; brand: string | null; model: string | null; color: string | null; serialMasked: string | null };
+  shop: { name: string; city: string | null; phone: string | null; active: boolean };
+}
+
+export const useWarrantyCheck = (code: string | null) =>
+  useQuery({
+    queryKey: ['warranty-check', code],
+    queryFn: () => api.get(`/public/warranty/${encodeURIComponent(code!)}`) as unknown as Promise<WarrantyCheck>,
+    enabled: !!code,
+    retry: false,
+  });

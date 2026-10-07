@@ -67,7 +67,15 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   numéro du client. Valeurs inconnues imprimées en pointillés (à compléter à la main), fiche de garantie détachable.
   Paramètres → onglet « Contrat client » (`ContractSettingsPanel`) : informations légales, modèle ZAFF ou personnalisé
   (articles activés / modifiés / déplacés / ajoutés, retour au texte d'origine), aperçu avec une vente fictive.
-  Création d'un modèle : état (neuf / reconditionné / occasion) et accessoires fournis, imprimés sur le contrat.
+  **QR code de vérification** sur chaque fiche de garantie (`QrCode`, lib `qrcode`, SVG) → page publique `/verify?c=…`
+  (sans connexion) : garantie active / terminée / appareil rapporté, en réparation, appareil, boutique — aucune donnée
+  client. Le lien est aussi dans le message WhatsApp. Adresse imprimée : `NEXT_PUBLIC_APP_URL` (sinon l'adresse courante).
+- **Fiche produit** `ProductForm` (`src/components/products/`), partagée par le Catalogue (création / modification) et
+  la Mise en stock (`compact`) : sections numérotées 1 Type d'appareil → 2 Marque et modèle → 3 Version (capacité /
+  configuration, couleur) → 4 Désignation et codes (désignation et SKU automatiques, modifiables) → 5 État et
+  accessoires → 6 Prix (marge en direct) → 7 Stock. Suggestions en cascade depuis `GET /global/reference/devices`
+  (`useDeviceCatalog`) + les produits déjà créés par la boutique ; toute valeur absente se tape (« Ajouter « … » »).
+  Alerte doublon (« Utiliser ce produit »), validation Zod `ProductFormSchema`.
 - `src/components/scan/barcode-scanner.tsx` : caméra (ZXing, HTTPS requis sur mobile) + douchette / clavier.
 
 ## Notifications push (application fermée)

@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { formatInternational } from '@/lib/geo';
+import { warrantyVerifyUrl } from '@/lib/env';
+import { QrCode } from '@/components/ui/qr-code';
 import { CONDITION_LABELS, formatDate, formatMoney, type ContractBlock, type ContractItem, type ProductCondition, type RenderedContract } from '@/lib/contract';
 
 /**
@@ -121,6 +123,7 @@ export function ContractDocument({ doc }: { doc: RenderedContract }) {
                   <Row label="Observations" value={null} />
                 </div>
               </div>
+              <VerifyBlock code={item.verifyCode} />
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="h-20 rounded border border-neutral-300 p-2 text-[11px] text-neutral-500">Cachet {doc.shop.displayName} :</div>
                 <div className="h-20 rounded border border-neutral-300 p-2 text-[11px] text-neutral-500">Signature du Client :</div>
@@ -129,6 +132,26 @@ export function ContractDocument({ doc }: { doc: RenderedContract }) {
           </section>
         ))}
     </article>
+  );
+}
+
+/** QR code de vérification : le client (ou un acheteur d'occasion) scanne et voit l'état de la garantie */
+function VerifyBlock({ code }: { code: string | null }) {
+  return (
+    <div className="mt-4 flex items-center gap-4 rounded-lg bg-neutral-50 border border-neutral-200 p-3 break-inside-avoid print:bg-white">
+      {code ? (
+        <QrCode value={warrantyVerifyUrl(code)} size={96} className="shrink-0 bg-white p-1" />
+      ) : (
+        <div className="w-24 h-24 shrink-0 rounded border-2 border-dashed border-neutral-300 flex items-center justify-center text-center text-[9px] text-neutral-400 p-1">
+          QR code de la vente
+        </div>
+      )}
+      <div className="text-[11px] text-neutral-700 space-y-1">
+        <p className="font-bold uppercase tracking-wider text-[#7a5a00]">Vérifier la garantie</p>
+        <p>Scannez ce code avec l&apos;appareil photo d&apos;un téléphone : il affiche l&apos;appareil, la boutique et la date de fin de garantie, sans aucune donnée personnelle.</p>
+        <p className="text-neutral-500">Code infalsifiable, propre à cet appareil et à cette vente.</p>
+      </div>
+    </div>
   );
 }
 

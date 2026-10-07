@@ -30,6 +30,7 @@ export interface ReferenceCategory {
   slug: string;
   brands: string[];
   serialTracked: boolean;
+  icon?: string;
 }
 
 export interface DashboardStats {
@@ -48,6 +49,32 @@ export const useCategories = () => useQuery({ queryKey: qk.categories(), queryFn
 /** Catalogue de référence commun à toutes les boutiques (base globale) : quasi statique */
 export const useReferenceCatalog = () =>
   useQuery({ queryKey: qk.reference(), queryFn: () => get<ReferenceCategory[]>('/global/reference/catalog'), staleTime: 60 * 60 * 1000 });
+
+export interface DeviceModel {
+  name: string;
+  variants?: string[];
+  colors?: string[];
+}
+export interface CategoryProfile {
+  variantLabel: string;
+  variants: string[];
+  colors: string[];
+  accessories: string[];
+  warrantyMonths: number;
+}
+export interface DeviceCatalog {
+  profiles: Record<string, CategoryProfile>;
+  defaultProfile: CategoryProfile;
+  /** catégorie (slug) → marque → modèles */
+  models: Record<string, Record<string, DeviceModel[]>>;
+}
+
+/** Appareils connus (modèles, capacités, coloris, accessoires) pour remplir vite une fiche produit */
+export const useDeviceCatalog = () =>
+  useQuery({ queryKey: [...qk.reference(), 'devices'], queryFn: () => get<DeviceCatalog>('/global/reference/devices'), staleTime: Infinity, gcTime: Infinity });
+
+export const useBrands = () =>
+  useQuery({ queryKey: qk.brands(), queryFn: () => get<Array<{ _id: string; name: string }>>('/catalog/brands') });
 
 export const useMyStats = (period: string) =>
   useQuery({ queryKey: qk.myStats(period), queryFn: () => get<MyStats>(`/analytics/me?period=${period}`) });

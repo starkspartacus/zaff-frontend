@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
-import { useReferenceCatalog } from '@/lib/queries';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
+import { ProductForm } from '@/components/products/product-form';
 import {
   Boxes,
   Search,
@@ -13,10 +13,6 @@ import {
   Edit2,
   Trash2,
   X,
-  Tag,
-  AlertTriangle,
-  Barcode,
-  Layers,
   Sparkles,
 } from 'lucide-react';
 
@@ -24,30 +20,13 @@ export default function CatalogPage() {
   const { establishment } = useAuth();
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [brands, setBrands] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
-  const reference = useReferenceCatalog().data ?? [];
 
   // Modal create/edit
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-
-  // Form fields
-  const [name, setName] = useState('');
-  const [sku, setSku] = useState('');
-  const [barcode, setBarcode] = useState('');
-  const [categoryName, setCategoryName] = useState('');
-  const [brandName, setBrandName] = useState('');
-  const [modelName, setModelName] = useState('');
-  const [color, setColor] = useState('');
-  const [purchasePrice, setPurchasePrice] = useState<number>(0);
-  const [price, setPrice] = useState<number>(0);
-  const [resellerPrice, setResellerPrice] = useState<number>(0);
-  const [stockQuantity, setStockQuantity] = useState<number>(0);
-  const [minStockThreshold, setMinStockThreshold] = useState<number>(3);
-  const [hasSerialNumbers, setHasSerialNumbers] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -56,20 +35,13 @@ export default function CatalogPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [prodRes, catRes, brandRes] = await Promise.allSettled([
-        api.get('/catalog/products'),
-        api.get('/catalog/categories'),
-        api.get('/catalog/brands'),
-      ]);
+      const [prodRes, catRes] = await Promise.allSettled([api.get('/catalog/products'), api.get('/catalog/categories')]);
 
       if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
         setProducts(prodRes.value);
       }
       if (catRes.status === 'fulfilled' && Array.isArray(catRes.value)) {
         setCategories(catRes.value);
-      }
-      if (brandRes.status === 'fulfilled' && Array.isArray(brandRes.value)) {
-        setBrands(brandRes.value);
       }
     } catch (e) {
       console.error('Error fetching catalog data:', e);
@@ -83,86 +55,12 @@ export default function CatalogPage() {
 
   const openCreateModal = () => {
     setEditingProduct(null);
-    setName('');
-    setSku(`SKU-${Math.floor(1000 + Math.random() * 9000)}`);
-    setBarcode('');
-    setCategoryName(categories[0]?.name || '');
-    setBrandName('');
-    setModelName('');
-    setColor('');
-    setPurchasePrice(0);
-    setPrice(0);
-    setResellerPrice(0);
-    setStockQuantity(0);
-    setMinStockThreshold(3);
-    setHasSerialNumbers(true);
     setIsModalOpen(true);
   };
 
   const openEditModal = (p: any) => {
     setEditingProduct(p);
-    setName(p.name);
-    setSku(p.sku);
-    setBarcode(p.barcode || '');
-    setCategoryName(categories.find((c) => c.slug === p.category)?.name || p.category || '');
-    setBrandName(p.brand || '');
-    setModelName(p.model || '');
-    setColor(p.color || '');
-    setPurchasePrice(p.purchasePrice || 0);
-    setPrice(p.salePrice || 0);
-    setResellerPrice(p.resellerPrice || 0);
-    setStockQuantity(p.stockQuantity || 0);
-    setMinStockThreshold(p.minStockAlert ?? 3);
-    setHasSerialNumbers(p.hasSerialNumbers || false);
     setIsModalOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // Catégorie / marque : réutilise l'existante ou la crée à la volée
-      const findByName = <T extends { name: string }>(list: T[], value: string) =>
-        list.find((x) => x.name.toLowerCase() === value.trim().toLowerCase());
-
-      let category = findByName(categories, categoryName);
-      if (!category) {
-        category = await api.post('/catalog/categories', { name: categoryName.trim() });
-      }
-      let brand = brandName.trim() ? findByName(brands, brandName) : null;
-      if (brandName.trim() && !brand) {
-        brand = await api.post('/catalog/brands', { name: brandName.trim(), categoryId: category._id });
-      }
-
-      const payload = {
-        name,
-        sku,
-        barcode: barcode || undefined,
-        category: category.slug,
-        brand: brand?.name || undefined,
-        brandId: brand?._id || undefined,
-        model: modelName.trim() || undefined,
-        color: color.trim() || undefined,
-        purchasePrice: Number(purchasePrice) || 0,
-        salePrice: Number(price) || 0,
-        resellerPrice: Number(resellerPrice) || 0,
-        // Produit à N° de série : le stock vient uniquement des appareils scannés
-        stockQuantity: hasSerialNumbers ? undefined : Number(stockQuantity) || 0,
-        minStockAlert: Number(minStockThreshold) || 0,
-        hasSerialNumbers,
-      };
-
-      if (editingProduct) {
-        await api.put(`/catalog/products/${editingProduct._id}`, payload);
-      } else {
-        await api.post('/catalog/products', payload);
-      }
-
-      setIsModalOpen(false);
-      fetchData();
-    } catch (err: any) {
-      console.error('Failed to save product:', err);
-      alert(err.message || 'Erreur lors de l’enregistrement');
-    }
   };
 
   const handleDelete = async (id: string) => {
@@ -357,213 +255,28 @@ export default function CatalogPage() {
 
       {/* CREATE / EDIT PRODUCT MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <form
-            onSubmit={handleSubmit}
-            className="bg-neutral-950 border border-neutral-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl space-y-4 relative max-h-[90vh] overflow-y-auto"
-          >
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-5 right-5 p-1 text-neutral-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <h2 className="text-xl font-bold text-white">
-              {editingProduct ? 'Modifier le Produit' : 'Nouveau Produit High-Tech'}
-            </h2>
-
-            <div className="space-y-3 pt-2">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/85 backdrop-blur-md">
+          <div className="bg-neutral-950 border border-neutral-800 rounded-t-3xl sm:rounded-3xl px-5 pt-5 pb-3 sm:px-7 max-w-2xl w-full shadow-2xl relative max-h-[94vh] overflow-y-auto">
+            <div className="flex items-start justify-between gap-3 mb-3">
               <div>
-                <label className="text-xs text-neutral-400 block mb-1">Désignation *</label>
-                <Input
-                  type="text"
-                  placeholder="Ex: iPhone 15 Pro Max 256GB Titane"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                />
+                <h2 className="text-xl font-bold text-white">{editingProduct ? 'Modifier le produit' : 'Nouveau produit'}</h2>
+                <p className="text-xs text-neutral-500">Choisissez dans les listes ou tapez ce qui manque : tout est modifiable.</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Référence SKU *</label>
-                  <Input
-                    type="text"
-                    value={sku}
-                    onChange={(e) => setSku(e.target.value)}
-                    required
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Code-barres EAN</label>
-                  <Input
-                    type="text"
-                    placeholder="Scan ou saisie"
-                    value={barcode}
-                    onChange={(e) => setBarcode(e.target.value)}
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Catégorie *</label>
-                  <Input
-                    type="text"
-                    list="catalog-categories"
-                    placeholder="Ex: Smartphones"
-                    value={categoryName}
-                    onChange={(e) => setCategoryName(e.target.value)}
-                    required
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
-                  <datalist id="catalog-categories">
-                    {[...new Set([...categories.map((c) => c.name), ...reference.map((r) => r.name)])].map((name) => (
-                      <option key={name} value={name} />
-                    ))}
-                  </datalist>
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Marque</label>
-                  <Input
-                    type="text"
-                    list="catalog-brands"
-                    placeholder="Ex: Apple"
-                    value={brandName}
-                    onChange={(e) => setBrandName(e.target.value)}
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
-                  <datalist id="catalog-brands">
-                    {[
-                      ...new Set([
-                        ...(reference.find((r) => r.name.toLowerCase() === categoryName.trim().toLowerCase())?.brands || []),
-                        ...brands.map((b) => b.name),
-                      ]),
-                    ].map((name) => (
-                      <option key={name} value={name} />
-                    ))}
-                  </datalist>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Modèle / capacité</label>
-                  <Input
-                    type="text"
-                    placeholder="Ex: 15 Pro Max 256 Go"
-                    value={modelName}
-                    onChange={(e) => setModelName(e.target.value)}
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Couleur</label>
-                  <Input
-                    type="text"
-                    placeholder="Ex: Titane naturel"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 pt-2">
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Prix d'Achat</label>
-                  <Input
-                    type="number"
-                    value={purchasePrice || ''}
-                    onChange={(e) => setPurchasePrice(Number(e.target.value) || 0)}
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Prix Détail *</label>
-                  <Input
-                    type="number"
-                    value={price || ''}
-                    onChange={(e) => setPrice(Number(e.target.value) || 0)}
-                    required
-                    className="bg-neutral-900 border-neutral-800 text-white font-bold text-[#f5d77f] rounded-xl h-10"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Prix Revendeur</label>
-                  <Input
-                    type="number"
-                    value={resellerPrice || ''}
-                    onChange={(e) => setResellerPrice(Number(e.target.value) || 0)}
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Stock Initial / Actuel</label>
-                  {hasSerialNumbers ? (
-                    <div className="h-10 px-3 rounded-xl bg-neutral-900/50 border border-neutral-800 text-[11px] text-neutral-400 flex items-center">
-                      {editingProduct ? `${editingProduct.stockQuantity} appareil(s)` : '0'} · alimenté par scan
-                    </div>
-                  ) : (
-                    <Input
-                      type="number"
-                      value={stockQuantity}
-                      onChange={(e) => setStockQuantity(Number(e.target.value) || 0)}
-                      required
-                      className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                    />
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-400 block mb-1">Seuil Alerte Stock</label>
-                  <Input
-                    type="number"
-                    value={minStockThreshold}
-                    onChange={(e) => setMinStockThreshold(Number(e.target.value) || 0)}
-                    required
-                    className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="hasSerialCheck"
-                  checked={hasSerialNumbers}
-                  onChange={(e) => setHasSerialNumbers(e.target.checked)}
-                  className="w-4 h-4 accent-[#d4a017]"
-                />
-                <label htmlFor="hasSerialCheck" className="text-xs text-neutral-300">
-                  Suivi par N° de série / IMEI : chaque appareil est scanné à la mise en stock et à la vente
-                </label>
-              </div>
-            </div>
-
-            <div className="pt-4 flex items-center justify-end gap-3 border-t border-neutral-800">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs text-neutral-400 hover:text-white"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2.5 rounded-xl bg-[#d4a017] text-black font-bold text-xs hover:brightness-110 transition-all shadow-md shadow-[#d4a017]/20"
-              >
-                Enregistrer l'Article
+              <button type="button" onClick={() => setIsModalOpen(false)} className="p-1 text-neutral-400 hover:text-white" aria-label="Fermer">
+                <X className="w-5 h-5" />
               </button>
             </div>
-          </form>
+            <ProductForm
+              key={editingProduct?._id || 'new'}
+              initial={editingProduct}
+              onCancel={() => setIsModalOpen(false)}
+              onSaved={() => {
+                setIsModalOpen(false);
+                fetchData();
+              }}
+              onUseExisting={(p) => setEditingProduct(p)}
+            />
+          </div>
         </div>
       )}
     </div>

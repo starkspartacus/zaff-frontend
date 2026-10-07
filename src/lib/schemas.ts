@@ -39,19 +39,14 @@ export const LoginSchema = z.discriminatedUnion('mode', [
 ]);
 export type LoginInput = z.input<typeof LoginSchema>;
 
-export const NewModelSchema = z.object({
-  category: z.string().trim().min(1, 'La catégorie est obligatoire.'),
-  name: z.string().trim().min(2, 'Le nom est obligatoire.'),
-  brand: z.string().trim(),
-  model: z.string().trim(),
-  color: z.string().trim(),
-  barcode: z.string().trim().refine((v) => !v || /^[0-9A-Za-z\-]{6,32}$/.test(v), 'Code-barres invalide.'),
-  purchasePrice: z.coerce.number().min(0, 'Prix invalide.'),
-  salePrice: z.coerce.number().min(0, 'Prix invalide.'),
-  condition: z.enum(['new', 'refurbished', 'used']).default('new'),
-  accessories: z.string().trim().max(300, 'Trop long (300 caractères maximum).'),
+/** Fiche produit (catalogue et mise en stock) : uniquement ce qui bloque l'enregistrement */
+export const ProductFormSchema = z.object({
+  category: z.string().trim().min(1, "Choisissez le type d'appareil."),
+  name: z.string().trim().min(2, 'Indiquez le modèle (ou la désignation).'),
+  sku: z.string().trim().min(1, 'Référence obligatoire.'),
+  barcode: z.string().trim().refine((v) => !v || /^[0-9A-Za-z-]{6,32}$/.test(v), 'Code-barres invalide (6 à 32 chiffres ou lettres).'),
+  salePrice: z.number({ error: 'Indiquez le prix de vente.' }).positive('Indiquez le prix de vente.'),
 });
-export type NewModelInput = z.input<typeof NewModelSchema>;
 
 export const CreateUserSchema = z.object({
   name: z.string().trim().min(2, 'Le nom est obligatoire.'),
