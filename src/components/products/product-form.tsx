@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -27,6 +27,7 @@ import {
   Watch,
   Cable,
   Wand2,
+  X,
   Camera,
   ImageOff,
   Loader2,
@@ -37,7 +38,7 @@ import { useBrands, useCategories, useDeviceCatalog, useProducts, useReferenceCa
 import { CONDITION_LABELS, type ProductCondition } from '@/lib/contract';
 import { errorMessage, type Category, type Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { imageUrl, uploadSharedImage, useSharedImages } from '@/lib/images';
+import { discardImage, imageUrl, shrinkImage, uploadImageBlob, useSharedImages } from '@/lib/images';
 import { ProductVisual } from './product-visual';
 import { fieldErrors, ProductFormSchema } from '@/lib/schemas';
 
@@ -150,7 +151,9 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   const [chosenImage, setChosenImage] = useState<string | null>(initial?.imageId || null);
   /** L'utilisateur a choisi lui-même (photo ou « sans photo ») : plus de choix automatique */
   const [imageTouched, setImageTouched] = useState(!!initial);
-  const [uploading, setUploading] = useState(false);
+  /** Photo prise / choisie sur l'appareil : réduite tout de suite, envoyée seulement à l'enregistrement */
+  const [localPhoto, setLocalPhoto] = useState<{ blob: Blob; preview: string } | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -192,26 +195,34 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
     setImageTouched(true);
   };
 
+  /** Sélection « photo locale » (pas encore envoyée) */
+  const LOCAL = 'local';
   const onPhoto = async (file?: File | null) => {
+    if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
-    if (!brand.trim() || !effectiveName.trim()) {
-      setImageError("Choisissez d'abord la marque et le modèle : la photo leur sera associée.");
-      return;
-    }
-    setUploading(true);
+    setPreparing(true);
     setImageError(null);
     try {
-      const img = await uploadSharedImage(file, { brand: brand.trim(), model: effectiveName.trim(), color: color.trim() || undefined, category: slug || undefined });
-      setImageId(img.id);
-      setImageTouched(true);
-      await queryClient.invalidateQueries({ queryKey: ['images'] });
+      const blob = await shrinkImage(file);
+      setLocalPhoto({ blob, preview: URL.createObjectURL(blob) });
+      setImageId(LOCAL);
     } catch (err) {
       setImageError(errorMessage(err));
     } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = '';
+      setPreparing(false);
     }
   };
+  const dropLocalPhoto = () => {
+    setLocalPhoto(null);
+    if (imageId === LOCAL) setImageId(null);
+  };
+  // Libère l'aperçu en mémoire en quittant la fiche
+  useEffect(
+    () => () => {
+      if (localPhoto) URL.revokeObjectURL(localPhoto.preview);
+    },
+    [localPhoto]
+  );
 
   const duplicate = !initial
     ? products.find(
@@ -271,7 +282,15 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
     }
     setSaving(true);
     setSaveError(null);
+    let uploadedId: string | null = null;
     try {
+      // La photo prise sur l'appareil n'est envoyée que maintenant, au clic sur « Enregistrer »
+      let finalImageId = imageId;
+      if (imageId === LOCAL && localPhoto) {
+        const img = await uploadImageBlob(localPhoto.blob, { brand: brand.trim(), model: effectiveName.trim(), color: color.trim() || undefined, category: slug || undefined });
+        finalImageId = img.id;
+        if (!img.duplicate) uploadedId = img.id;
+      }
       // Catégorie / marque : réutilise l'existante de la boutique ou la crée
       let cat = shopCat;
       if (!cat) cat = (await api.post('/catalog/categories', { name: category.trim() })) as unknown as Category;
@@ -290,7 +309,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
         color: color.trim() || undefined,
         condition,
         accessories: accessories.join(', ') || undefined,
-        imageId: imageId || (initial?.imageId ? null : undefined),
+        imageId: finalImageId || (initial?.imageId ? null : undefined),
         purchasePrice: cost,
         salePrice: sale,
         resellerPrice: Number(resellerPrice) || 0,
@@ -303,8 +322,11 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
         ? await api.put(`/catalog/products/${initial._id}`, payload)
         : await api.post('/catalog/products', payload)) as unknown as Product;
       await queryClient.invalidateQueries({ queryKey: ['products'] });
+      await queryClient.invalidateQueries({ queryKey: ['images'] });
       onSaved(saved);
     } catch (err) {
+      // Produit non enregistré : la photo tout juste envoyée est annulée (aucun fichier orphelin)
+      if (uploadedId) await discardImage(uploadedId);
       setSaveError(errorMessage(err));
     } finally {
       setSaving(false);
@@ -318,7 +340,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       {/* Aperçu vivant de la fiche */}
       <div className="sticky top-0 z-10 -mx-1 px-1 pb-2 bg-neutral-950">
         <div className="rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3 flex items-center gap-3">
-          <ProductVisual imageId={imageId} category={slug} brand={brand} name={fullDesignation} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
+          <ProductVisual imageId={imageId === LOCAL ? null : imageId} src={imageId === LOCAL ? localPhoto?.preview : null} category={slug} brand={brand} name={fullDesignation} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className={cn('text-sm font-bold truncate', fullDesignation ? 'text-white' : 'text-neutral-500')}>
               {fullDesignation || 'Votre produit apparaîtra ici'}
@@ -431,14 +453,37 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
               </button>
             );
           })}
+          {localPhoto && (
+            <div className={cn('relative aspect-square rounded-2xl border-2 overflow-hidden', imageId === LOCAL ? 'border-gold' : 'border-neutral-800')}>
+              <button type="button" onClick={() => setImageId(LOCAL)} aria-pressed={imageId === LOCAL} className="absolute inset-0" aria-label="Utiliser ma photo">
+                <ProductVisual src={localPhoto.preview} className="absolute inset-0" rounded="rounded-none" name="Ma photo" />
+              </button>
+              <span className="theme-fixed absolute bottom-1 left-1 right-1 rounded-md bg-black/65 px-1 text-[9px] font-semibold text-white text-center pointer-events-none">
+                Envoyée à l&apos;enregistrement
+              </span>
+              <button
+                type="button"
+                onClick={dropLocalPhoto}
+                className="theme-fixed absolute top-1 left-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center"
+                aria-label="Retirer ma photo"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              {imageId === LOCAL && (
+                <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-gold flex items-center justify-center pointer-events-none">
+                  <Check className="w-3 h-3 text-ink" />
+                </span>
+              )}
+            </div>
+          )}
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            disabled={uploading}
+            disabled={preparing}
             className="aspect-square rounded-2xl border-2 border-dashed border-neutral-700 text-neutral-400 hover:border-gold hover:text-gold flex flex-col items-center justify-center gap-1 text-[11px] font-semibold"
           >
-            {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
-            {uploading ? 'Envoi…' : 'Prendre / ajouter'}
+            {preparing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
+            {preparing ? 'Préparation…' : localPhoto ? 'Reprendre' : 'Prendre / ajouter'}
           </button>
           <button
             type="button"
@@ -463,6 +508,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
             : sharedImages.length
               ? `${sharedImages.length} photo${sharedImages.length > 1 ? 's' : ''} disponible${sharedImages.length > 1 ? 's' : ''} pour ce modèle. Sans photo, une illustration colorée est affichée.`
               : "Pas encore de photo pour ce modèle : prenez l'appareil (ou sa boîte) en photo sur fond clair, elle servira à toutes les boutiques."}
+          {' '}Votre photo n&apos;est envoyée qu&apos;en cliquant sur « {initial ? 'Enregistrer' : 'Créer'} ».
         </p>
         {imageError && <p className="text-xs text-red-400">{imageError}</p>}
       </Section>

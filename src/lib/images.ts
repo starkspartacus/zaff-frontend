@@ -13,6 +13,9 @@ export interface SharedImage {
   bytes: number;
   establishmentName: string | null;
   usage: number;
+  library?: boolean;
+  pending?: boolean;
+  createdAt?: string;
   url: string;
 }
 
@@ -54,10 +57,33 @@ export async function shrinkImage(file: File, max = 1000): Promise<Blob> {
   throw new Error('Photo trop lourde, même réduite. Essayez une autre photo.');
 }
 
-export async function uploadSharedImage(file: File, meta: { brand: string; model: string; color?: string; category?: string }) {
-  const blob = await shrinkImage(file);
+/**
+ * Envoi d'une photo déjà réduite. Appelé **uniquement au moment d'enregistrer** (fiche produit) ou
+ * d'importer (photothèque) : choisir une photo ne l'envoie pas, aucun fichier n'est laissé sans produit.
+ */
+export async function uploadImageBlob(
+  blob: Blob,
+  meta: { brand: string; model: string; color?: string; category?: string },
+  opts: { library?: boolean } = {}
+) {
   const form = new FormData();
   form.append('file', blob, blob.type === 'image/webp' ? 'photo.webp' : 'photo.jpg');
   for (const [k, v] of Object.entries(meta)) if (v) form.append(k, v);
-  return (await api.post('/global/images', form, { headers: { 'Content-Type': 'multipart/form-data' } })) as unknown as SharedImage;
+  if (opts.library) form.append('library', 'true');
+  return (await api.post('/global/images', form, { headers: { 'Content-Type': 'multipart/form-data' } })) as unknown as SharedImage & {
+    duplicate: boolean;
+  };
 }
+
+/** Annule une photo envoyée dont le produit n'a pas pu être enregistré (sinon supprimée par le serveur au bout d'1 h) */
+export const discardImage = (id: string) => api.delete(`/global/images/${id}/pending`).catch(() => undefined);
+
+/** Photothèque de ma boutique (propriétaire) */
+export const useMyLibrary = (enabled = true) =>
+  useQuery({
+    queryKey: ['images', 'mine'],
+    queryFn: () => api.get('/global/images/mine') as unknown as Promise<SharedImage[]>,
+    enabled,
+  });
+
+export const deleteLibraryImage = (id: string) => api.delete(`/global/images/${id}`);

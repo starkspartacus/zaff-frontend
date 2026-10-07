@@ -86,11 +86,18 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   accessoires → 6 Prix (marge en direct) → 7 Stock. Suggestions en cascade depuis `GET /global/reference/devices`
   (`useDeviceCatalog`) + les produits déjà créés par la boutique ; toute valeur absente se tape (« Ajouter « … » »).
   Alerte doublon (« Utiliser ce produit »), validation Zod `ProductFormSchema`.
-- **Images produits** : base partagée par toutes les boutiques (`/global/images`, `src/lib/images.ts`). Dans la fiche
-  produit, section « Photo » : photos déjà disponibles pour la marque + le modèle (la bonne couleur d'abord, la meilleure
-  choisie automatiquement), « Prendre / ajouter » (appareil photo du téléphone, photo **réduite dans le navigateur** ≤ 1000 px
-  WebP / JPEG avant l'envoi), ou « Sans photo ». `ProductVisual` affiche la photo, sinon une illustration colorée par
-  catégorie (icône + marque).
+- **Images produits** : base partagée par toutes les boutiques (`/global/images`, `src/lib/images.ts`), fichiers chez
+  **UploadThing** (côté serveur). Section « Photo » de la fiche produit : photos disponibles pour la marque + le modèle
+  (la bonne couleur d'abord, la meilleure choisie automatiquement), « Prendre / ajouter », ou « Sans photo ».
+  **Aucun envoi avant « Enregistrer / Créer »** : la photo prise est réduite sur l'appareil (≤ 1000 px, WebP / JPEG) et
+  montrée en aperçu local ; l'envoi a lieu au clic, puis le produit est enregistré ; s'il échoue, la photo envoyée est
+  annulée (`discardImage`). Remplacer ou retirer la photo d'un produit efface l'ancienne (UploadThing + base) si plus
+  aucun produit ne l'utilise. `ProductVisual` affiche la photo, sinon une illustration colorée par catégorie.
+- `/app/photo-library` **Photothèque** (propriétaire) : import en masse (plusieurs photos ou un dossier, glisser-déposer,
+  200 max par import), marque / modèle / couleur / catégorie **devinés depuis le nom du fichier** (`src/lib/photo-guess.ts`,
+  catalogue des appareils connus), modifiables, « Appliquer » une marque aux photos sans marque ; rien n'est envoyé avant
+  « Importer » (3 envois en parallèle, progression, doublons signalés « Déjà là »). Liste des photos de la boutique avec
+  nombre de produits qui les utilisent ; suppression seulement si aucun produit ne s'en sert.
 - `/app/showcase` **Vitrine** (vendeur, magasinier, propriétaire) : cartes `ProductCard` (photo, prix de vente, version,
   état, pastille de stock), recherche, filtres par catégorie, « En stock seulement ». Fiche : infos + appareils disponibles,
   « Vendre » ouvre `/app/scan?code=<N° de série>` (recherche automatique comme un scan). Photo aussi sur la fiche de vente

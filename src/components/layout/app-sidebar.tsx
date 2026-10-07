@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Logo } from '@/components/ui/logo';
 import { canAccess, normalizeRole, ROLE_HOME, ROLE_LABELS } from '@/lib/roles';
 import {
+  Images,
   LayoutGrid,
   LayoutDashboard,
   TrendingUp,
@@ -88,6 +89,7 @@ const navGroups: NavGroup[] = [
     label: 'Administration',
     items: [
       { title: 'Équipe & Accès', href: '/app/users', icon: UserCheck },
+      { title: 'Photothèque', href: '/app/photo-library', icon: Images },
       { title: 'Paramètres boutique', href: '/app/settings', icon: Settings },
     ],
   },
