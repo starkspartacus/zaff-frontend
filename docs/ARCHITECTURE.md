@@ -61,6 +61,13 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   dans plusieurs boutiques, le serveur renvoie la liste et l'utilisateur choisit.
 - Téléphones : `PhoneInput` (`src/components/forms/geo-fields.tsx`, libphonenumber-js) = indicatif + numéro mis en
   forme et vérifié pour le pays ; envoyés en E.164. Listes longues : `SearchSelect` (recherche sans accents, feuille en bas sur mobile).
+- **Contrat de vente et garantie** : `/contract?sale=<id>` (hors du menu, pour imprimer en A4 ou enregistrer en PDF ;
+  `ContractDocument` dans `src/components/contract/`). Ouvert depuis l'écran « Vendu ! » du scan, la caisse POS,
+  les factures et « Mes ventes ». Bouton WhatsApp : message récapitulatif (facture, N° de série, fin de garantie) au
+  numéro du client. Valeurs inconnues imprimées en pointillés (à compléter à la main), fiche de garantie détachable.
+  Paramètres → onglet « Contrat client » (`ContractSettingsPanel`) : informations légales, modèle ZAFF ou personnalisé
+  (articles activés / modifiés / déplacés / ajoutés, retour au texte d'origine), aperçu avec une vente fictive.
+  Création d'un modèle : état (neuf / reconditionné / occasion) et accessoires fournis, imprimés sur le contrat.
 - `src/components/scan/barcode-scanner.tsx` : caméra (ZXing, HTTPS requis sur mobile) + douchette / clavier.
 
 ## Notifications push (application fermée)

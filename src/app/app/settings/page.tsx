@@ -1,16 +1,61 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CheckCircle2, Plus, RotateCcw, Settings, ShieldCheck, Trash2, Undo2, Wrench } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { CheckCircle2, FileSignature, Plus, RotateCcw, Settings, ShieldCheck, Trash2, Undo2, Wrench } from 'lucide-react';
+import { ContractSettingsPanel } from '@/components/contract/contract-settings';
 import { useReturnPolicy, useUpdateReturnPolicy } from '@/lib/queries';
 import { errorMessage, type ActionToggles, type ReturnPolicy } from '@/lib/types';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { cn } from '@/lib/utils';
 
+type Tab = 'returns' | 'contract';
+const TABS: Array<{ id: Tab; label: string; icon: React.ElementType }> = [
+  { id: 'returns', label: 'Retours et garantie', icon: ShieldCheck },
+  { id: 'contract', label: 'Contrat client', icon: FileSignature },
+];
+
 export default function SettingsPage() {
+  const [tab, setTab] = useState<Tab>('returns');
+  return (
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <Settings className="w-6 h-6 text-[#d4a017]" /> Paramètres de la boutique
+        </h1>
+        <p className="text-xs text-neutral-400 mt-0.5">
+          {tab === 'returns'
+            ? 'Retours, avoirs et garantie : vos vendeurs ne proposeront que ce que vous autorisez ici.'
+            : 'Le contrat de vente et de garantie remis au client après chaque vente.'}
+        </p>
+      </div>
+      <div role="tablist" className="grid grid-cols-2 p-1 rounded-2xl bg-neutral-900 border border-neutral-800">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={cn(
+              'relative h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors',
+              tab === id ? 'text-black' : 'text-neutral-400 hover:text-white'
+            )}
+          >
+            {tab === id && <motion.span layoutId="settings-tab" className="absolute inset-0 -z-0 rounded-xl bg-gradient-to-r from-[#d4a017] to-[#f5d77f]" />}
+            <Icon className="relative w-4 h-4" />
+            <span className="relative">{label}</span>
+          </button>
+        ))}
+      </div>
+      {tab === 'returns' ? <ReturnPolicyTab /> : <ContractSettingsPanel />}
+    </div>
+  );
+}
+
+function ReturnPolicyTab() {
   const { data: saved, isLoading } = useReturnPolicy();
   if (isLoading || !saved) {
-    return <div className="max-w-3xl mx-auto rounded-3xl border border-neutral-800 p-10 text-center text-sm text-neutral-500">Chargement des paramètres…</div>;
+    return <div className="rounded-3xl border border-neutral-800 p-10 text-center text-sm text-neutral-500">Chargement des paramètres…</div>;
   }
   // Le formulaire part des valeurs enregistrées ; après « Enregistrer », `saved` suit et le message reste affiché
   return <ReturnPolicyForm saved={saved} />;
@@ -49,13 +94,7 @@ function ReturnPolicyForm({ saved }: { saved: ReturnPolicy }) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-24">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          <Settings className="w-6 h-6 text-[#d4a017]" /> Paramètres de la boutique
-        </h1>
-        <p className="text-xs text-neutral-400 mt-0.5">Retours, avoirs et garantie : vos vendeurs ne proposeront que ce que vous autorisez ici.</p>
-      </div>
+    <div className="space-y-6 pb-24">
 
       <Summary p={p} />
 

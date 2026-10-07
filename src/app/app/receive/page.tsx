@@ -9,6 +9,7 @@ import { errorMessage, type Category, type Product } from '@/lib/types';
 import { useAddUnits, useCategories, useDeleteUnit, useProducts, useReferenceCatalog } from '@/lib/queries';
 import { qk } from '@/lib/query-keys';
 import { fieldErrors, NewModelSchema } from '@/lib/schemas';
+import { CONDITION_LABELS, type ProductCondition } from '@/lib/contract';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { AnimatedList, AnimatedListItem } from '@/components/magicui/animated-list';
@@ -28,6 +29,8 @@ const emptyModel = {
   barcode: '',
   purchasePrice: '',
   salePrice: '',
+  condition: 'new' as ProductCondition,
+  accessories: '',
 };
 
 export default function ReceiveStockPage() {
@@ -184,6 +187,8 @@ export default function ReceiveStockPage() {
         model: m.model || undefined,
         color: m.color || undefined,
         barcode: m.barcode || undefined,
+        condition: m.condition,
+        accessories: m.accessories || undefined,
         purchasePrice: m.purchasePrice,
         salePrice: m.salePrice,
         hasSerialNumbers: true,
@@ -401,6 +406,26 @@ export default function ReceiveStockPage() {
             <Field label="Code-barres de la boîte (EAN)">
               <input value={newModel.barcode} onChange={(e) => setNewModel({ ...newModel, barcode: e.target.value })} placeholder="Facultatif" className={`${inputCls} font-mono`} />
               <FieldError msg={errors.barcode} />
+            </Field>
+            <Field label="État (imprimé sur le contrat du client)">
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(CONDITION_LABELS) as ProductCondition[]).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    aria-pressed={newModel.condition === k}
+                    onClick={() => setNewModel({ ...newModel, condition: k })}
+                    className={`h-10 rounded-xl border text-xs font-semibold ${
+                      newModel.condition === k ? 'bg-[#d4a017]/15 border-[#d4a017] text-[#f5d77f]' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+                    }`}
+                  >
+                    {CONDITION_LABELS[k]}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Accessoires fournis">
+              <input value={newModel.accessories} onChange={(e) => setNewModel({ ...newModel, accessories: e.target.value })} placeholder="Ex: Chargeur, câble, boîte" maxLength={300} className={inputCls} />
             </Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Prix d'achat">

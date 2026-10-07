@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import {
+  FileSignature,
   Search,
   ShoppingCart,
   Trash2,
@@ -743,6 +745,12 @@ export default function SalesPosPage() {
               </div>
             </div>
 
+            <Link
+              href={`/contract?sale=${completedSale._id}`}
+              className="w-full py-2.5 rounded-xl bg-[#d4a017]/10 border border-[#d4a017]/40 text-[#f5d77f] text-xs font-bold flex items-center justify-center gap-2"
+            >
+              <FileSignature className="w-4 h-4" /> Contrat et garantie du client
+            </Link>
             <div className="flex gap-3">
               <button
                 onClick={() => window.print()}

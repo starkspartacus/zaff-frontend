@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { useMyStats } from '@/lib/queries';
 import { NumberTicker } from '@/components/magicui/number-ticker';
-import { CalendarCheck, Lock, PackagePlus, RefreshCw, ScanLine } from 'lucide-react';
+import { CalendarCheck, FileSignature, Lock, PackagePlus, RefreshCw, ScanLine } from 'lucide-react';
 
 const PERIODS = [
   { id: 'day', label: "Aujourd'hui" },
@@ -124,6 +124,7 @@ export default function MyActivityPage() {
                 .join(' · '),
               right: formatPrice(s.total),
               when: time(s.saleDate),
+              href: `/contract?sale=${s._id}`,
             }))}
           />
         </>
@@ -132,15 +133,17 @@ export default function MyActivityPage() {
   );
 }
 
-function List({ title, empty, items }: { title: string; empty: string; items: { key: string; title: string; sub: string; right: string; when: string }[] }) {
+function List({ title, empty, items }: { title: string; empty: string; items: { key: string; title: string; sub: string; right: string; when: string; href?: string }[] }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{title}</p>
       {items.length === 0 ? (
         <p className="text-center text-sm text-neutral-500 py-6">{empty}</p>
       ) : (
-        items.map((i) => (
-          <div key={i.key} className="rounded-2xl border border-neutral-800 bg-neutral-950 px-4 py-3 flex items-center justify-between gap-3">
+        items.map((i) => {
+          const Row = i.href ? Link : 'div';
+          return (
+          <Row key={i.key} href={i.href as string} className="rounded-2xl border border-neutral-800 bg-neutral-950 px-4 py-3 flex items-center justify-between gap-3 hover:border-neutral-700">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white truncate">{i.title}</p>
               <p className="text-[11px] text-neutral-500 font-mono truncate">{i.sub}</p>
@@ -148,9 +151,11 @@ function List({ title, empty, items }: { title: string; empty: string; items: { 
             <div className="text-right shrink-0">
               <p className="text-sm font-bold text-[#f5d77f]">{i.right}</p>
               <p className="text-[10px] text-neutral-500">{i.when}</p>
+              {i.href && <p className="text-[10px] text-[#d4a017] flex items-center justify-end gap-1"><FileSignature className="w-3 h-3" /> Contrat</p>}
             </div>
-          </div>
-        ))
+          </Row>
+          );
+        })
       )}
     </div>
   );

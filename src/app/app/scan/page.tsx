@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   ChevronDown,
   CreditCard,
+  FileSignature,
   PackageSearch,
   Ticket,
   ScanLine,
@@ -284,6 +285,12 @@ function ScanSell() {
               </span>
             ) : null}
           </p>
+          <Link
+            href={`/contract?sale=${step.sale._id}`}
+            className="w-full h-12 rounded-2xl bg-gradient-to-r from-[#d4a017] to-[#b8860b] text-black font-bold text-sm flex items-center justify-center gap-2"
+          >
+            <FileSignature className="w-4 h-4" /> Contrat et garantie du client
+          </Link>
           <ScanAgainButton onClick={() => setStep({ kind: 'idle' })} label="Scanner l'article suivant" />
         </ResultCard>
         </BlurFade>

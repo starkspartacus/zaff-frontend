@@ -48,6 +48,8 @@ export const NewModelSchema = z.object({
   barcode: z.string().trim().refine((v) => !v || /^[0-9A-Za-z\-]{6,32}$/.test(v), 'Code-barres invalide.'),
   purchasePrice: z.coerce.number().min(0, 'Prix invalide.'),
   salePrice: z.coerce.number().min(0, 'Prix invalide.'),
+  condition: z.enum(['new', 'refurbished', 'used']).default('new'),
+  accessories: z.string().trim().max(300, 'Trop long (300 caractères maximum).'),
 });
 export type NewModelInput = z.input<typeof NewModelSchema>;
 

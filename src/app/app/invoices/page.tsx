@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import {
+  FileSignature,
   Receipt,
   Search,
   Printer,
@@ -160,6 +162,14 @@ export default function InvoicesPage() {
                         <Eye className="w-4 h-4 text-[#d4a017]" />
                         <span className="text-[11px]">Détails</span>
                       </button>
+                      <Link
+                        href={`/contract?sale=${sale._id}`}
+                        className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors inline-flex items-center gap-1.5"
+                        title="Contrat de vente et garantie"
+                      >
+                        <FileSignature className="w-4 h-4 text-[#d4a017]" />
+                        <span className="text-[11px]">Contrat</span>
+                      </Link>
                     </td>
                   </tr>
                 ))
