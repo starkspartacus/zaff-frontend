@@ -6,14 +6,14 @@ import { api } from '@/lib/api';
 import { disablePush } from '@/lib/push';
 import { normalizeRole, ROLE_HOME } from '@/lib/roles';
 import { useAuthStore, type Establishment, type UserProfile } from '@/stores/auth-store';
+import { useAdminStore } from '@/stores/admin-store';
 
 export type { Establishment, UserProfile };
 
-interface LoginResponse {
-  accessToken: string;
-  user: UserProfile;
-  establishment: Establishment;
-}
+type LoginResponse =
+  | { platform?: false; accessToken: string; user: UserProfile; establishment: Establishment }
+  /** Identifiants de l'administrateur ZAFF : l'espace administrateur s'ouvre (jamais une boutique) */
+  | { platform: true; accessToken: string; admin: { email: string } };
 
 /**
  * Accès à la session (store Zustand persistant) et aux actions de connexion.
@@ -38,6 +38,13 @@ export function useAuth() {
         tenantSlug: tenantSlug || undefined,
         countryCode: countryCode || undefined,
       })) as unknown as LoginResponse;
+      if (res.platform) {
+        useAuthStore.getState().clear(); // aucune session boutique en parallèle
+        queryClient.clear();
+        useAdminStore.getState().setSession(res.accessToken, res.admin.email);
+        router.push('/admin');
+        return;
+      }
       const sessionUser = { ...res.user, role: normalizeRole(res.user?.role) };
       queryClient.clear(); // aucune donnée d'une autre session ne doit subsister
       setSession({ token: res.accessToken, user: sessionUser, establishment: res.establishment });

@@ -73,7 +73,8 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   et de l'e-mail vérifiée avant la dernière étape (`/global/establishments/check`) → modale « déjà un compte »
   (PHONE_TAKEN / EMAIL_TAKEN, aussi renvoyés par le serveur à l'inscription). Succès : confettis puis connexion auto.
 - `/login` : onglets Téléphone | E-mail. Téléphone : pays d'abord (indicatif automatique, dernier pays mémorisé
-  `zaff-last-country`), envoi `{ identifier, password, countryCode }`. Plus de champ « slug » : si le compte existe
+  `zaff-last-country`), envoi `{ identifier, password, countryCode }`. Réponse `platform: true` (e-mail de l'administrateur
+  ZAFF) → session admin (`admin-store`), session boutique effacée, redirection `/admin`. Lien « Espace administrateur ». Plus de champ « slug » : si le compte existe
   dans plusieurs boutiques, le serveur renvoie la liste et l'utilisateur choisit.
 - Téléphones : `PhoneInput` (`src/components/forms/geo-fields.tsx`, libphonenumber-js) = indicatif + numéro mis en
   forme et vérifié pour le pays ; envoyés en E.164. Listes longues : `SearchSelect` (recherche sans accents, feuille en bas sur mobile).

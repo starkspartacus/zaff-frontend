@@ -274,6 +274,12 @@ export default function LoginPage() {
             <Link href="/register" className="text-gold hover:underline font-semibold">
               Créer ma boutique gratuitement
             </Link>
+            <p className="mt-3 text-xs text-neutral-500">
+              Administrateur ZAFF ?{' '}
+              <Link href="/admin/login" className="text-neutral-300 hover:text-gold underline">
+                Espace administrateur
+              </Link>
+            </p>
           </div>
         </div>
       </motion.div>
