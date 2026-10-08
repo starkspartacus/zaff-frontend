@@ -87,5 +87,6 @@ export function notificationHref(n: AppNotification): string | null {
   if (n.type === 'cash.validated') return '/app/cash-closing';
   if (n.type === 'return.created') return '/app/returns';
   if (n.type === 'repair.ready') return '/app/repairs';
+  if (n.type === 'catalog.photo') return '/app/catalog';
   return null;
 }

@@ -59,6 +59,8 @@ export interface ContractItem {
   reference: string | null;
   condition: ProductCondition;
   accessories: string | null;
+  /** Fiche technique officielle (catalogue ZAFF) */
+  specs?: { label: string; value: string }[];
   quantity: number;
   price: number;
   warrantyMonths: number;

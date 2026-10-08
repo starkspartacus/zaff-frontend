@@ -123,6 +123,13 @@ function DeviceView() {
           <p className="text-xs text-neutral-400">
             {device.shops ? `Dans le catalogue de ${device.shops} boutique${device.shops > 1 ? 's' : ''} : chaque photo ajoutée est transmise à leurs produits sans photo.` : "Aucune boutique ne l'utilise encore."}
           </p>
+          {device.prices.length > 0 && (
+            <p className="text-xs text-neutral-400">
+              Prix pratiqués :{' '}
+              {device.prices.map((p) => `${p.variant || 'toutes capacités'} ~${p.median.toLocaleString('fr-FR')} ${p.currency} (${p.shops} boutiques)`).join(' · ')}
+            </p>
+          )}
+          {device.aliases > 0 && <p className="text-[11px] text-neutral-500">{device.aliases} autre(s) écriture(s) reconnue(s) (doublons fusionnés).</p>}
           {device.specs.length > 0 && (
             <dl className="rounded-2xl border border-neutral-800 divide-y divide-neutral-800 text-xs">
               {device.specs.map((s) => (

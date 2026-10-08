@@ -48,7 +48,13 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
 ## Écrans clés
 - `/app/scan` vendeur : scan → fiche → « Voulez-vous vendre cet article ? » → Oui → écran « Vendu ! ».
 - `/app/receive` magasinier : choisir / créer le modèle (suggestions du catalogue de référence global),
-  puis scanner chaque appareil (✓ / ✗ avec la raison, annulation possible).
+  puis scanner chaque appareil (✓ / ✗ avec la raison, annulation possible). `?product=<id>` : modèle déjà choisi
+  (bouton « Mettre en stock » du Catalogue, « Scanner les appareils » de la fiche produit, et automatiquement après la
+  création d'un produit à N° de série dans le Catalogue).
+- **Le stock d'un produit à N° de série ne monte qu'en scannant le N° de série / IMEI de chaque appareil** ; le code-barres
+  de la boîte identifie seulement le modèle (rappelé dans la fiche produit et la fenêtre de scan du code-barres).
+- `/app/catalog` lit les produits avec React Query (`useProducts`) : stock rafraîchi en direct par le WebSocket.
+  Ne jamais charger une liste avec un `api.get` ponctuel dans un `useEffect` (elle ne se met plus à jour).
 - `/app/my-activity` : mes ventes / mes mises en stock. `/app` propriétaire : chiffres du jour, ventes par
   vendeur, équipe en ligne (temps réel).
 - `/app/cash-closing` vendeur (et propriétaire qui vend) : ma caisse en cours (espèces / Mobile Money à remettre),
@@ -103,7 +109,10 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   **Fiche technique** dans `DeviceEditorModal` (lignes usuelles proposées selon la catégorie).
 - Boutique : `DeviceSpecs` (`src/components/products/device-specs.tsx`) affiche la fiche technique dans la fiche produit
   (modèle reconnu) et la Vitrine (`useCatalogDevice(product.deviceId)`). Modèle absent du catalogue : le formulaire indique
-  que ZAFF est prévenu ; la photo arrive ensuite toute seule (WebSocket `products`). Catalogue relu toutes les 10 min.
+  que ZAFF est prévenu ; la photo arrive ensuite toute seule (WebSocket `products`, notification `catalog.photo`).
+  Catalogue relu toutes les 10 min. **Prix pratiqué** (section Prix) : médiane d'au moins 3 boutiques dans la devise
+  de la boutique (`establishment.currencyCode`), la bonne capacité d'abord, bouton « Utiliser ce prix ». Contrat :
+  ligne « Caractéristiques » (fiche technique). Admin : bouton « Doublon » dans les demandes (`mergeRequest`).
 - `/app/showcase` **Vitrine** (vendeur, magasinier, propriétaire) : cartes `ProductCard` (photo, prix de vente, version,
   état, pastille de stock), recherche, filtres par catégorie, « En stock seulement ». Fiche : infos + appareils disponibles,
   « Vendre » ouvre `/app/scan?code=<N° de série>` (recherche automatique comme un scan). Photo aussi sur la fiche de vente

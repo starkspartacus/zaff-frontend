@@ -1,8 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
+import { useCategories, useProducts } from '@/lib/queries';
+import { errorMessage, type Product } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import { ProductForm } from '@/components/products/product-form';
@@ -15,51 +20,34 @@ import {
   Trash2,
   X,
   Sparkles,
+  ScanLine,
 } from 'lucide-react';
 
 export default function CatalogPage() {
   const { establishment } = useAuth();
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  // React Query : le stock se met à jour en direct (mise en stock, ventes, retours) grâce au temps réel
+  const { data: products = [], isLoading } = useProducts();
+  const categories = useCategories().data ?? [];
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
 
   // Modal create/edit
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const [prodRes, catRes] = await Promise.allSettled([api.get('/catalog/products'), api.get('/catalog/categories')]);
-
-      if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
-        setProducts(prodRes.value);
-      }
-      if (catRes.status === 'fulfilled' && Array.isArray(catRes.value)) {
-        setCategories(catRes.value);
-      }
-    } catch (e) {
-      console.error('Error fetching catalog data:', e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const fetchData = () => queryClient.invalidateQueries({ queryKey: ['products'] });
 
   const currency = establishment?.currency || 'F CFA';
-  const formatPrice = (val: number) => `${(val || 0).toLocaleString('fr-FR')} ${currency}`;
+  const formatPrice = (val?: number) => `${(val || 0).toLocaleString('fr-FR')} ${currency}`;
 
   const openCreateModal = () => {
     setEditingProduct(null);
     setIsModalOpen(true);
   };
 
-  const openEditModal = (p: any) => {
+  const openEditModal = (p: Product) => {
     setEditingProduct(p);
     setIsModalOpen(true);
   };
@@ -69,8 +57,8 @@ export default function CatalogPage() {
     try {
       await api.delete(`/catalog/products/${id}`);
       fetchData();
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de la suppression');
+    } catch (err) {
+      alert(errorMessage(err));
     }
   };
 
@@ -98,7 +86,7 @@ export default function CatalogPage() {
             Catalogue High-Tech
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
-            Gérez vos références d'appareils, pièces de rechange, accessoires et tarifs
+            Gérez vos références d&apos;appareils, pièces de rechange, accessoires et tarifs
           </p>
         </div>
 
@@ -160,7 +148,7 @@ export default function CatalogPage() {
               <tr>
                 <th className="py-3.5 px-4">Article</th>
                 <th className="py-3.5 px-4">SKU / Code-barres</th>
-                <th className="py-3.5 px-4">Prix d'Achat</th>
+                <th className="py-3.5 px-4">Prix d&apos;Achat</th>
                 <th className="py-3.5 px-4">Prix Détail</th>
                 <th className="py-3.5 px-4">Prix Revendeur</th>
                 <th className="py-3.5 px-4 text-center">Stock</th>
@@ -234,6 +222,16 @@ export default function CatalogPage() {
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1">
+                          {p.hasSerialNumbers && (
+                            <Link
+                              href={`/app/receive?product=${p._id}`}
+                              className="p-1.5 rounded-lg text-gold hover:bg-gold/10 transition-colors"
+                              title="Mettre en stock : scanner les N° de série / IMEI"
+                              aria-label={`Mettre en stock ${p.name}`}
+                            >
+                              <ScanLine className="w-4 h-4" />
+                            </Link>
+                          )}
                           <button
                             onClick={() => openEditModal(p)}
                             className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
@@ -276,9 +274,11 @@ export default function CatalogPage() {
               key={editingProduct?._id || 'new'}
               initial={editingProduct}
               onCancel={() => setIsModalOpen(false)}
-              onSaved={() => {
+              onSaved={(saved) => {
                 setIsModalOpen(false);
                 fetchData();
+                // Nouveau produit à N° de série : son stock monte en scannant chaque appareil, on y va directement
+                if (!editingProduct && saved.hasSerialNumbers) router.push(`/app/receive?product=${saved._id}`);
               }}
               onUseExisting={(p) => setEditingProduct(p)}
             />

@@ -17,6 +17,8 @@ export interface Establishment {
   name: string;
   slug: string;
   currency: string;
+  /** Code ISO de la devise (XOF, NGN…) : prix conseillés du catalogue */
+  currencyCode?: string | null;
   phone?: string;
   email?: string;
   address?: string;

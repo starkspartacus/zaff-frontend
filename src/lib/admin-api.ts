@@ -46,6 +46,10 @@ export interface AdminDevice {
   specs: DeviceSpec[];
   /** Nombre de boutiques qui ont ce modèle en catalogue */
   shops: number;
+  /** Prix pratiqués (médiane d'au moins 3 boutiques) */
+  prices: { currency: string; variant: string | null; median: number; shops: number }[];
+  /** Nombre d'autres écritures fusionnées (doublons) */
+  aliases: number;
   photos: { imageId: string; color: string | null }[];
   imageId: string | null;
   active: boolean;
@@ -132,6 +136,8 @@ export const useDeviceRequests = (status: RequestStatus) =>
 
 export const acceptRequest = (id: string, dto: DeviceInput) =>
   adminApi.post(`/platform/device-requests/${id}/accept`, dto) as unknown as Promise<{ device: AdminDevice; linked: number }>;
+export const mergeRequest = (id: string, deviceId: string) =>
+  adminApi.post(`/platform/device-requests/${id}/merge`, { deviceId }) as unknown as Promise<{ device: AdminDevice; linked: number }>;
 export const dismissRequest = (id: string) => adminApi.post(`/platform/device-requests/${id}/dismiss`);
 export const reopenRequest = (id: string) => adminApi.post(`/platform/device-requests/${id}/reopen`);
 

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { scanFeedback } from '@/components/scan/feedback';
 import { errorMessage, type Product } from '@/lib/types';
@@ -18,11 +19,28 @@ type ScanResult =
   | { status: 'undone'; serialNumber: string; at: Date };
 
 export default function ReceiveStockPage() {
+  return (
+    <Suspense fallback={null}>
+      <ReceiveStock />
+    </Suspense>
+  );
+}
+
+function ReceiveStock() {
   const products = useProducts().data ?? [];
+  // « Mettre en stock » depuis le Catalogue (ou après la création d'un produit) : le modèle est déjà choisi
+  const wantedId = useSearchParams().get('product');
+  const [wantedDismissed, setWantedDismissed] = useState(false);
   const addUnits = useAddUnits();
   const deleteUnit = useDeleteUnit();
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<Product | null>(null);
+  const [picked, setPicked] = useState<Product | null>(null);
+  const wanted = !picked && !wantedDismissed && wantedId ? products.find((p) => p._id === wantedId && p.hasSerialNumbers) ?? null : null;
+  const selected = picked ?? wanted;
+  const setSelected = (p: Product | null) => {
+    setPicked(p);
+    if (!p) setWantedDismissed(true);
+  };
   const [results, setResults] = useState<ScanResult[]>([]);
   const [stockQuantity, setStockQuantity] = useState<number | null>(null);
   const isSending = addUnits.isPending;
@@ -156,7 +174,7 @@ export default function ReceiveStockPage() {
             <p className="text-3xl font-black text-gold-soft">
               +<NumberTicker value={added} />
             </p>
-            <p className="text-[10px] text-neutral-500">ajouté(s) · {stockQuantity ?? '—'} en stock</p>
+            <p className="text-[10px] text-neutral-500">ajouté(s) · {products.find((p) => p._id === selected._id)?.stockQuantity ?? stockQuantity ?? '—'} en stock</p>
           </div>
         </div>
 

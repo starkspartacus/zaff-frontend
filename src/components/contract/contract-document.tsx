@@ -290,6 +290,7 @@ function ProductsBox({ doc, money }: { doc: RenderedContract; money: (n: number)
               <ConditionChecks value={item.condition} />
             </div>
             <Row label="Accessoires fournis" value={item.accessories} />
+            {item.specs?.length ? <Row label="Caractéristiques" value={item.specs.map((s) => `${s.label} : ${s.value}`).join(' · ')} /> : null}
           </Box>
           <Box title="Conditions financières & garantie">
             <Row label="Prix de vente TTC" value={item.quantity > 1 ? `${item.quantity} × ${money(item.price)}` : money(item.price)} strong />

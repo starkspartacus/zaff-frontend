@@ -32,7 +32,9 @@ import {
   Camera,
   ImageOff,
   Globe2,
+  ScanLine,
 } from 'lucide-react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useBrands, useCategories, useDeviceCatalog, useProducts, useReferenceCatalog, type CategoryProfile, type DeviceModel } from '@/lib/queries';
 import { CONDITION_LABELS, type ProductCondition } from '@/lib/contract';
@@ -126,6 +128,8 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   const shopCategories = useCategories().data ?? [];
   const shopBrands = useBrands().data ?? [];
   const products = useProducts().data ?? [];
+  // Stock à jour en direct (mises en stock faites ailleurs pendant que la fiche est ouverte)
+  const liveStock = products.find((p) => p._id === initial?._id)?.stockQuantity ?? initial?.stockQuantity ?? 0;
 
   const initialCategoryName =
     (initial && (shopCategories.find((c) => c.slug === initial.category)?.name || reference.find((r) => r.slug === initial.category)?.name || initial.category)) ||
@@ -210,6 +214,10 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
     : undefined;
 
   const sale = Number(salePrice) || 0;
+  // Prix pratiqué par les autres boutiques (même devise ; la bonne capacité d'abord) : un repère, jamais imposé
+  const variantKey = variant.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const localPrices = (knownModel?.prices || []).filter((x) => establishment?.currencyCode && x.currency === establishment.currencyCode);
+  const marketPrice = (variantKey && localPrices.find((x) => x.variantKey === variantKey)) || localPrices.find((x) => !x.variantKey) || null;
   const cost = Number(purchasePrice) || 0;
   const margin = sale && cost ? sale - cost : null;
 
@@ -548,6 +556,20 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
           <MoneyField label="Prix de vente *" value={salePrice} onChange={(v) => { setSalePrice(v); setErrors((e) => ({ ...e, salePrice: '' })); }} error={errors.salePrice} />
           {!compact && <MoneyField label="Prix revendeur" value={resellerPrice} onChange={setResellerPrice} />}
         </div>
+        {marketPrice && (
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/50 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-neutral-300">
+              <Globe2 className="inline w-3.5 h-3.5 mr-1 text-gold" />
+              Prix pratiqué{marketPrice.variant ? ` (${marketPrice.variant})` : ''} : <strong className="text-white">~{marketPrice.median.toLocaleString('fr-FR')} {establishment?.currency}</strong>
+              <span className="text-neutral-500"> · médiane de {marketPrice.shops} boutiques ZAFF</span>
+            </p>
+            {Number(salePrice) !== marketPrice.median && (
+              <button type="button" onClick={() => (setSalePrice(String(marketPrice.median)), setErrors((e) => ({ ...e, salePrice: '' })))} className="h-8 px-3 rounded-lg border border-gold/50 text-gold-soft text-xs font-semibold">
+                Utiliser ce prix
+              </button>
+            )}
+          </div>
+        )}
         {margin !== null && (
           <p className={cn('text-xs flex items-center gap-1.5', margin >= 0 ? 'text-emerald-400' : 'text-red-400')}>
             <Banknote className="w-3.5 h-3.5" />
@@ -571,7 +593,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
               <div>
                 <p className="text-xs font-semibold text-neutral-300 mb-1">Stock</p>
                 <p className="h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-neutral-400 flex items-center gap-2">
-                  <Boxes className="w-4 h-4" /> {initial?.stockQuantity ?? 0} · alimenté par scan
+                  <Boxes className="w-4 h-4" /> <strong className="text-white text-sm">{liveStock}</strong> en stock
                 </p>
               </div>
             ) : (
@@ -579,6 +601,24 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
             )}
             <TextField label="Alerte stock bas à" value={minStockAlert} onChange={setMinStockAlert} inputMode="numeric" />
           </div>
+          {hasSerialNumbers && (
+            <div className="rounded-2xl border border-gold/30 bg-gold/5 p-3 space-y-2">
+              <p className="text-xs text-neutral-300">
+                Le stock monte en scannant le <strong className="text-white">N° de série / IMEI de chaque appareil</strong> (étiquette de la boîte ou
+                *#06# sur un téléphone). Le code-barres de la boîte sert seulement à reconnaître le modèle.
+              </p>
+              {initial?._id ? (
+                <Link
+                  href={`/app/receive?product=${initial._id}`}
+                  className="h-11 px-4 rounded-xl bg-gradient-to-r from-gold to-gold-deep text-ink text-sm font-bold inline-flex items-center gap-2"
+                >
+                  <ScanLine className="w-4 h-4" /> Scanner les appareils
+                </Link>
+              ) : (
+                <p className="text-[11px] text-gold-soft">Après « Créer le produit », l&apos;écran de scan s&apos;ouvre : chaque appareil scanné ajoute 1 au stock.</p>
+              )}
+            </div>
+          )}
         </Section>
       )}
 
@@ -606,6 +646,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
                 <X className="w-4 h-4" />
               </button>
             </div>
+            <p className="text-[11px] text-neutral-500">Ce code identifie le modèle (il n&apos;ajoute pas de stock).</p>
             <BarcodeScanner
               autoStartCamera
               placeholder="Scannez ou tapez le code-barres"
