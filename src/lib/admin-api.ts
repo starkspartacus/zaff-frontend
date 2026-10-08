@@ -145,6 +145,74 @@ export const reopenRequest = (id: string) => adminApi.post(`/platform/device-req
 export const syncCatalog = () =>
   adminApi.post('/platform/devices/sync') as unknown as Promise<{ shops: number; products: number; devicesUsed: number; requests: number } | null>;
 
+// ─── Photos par l'IA ───
+
+export interface AiStatus {
+  enabled: boolean;
+  model: string;
+}
+
+export interface AiJob {
+  id: string;
+  status: 'queued' | 'running' | 'done' | 'cancelled' | 'failed';
+  label: string | null;
+  total: number;
+  processed: number;
+  found: number;
+  published: number;
+  notFound: number;
+  errors: number;
+  auto: boolean;
+  minScore: number;
+  lastError: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+}
+
+export interface AiCandidate {
+  id: string;
+  jobId: string;
+  deviceId: string;
+  device: { brand: string; model: string; category: string; photos: number } | null;
+  color: string | null;
+  score: number;
+  verdict: { view?: string; cleanBackground?: boolean; textOrWatermark?: boolean; reason?: string };
+  source: string | null;
+  sourceUrl: string;
+  pageUrl: string | null;
+  bytes: number;
+  status: 'pending' | 'published' | 'rejected' | 'failed';
+  error: string | null;
+}
+
+export const useAiStatus = () => useQuery({ queryKey: ['admin', 'ai', 'status'], queryFn: () => get<AiStatus>('/platform/ai-images/status') });
+
+/** Lots de recherche : rechargés toutes les 3 s tant qu'un lot est en cours (l'espace admin n'a pas de WebSocket) */
+export const useAiJobs = () =>
+  useQuery({
+    queryKey: ['admin', 'ai', 'jobs'],
+    queryFn: () => get<AiJob[]>('/platform/ai-images/jobs'),
+    refetchInterval: (q) => ((q.state.data as AiJob[] | undefined)?.some((j) => j.status === 'running' || j.status === 'queued') ? 3000 : false),
+  });
+
+export const useAiCandidates = (q: { status?: string; jobId?: string }, live = false) =>
+  useQuery({
+    queryKey: ['admin', 'ai', 'candidates', q],
+    queryFn: () => get<AiCandidate[]>('/platform/ai-images/candidates', q),
+    refetchInterval: live ? 4000 : false,
+  });
+
+export const createAiJob = (body: { deviceIds?: string[]; selection?: 'missing-popular'; limit?: number; auto?: boolean; minScore?: number }) =>
+  adminApi.post('/platform/ai-images/jobs', body) as unknown as Promise<AiJob>;
+export const cancelAiJob = (id: string) => adminApi.post(`/platform/ai-images/jobs/${id}/cancel`);
+export const publishAiCandidate = (id: string, color?: string | null) => adminApi.post(`/platform/ai-images/candidates/${id}/publish`, color === undefined ? {} : { color });
+export const rejectAiCandidate = (id: string) => adminApi.post(`/platform/ai-images/candidates/${id}/reject`);
+export const publishAiCandidates = (body: { ids?: string[]; jobId?: string; minScore?: number }) =>
+  adminApi.post('/platform/ai-images/candidates/publish', body) as unknown as Promise<{ published: number; failed: number }>;
+/** Aperçu protégé (jeton admin) : chargé en blob */
+export const fetchAiPreview = (id: string, size: 'thumb' | 'full') =>
+  adminApi.get(`/platform/ai-images/candidates/${id}/preview`, { params: { size }, responseType: 'blob' }) as unknown as Promise<Blob>;
+
 export const createDevice = (dto: DeviceInput) => adminApi.post('/platform/devices', dto) as unknown as Promise<AdminDevice>;
 export const updateDevice = (id: string, dto: Partial<DeviceInput>) => adminApi.put(`/platform/devices/${id}`, dto) as unknown as Promise<AdminDevice>;
 export const deleteDevice = (id: string) => adminApi.delete(`/platform/devices/${id}`);

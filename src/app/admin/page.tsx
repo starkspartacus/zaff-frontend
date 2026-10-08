@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Flag, ImagePlus, Inbox, Loader2, RefreshCw, Smartphone, Store, Tags } from 'lucide-react';
+import { ArrowRight, Flag, ImagePlus, Inbox, Loader2, RefreshCw, Smartphone, Sparkles, Store, Tags } from 'lucide-react';
 import { syncCatalog, useAdminDevices, useAdminRefresh, useAdminUsage, useDeviceStats } from '@/lib/admin-api';
 import { errorMessage } from '@/lib/types';
 import { formatBytes } from '@/lib/images';
@@ -104,7 +104,10 @@ export default function AdminDashboard() {
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/admin/import" className="h-11 px-4 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink text-sm font-bold flex items-center gap-2">
+          <Link href="/admin/ai" className="h-11 px-4 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink text-sm font-bold flex items-center gap-2">
+            <Sparkles className="w-4 h-4" /> Trouver les photos avec l&apos;IA
+          </Link>
+          <Link href="/admin/import" className="h-11 px-4 rounded-2xl bg-neutral-900 border border-neutral-700 text-white text-sm font-semibold flex items-center gap-2">
             <ImagePlus className="w-4 h-4" /> Importer des photos en masse
           </Link>
           <Link href="/admin/devices" className="h-11 px-4 rounded-2xl bg-neutral-900 border border-neutral-700 text-white text-sm font-semibold flex items-center gap-2">

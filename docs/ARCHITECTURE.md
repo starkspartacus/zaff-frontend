@@ -108,6 +108,11 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   jour » (recalcul). **Demandes** `/admin/requests` (badge dans le menu) : modèles saisis par les boutiques, « Ajouter »
   ouvre `DeviceEditorModal` pré-rempli (`prefill` + `onSubmit`) puis « Ajouter ses photos » ; Ignorer / Remettre à traiter.
   **Fiche technique** dans `DeviceEditorModal` (lignes usuelles proposées selon la catégorie).
+- **Photos par l'IA** `/admin/ai` : lancer une recherche (10 / 25 / 50 / 100 appareils sans photo, les plus utilisés
+  d'abord), mode « Je valide chaque photo » ou « Publication automatique » (note minimale), suivi des lots (rechargé toutes
+  les 3 s seulement pendant un traitement), photos à valider groupées par appareil (note, coloris, raison, source),
+  Publier / Rejeter, « Publier tout ce qui est noté ≥ … ». Aperçus chargés avec le jeton admin (`fetchAiPreview`, blob).
+  Bouton « Chercher avec l'IA » sur la fiche appareil. Sans `GEMINI_API_KEY` côté serveur : explication à la place.
 - Boutique : `DeviceSpecs` (`src/components/products/device-specs.tsx`) affiche la fiche technique dans la fiche produit
   (modèle reconnu) et la Vitrine (`useCatalogDevice(product.deviceId)`). Modèle absent du catalogue : le formulaire indique
   que ZAFF est prévenu ; la photo arrive ensuite toute seule (WebSocket `products`, notification `catalog.photo`).

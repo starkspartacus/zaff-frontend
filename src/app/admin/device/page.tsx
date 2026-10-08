@@ -2,9 +2,9 @@
 
 import React, { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { ArrowLeft, Camera, Loader2, Pencil, Star, Trash2, UploadCloud, X } from 'lucide-react';
-import { removeDevicePhoto, setDefaultPhoto, uploadDevicePhoto, useAdminCategories, useAdminDevice, useAdminRefresh } from '@/lib/admin-api';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft, Camera, Loader2, Pencil, Sparkles, Star, Trash2, UploadCloud, X } from 'lucide-react';
+import { createAiJob, removeDevicePhoto, setDefaultPhoto, uploadDevicePhoto, useAiStatus, useAdminCategories, useAdminDevice, useAdminRefresh } from '@/lib/admin-api';
 import { prepareImage, type PreparedImage } from '@/lib/images';
 import { errorMessage } from '@/lib/types';
 import { ProductVisual } from '@/components/products/product-visual';
@@ -39,6 +39,8 @@ function DeviceView() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
+  const router = useRouter();
+  const aiEnabled = useAiStatus().data?.enabled;
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingRef = useRef(pending);
   useEffect(() => {
@@ -114,9 +116,20 @@ function DeviceView() {
               <h1 className="text-2xl font-black text-white">{device.model}</h1>
               {!device.active && <p className="text-xs text-amber-400 mt-1">Masqué : les boutiques ne le voient pas.</p>}
             </div>
-            <button onClick={() => setEditing(true)} className="h-10 px-3 rounded-xl border border-neutral-700 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0">
-              <Pencil className="w-3.5 h-3.5 text-gold" /> Modifier
-            </button>
+            <div className="flex gap-2 shrink-0">
+              {aiEnabled && (
+                <button
+                  onClick={() => act(async () => (await createAiJob({ deviceIds: [device.id] }), router.push('/admin/ai')))}
+                  className="h-10 px-3 rounded-xl bg-gold/10 border border-gold/40 text-gold-soft text-xs font-semibold flex items-center gap-1.5"
+                  title="L'IA cherche et vérifie les photos officielles de ce modèle"
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Chercher avec l&apos;IA
+                </button>
+              )}
+              <button onClick={() => setEditing(true)} className="h-10 px-3 rounded-xl border border-neutral-700 text-white text-xs font-semibold flex items-center gap-1.5">
+                <Pencil className="w-3.5 h-3.5 text-gold" /> Modifier
+              </button>
+            </div>
           </div>
           <Info label="Capacités" values={device.variants} />
           <Info label="Coloris" values={device.colors} />

@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Flag, ImagePlus, Inbox, LayoutDashboard, LogOut, ShieldCheck, Smartphone } from 'lucide-react';
+import { Flag, ImagePlus, Inbox, LayoutDashboard, LogOut, ShieldCheck, Smartphone, Sparkles } from 'lucide-react';
 import { useDeviceStats } from '@/lib/admin-api';
 import { useAdminStore } from '@/stores/admin-store';
 import { applyTheme, useThemeStore } from '@/stores/theme-store';
@@ -15,6 +15,7 @@ const NAV = [
   { href: '/admin', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/admin/devices', label: 'Appareils', icon: Smartphone },
   { href: '/admin/requests', label: 'Demandes', icon: Inbox },
+  { href: '/admin/ai', label: "Photos par l'IA", icon: Sparkles },
   { href: '/admin/import', label: 'Import de photos', icon: ImagePlus },
   { href: '/admin/reports', label: 'Signalements', icon: Flag },
 ];
