@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Flag, ImagePlus, Images, Smartphone, Tags } from 'lucide-react';
-import { useAdminDevices, useAdminUsage, useDeviceStats } from '@/lib/admin-api';
+import { ArrowRight, Flag, ImagePlus, Inbox, Loader2, RefreshCw, Smartphone, Store, Tags } from 'lucide-react';
+import { syncCatalog, useAdminDevices, useAdminRefresh, useAdminUsage, useDeviceStats } from '@/lib/admin-api';
+import { errorMessage } from '@/lib/types';
 import { formatBytes } from '@/lib/images';
 import { ProductVisual } from '@/components/products/product-visual';
 import { NumberTicker } from '@/components/magicui/number-ticker';
@@ -12,22 +13,58 @@ import { NumberTicker } from '@/components/magicui/number-ticker';
 export default function AdminDashboard() {
   const { data: stats } = useDeviceStats();
   const usage = useAdminUsage().data;
-  const missing = useAdminDevices({ photos: 'missing', limit: 12 }).data;
+  // Les plus utilisés par les boutiques d'abord : chaque photo profite au plus grand nombre
+  const missing = useAdminDevices({ photos: 'missing', sort: 'popular', limit: 12 }).data;
+  const refresh = useAdminRefresh();
+  const [syncing, setSyncing] = useState(false);
+  const [syncInfo, setSyncInfo] = useState<string | null>(null);
   const coverage = stats && stats.devices ? Math.round((stats.withPhotos / stats.devices) * 100) : 0;
+  const usedCoverage = stats && stats.usedDevices ? Math.round((stats.usedWithPhotos / stats.usedDevices) * 100) : 0;
+
+  const sync = async () => {
+    setSyncing(true);
+    setSyncInfo(null);
+    try {
+      const r = await syncCatalog();
+      if (r) setSyncInfo(`${r.shops} boutique(s), ${r.products} produit(s) analysés · ${r.devicesUsed} appareils utilisés · ${r.requests} demande(s) d'ajout`);
+      await refresh();
+    } catch (err) {
+      setSyncInfo(errorMessage(err));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Catalogue global</h1>
-        <p className="text-xs text-neutral-400 mt-0.5">
-          Les boutiques créent leurs produits à partir de ces appareils et récupèrent leurs photos automatiquement.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Catalogue global</h1>
+          <p className="text-xs text-neutral-400 mt-0.5">
+            Les boutiques créent leurs produits à partir de ces appareils ; chaque photo ajoutée est transmise automatiquement à leurs produits.
+          </p>
+        </div>
+        <button
+          onClick={sync}
+          disabled={syncing}
+          className="h-10 px-3 rounded-xl border border-neutral-700 text-white text-xs font-semibold flex items-center gap-1.5 disabled:opacity-60"
+          title="Recompte les boutiques par appareil, met à jour les demandes d'ajout et transmet les photos manquantes (fait aussi toutes les 6 h)"
+        >
+          {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4 text-gold" />} Mettre à jour
+        </button>
       </div>
+      {syncInfo && <p className="text-xs text-emerald-400">{syncInfo}</p>}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card icon={Smartphone} label="Appareils" value={stats?.devices ?? 0} hint={`${stats?.active ?? 0} visibles par les boutiques · ${stats?.brands ?? 0} marques`} />
-        <Card icon={Images} label="Avec photo" value={stats?.withPhotos ?? 0} hint={`${coverage} % du catalogue · ${stats?.photos ?? 0} photos`} bar={coverage / 100} />
-        <Card icon={ImagePlus} label="Sans photo" value={stats?.missingPhotos ?? 0} hint="Priorité : les modèles les plus vendus" tone="amber" />
+        <Card
+          icon={Store}
+          label="Utilisés par les boutiques"
+          value={stats?.usedDevices ?? 0}
+          hint={`${usedCoverage} % ont leur photo · catalogue complet : ${coverage} % (${stats?.photos ?? 0} photos)`}
+          bar={usedCoverage / 100}
+        />
+        <Card icon={Inbox} label="Demandes d'ajout" value={stats?.requests ?? 0} hint="Modèles saisis par les boutiques, absents du catalogue" tone={stats?.requests ? 'amber' : undefined} href="/admin/requests" />
         <Card icon={Flag} label="Signalements" value={stats?.reported ?? 0} hint="Photos signalées par les boutiques" tone={stats?.reported ? 'red' : undefined} href="/admin/reports" />
       </div>
 
@@ -42,15 +79,25 @@ export default function AdminDashboard() {
 
       <section className="space-y-3">
         <div className="flex items-end justify-between">
-          <h2 className="text-sm font-bold text-white">Appareils à photographier</h2>
-          <Link href="/admin/devices?photos=missing" className="text-xs text-gold flex items-center gap-1">
+          <div>
+            <h2 className="text-sm font-bold text-white">Appareils à photographier</h2>
+            <p className="text-[11px] text-neutral-500">Les plus présents dans les boutiques d&apos;abord</p>
+          </div>
+          <Link href="/admin/devices?photos=missing&sort=popular" className="text-xs text-gold flex items-center gap-1">
             Tout voir <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {missing?.items.map((d) => (
             <Link key={d.id} href={`/admin/device?id=${d.id}`} className="rounded-3xl border border-neutral-800 bg-neutral-950 p-2.5 hover:border-gold/50 transition-colors">
-              <ProductVisual category={d.category} brand={d.brand} name={d.model} className="w-full aspect-square" />
+              <div className="relative">
+                <ProductVisual category={d.category} brand={d.brand} name={d.model} className="w-full aspect-square" />
+                {d.shops > 0 && (
+                  <span className="theme-fixed absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full bg-black/70 text-[10px] font-bold text-gold flex items-center gap-1">
+                    <Store className="w-3 h-3" /> {d.shops}
+                  </span>
+                )}
+              </div>
               <p className="mt-2 px-1 text-xs font-bold text-white truncate">{d.model}</p>
               <p className="px-1 text-[11px] text-neutral-500 truncate">{d.brand}</p>
             </Link>

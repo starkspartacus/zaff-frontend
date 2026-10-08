@@ -25,6 +25,8 @@ export interface Product {
   accessories?: string | null;
   /** Photo de la base d'images partagée */
   imageId?: string | null;
+  /** Appareil du catalogue global (photos, fiche technique) */
+  deviceId?: string | null;
 }
 
 export type UnitStatus = 'in_stock' | 'sold' | 'defective' | 'in_repair';

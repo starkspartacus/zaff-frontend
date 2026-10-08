@@ -22,11 +22,12 @@ function DevicesList() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [photos, setPhotos] = useState(params.get('photos') || '');
+  const [sort, setSort] = useState<'name' | 'popular'>(params.get('sort') === 'popular' ? 'popular' : 'name');
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const reference = useAdminReference();
   const stats = useDeviceStats().data;
-  const { data, isFetching } = useAdminDevices({ search: search || undefined, category: category || undefined, photos: photos || undefined, page, limit: 48 });
+  const { data, isFetching } = useAdminDevices({ search: search || undefined, category: category || undefined, photos: photos || undefined, sort, page, limit: 48 });
   const pages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
 
   return (
@@ -67,6 +68,10 @@ function DevicesList() {
             </Pill>
           ))}
           <span className="w-px bg-neutral-800 mx-1 shrink-0" />
+          <Pill on={sort === 'popular'} onClick={() => (setSort(sort === 'popular' ? 'name' : 'popular'), setPage(1))}>
+            Les plus utilisés
+          </Pill>
+          <span className="w-px bg-neutral-800 mx-1 shrink-0" />
           <Pill on={!category} onClick={() => (setCategory(''), setPage(1))}>
             Toutes catégories
           </Pill>
@@ -94,7 +99,8 @@ function DevicesList() {
             </div>
             <p className="mt-2 px-1 text-xs font-bold text-white truncate">{d.model}</p>
             <p className="px-1 text-[11px] text-neutral-500 truncate">
-              {d.brand} · {d.colors.length} coloris{d.active ? '' : ' · masqué'}
+              {d.brand} · {d.shops ? `${d.shops} boutique${d.shops > 1 ? 's' : ''}` : `${d.colors.length} coloris`}
+              {d.active ? '' : ' · masqué'}
             </p>
           </Link>
         ))}

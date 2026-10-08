@@ -96,7 +96,14 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   filtres, création `DeviceEditorModal`), fiche appareil `/admin/device?id=` (photos par coloris, photo par défaut ★,
   retrait, ajout préparé localement et envoyé seulement sur « Envoyer »), **Import de photos** en masse (`/admin/import` :
   appareil / couleur devinés depuis le nom du fichier `src/lib/photo-guess.ts`, appareil inconnu créé, 3 envois en parallèle,
-  doublons « Déjà là »), Signalements (Garder / Retirer).
+  doublons « Déjà là »), Signalements (Garder / Retirer). **Priorités** : « Appareils à photographier » et le filtre « Les plus
+  utilisés » classent par nombre de boutiques ; carte « Utilisés par les boutiques » (part qui a sa photo) ; bouton « Mettre à
+  jour » (recalcul). **Demandes** `/admin/requests` (badge dans le menu) : modèles saisis par les boutiques, « Ajouter »
+  ouvre `DeviceEditorModal` pré-rempli (`prefill` + `onSubmit`) puis « Ajouter ses photos » ; Ignorer / Remettre à traiter.
+  **Fiche technique** dans `DeviceEditorModal` (lignes usuelles proposées selon la catégorie).
+- Boutique : `DeviceSpecs` (`src/components/products/device-specs.tsx`) affiche la fiche technique dans la fiche produit
+  (modèle reconnu) et la Vitrine (`useCatalogDevice(product.deviceId)`). Modèle absent du catalogue : le formulaire indique
+  que ZAFF est prévenu ; la photo arrive ensuite toute seule (WebSocket `products`). Catalogue relu toutes les 10 min.
 - `/app/showcase` **Vitrine** (vendeur, magasinier, propriétaire) : cartes `ProductCard` (photo, prix de vente, version,
   état, pastille de stock), recherche, filtres par catégorie, « En stock seulement ». Fiche : infos + appareils disponibles,
   « Vendre » ouvre `/app/scan?code=<N° de série>` (recherche automatique comme un scan). Photo aussi sur la fiche de vente

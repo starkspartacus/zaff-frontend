@@ -31,6 +31,11 @@ adminApi.interceptors.response.use(
 
 const get = <T,>(url: string, params?: Record<string, unknown>) => adminApi.get(url, { params }) as unknown as Promise<T>;
 
+export interface DeviceSpec {
+  label: string;
+  value: string;
+}
+
 export interface AdminDevice {
   id: string;
   category: string;
@@ -38,6 +43,9 @@ export interface AdminDevice {
   model: string;
   variants: string[];
   colors: string[];
+  specs: DeviceSpec[];
+  /** Nombre de boutiques qui ont ce modèle en catalogue */
+  shops: number;
   photos: { imageId: string; color: string | null }[];
   imageId: string | null;
   active: boolean;
@@ -52,6 +60,27 @@ export interface DeviceStats {
   photos: number;
   brands: number;
   reported: number;
+  /** Appareils présents dans au moins une boutique, et parmi eux ceux qui ont une photo */
+  usedDevices: number;
+  usedWithPhotos: number;
+  /** Demandes d'ajout ouvertes */
+  requests: number;
+}
+
+export type RequestStatus = 'open' | 'added' | 'dismissed';
+
+/** Modèle saisi par des boutiques, absent du catalogue */
+export interface DeviceRequest {
+  id: string;
+  category: string | null;
+  brand: string;
+  model: string;
+  colors: string[];
+  variants: string[];
+  shops: number;
+  status: RequestStatus;
+  deviceId: string | null;
+  lastSeenAt: string | null;
 }
 
 export interface DeviceInput {
@@ -60,15 +89,16 @@ export interface DeviceInput {
   model: string;
   variants?: string[];
   colors?: string[];
+  specs?: DeviceSpec[];
   active?: boolean;
 }
 
 export const adminLogin = (email: string, password: string) =>
   adminApi.post('/platform/auth/login', { email, password }) as unknown as Promise<{ accessToken: string; admin: { email: string } }>;
 
-export const useDeviceStats = () => useQuery({ queryKey: ['admin', 'stats'], queryFn: () => get<DeviceStats>('/platform/devices/stats') });
+export const useDeviceStats = (enabled = true) => useQuery({ queryKey: ['admin', 'stats'], queryFn: () => get<DeviceStats>('/platform/devices/stats'), enabled });
 
-export const useAdminDevices = (q: { search?: string; category?: string; photos?: string; page?: number; limit?: number }) =>
+export const useAdminDevices = (q: { search?: string; category?: string; photos?: string; sort?: 'name' | 'popular'; page?: number; limit?: number }) =>
   useQuery({
     queryKey: ['admin', 'devices', q],
     queryFn: () => get<{ total: number; page: number; limit: number; items: AdminDevice[] }>('/platform/devices', q),
@@ -96,6 +126,18 @@ export const useAdminUsage = () =>
         '/platform/devices/usage'
       ),
   });
+
+export const useDeviceRequests = (status: RequestStatus) =>
+  useQuery({ queryKey: ['admin', 'requests', status], queryFn: () => get<DeviceRequest[]>('/platform/device-requests', { status }) });
+
+export const acceptRequest = (id: string, dto: DeviceInput) =>
+  adminApi.post(`/platform/device-requests/${id}/accept`, dto) as unknown as Promise<{ device: AdminDevice; linked: number }>;
+export const dismissRequest = (id: string) => adminApi.post(`/platform/device-requests/${id}/dismiss`);
+export const reopenRequest = (id: string) => adminApi.post(`/platform/device-requests/${id}/reopen`);
+
+/** Recalcul : boutiques par appareil, demandes d'ajout, photos transmises aux produits */
+export const syncCatalog = () =>
+  adminApi.post('/platform/devices/sync') as unknown as Promise<{ shops: number; products: number; devicesUsed: number; requests: number } | null>;
 
 export const createDevice = (dto: DeviceInput) => adminApi.post('/platform/devices', dto) as unknown as Promise<AdminDevice>;
 export const updateDevice = (id: string, dto: Partial<DeviceInput>) => adminApi.put(`/platform/devices/${id}`, dto) as unknown as Promise<AdminDevice>;

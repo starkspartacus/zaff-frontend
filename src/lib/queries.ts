@@ -59,6 +59,8 @@ export interface DeviceModel {
   /** Photos conformes par coloris (ajoutées par l'administrateur ZAFF) */
   photos?: { imageId: string; color: string | null }[];
   imageId?: string | null;
+  /** Fiche technique officielle */
+  specs?: { label: string; value: string }[];
 }
 export interface CategoryProfile {
   variantLabel: string;
@@ -75,8 +77,17 @@ export interface DeviceCatalog {
 }
 
 /** Appareils connus (modèles, capacités, coloris, accessoires) pour remplir vite une fiche produit */
+// Le catalogue évolue (photos, fiches techniques ajoutées par ZAFF) : relu toutes les 10 min au plus
 export const useDeviceCatalog = () =>
-  useQuery({ queryKey: [...qk.reference(), 'devices'], queryFn: () => get<DeviceCatalog>('/global/reference/devices'), staleTime: Infinity, gcTime: Infinity });
+  useQuery({ queryKey: [...qk.reference(), 'devices'], queryFn: () => get<DeviceCatalog>('/global/reference/devices'), staleTime: 10 * 60 * 1000, gcTime: Infinity });
+
+/** Appareil du catalogue global par son identifiant (fiche technique d'un produit) */
+export function useCatalogDevice(deviceId?: string | null) {
+  const { data } = useDeviceCatalog();
+  if (!deviceId || !data) return undefined;
+  for (const brands of Object.values(data.models)) for (const list of Object.values(brands)) for (const m of list) if (m.id === deviceId) return m;
+  return undefined;
+}
 
 export const useBrands = () =>
   useQuery({ queryKey: qk.brands(), queryFn: () => get<Array<{ _id: string; name: string }>>('/catalog/brands') });

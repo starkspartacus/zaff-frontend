@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { LayoutGrid, PackageSearch, ScanLine, Search, ShoppingCart, X } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
-import { useProducts, useReferenceCatalog, useUnits } from '@/lib/queries';
+import { useCatalogDevice, useProducts, useReferenceCatalog, useUnits } from '@/lib/queries';
 import { CONDITION_LABELS } from '@/lib/contract';
 import type { Product } from '@/lib/types';
 import { ProductCard } from '@/components/products/product-card';
 import { ProductVisual } from '@/components/products/product-visual';
+import { DeviceSpecs } from '@/components/products/device-specs';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { cn } from '@/lib/utils';
 
@@ -139,6 +140,7 @@ function ProductSheet({ product, formatPrice, categoryName, onClose }: { product
   const router = useRouter();
   const units = useUnits({ productId: product._id, status: 'in_stock', limit: '50' }, !!product.hasSerialNumbers);
   const available = product.hasSerialNumbers ? units.data ?? [] : [];
+  const device = useCatalogDevice(product.deviceId);
   const rows: Array<[string, string | null | undefined]> = [
     ['Catégorie', categoryName],
     ['Marque', product.brand],
@@ -179,6 +181,7 @@ function ProductSheet({ product, formatPrice, categoryName, onClose }: { product
                 </React.Fragment>
               ))}
           </dl>
+          <DeviceSpecs specs={device?.specs} />
 
           {product.hasSerialNumbers ? (
             <div className="space-y-2">

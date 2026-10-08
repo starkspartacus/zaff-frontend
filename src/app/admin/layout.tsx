@@ -3,7 +3,8 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Flag, ImagePlus, LayoutDashboard, LogOut, ShieldCheck, Smartphone } from 'lucide-react';
+import { Flag, ImagePlus, Inbox, LayoutDashboard, LogOut, ShieldCheck, Smartphone } from 'lucide-react';
+import { useDeviceStats } from '@/lib/admin-api';
 import { useAdminStore } from '@/stores/admin-store';
 import { applyTheme, useThemeStore } from '@/stores/theme-store';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
@@ -13,6 +14,7 @@ import { cn } from '@/lib/utils';
 const NAV = [
   { href: '/admin', label: 'Tableau de bord', icon: LayoutDashboard },
   { href: '/admin/devices', label: 'Appareils', icon: Smartphone },
+  { href: '/admin/requests', label: 'Demandes', icon: Inbox },
   { href: '/admin/import', label: 'Import de photos', icon: ImagePlus },
   { href: '/admin/reports', label: 'Signalements', icon: Flag },
 ];
@@ -24,6 +26,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { token, email, hydrated, clear } = useAdminStore();
   const theme = useThemeStore((s) => s.theme);
   const isLogin = pathname === '/admin/login';
+  const stats = useDeviceStats(!!token && !isLogin).data;
+  const badges: Record<string, number> = { '/admin/requests': stats?.requests ?? 0, '/admin/reports': stats?.reported ?? 0 };
 
   useEffect(() => {
     applyTheme(theme);
@@ -58,6 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   )}
                 >
                   <Icon className="w-4 h-4" /> <span className="hidden md:inline">{label}</span>
+                  {badges[href] > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-gold text-ink text-[10px] font-black flex items-center justify-center">{badges[href]}</span>}
                 </Link>
               );
             })}

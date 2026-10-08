@@ -36,6 +36,7 @@ import {
 import { api } from '@/lib/api';
 import { useBrands, useCategories, useDeviceCatalog, useProducts, useReferenceCatalog, type CategoryProfile, type DeviceModel } from '@/lib/queries';
 import { CONDITION_LABELS, type ProductCondition } from '@/lib/contract';
+import { DeviceSpecs } from '@/components/products/device-specs';
 import { errorMessage, type Category, type Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { reportImage, useSharedImages } from '@/lib/images';
@@ -376,9 +377,16 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
           options={modelOptions}
           placeholder={brand ? `Ex. : ${modelOptions[0] || 'nom du modèle'}` : 'Choisissez la marque ou tapez le modèle'}
           max={12}
-          hint={brand && !modelOptions.length ? `Aucun modèle ${brand} connu : tapez son nom, il sera mémorisé pour la boutique.` : undefined}
+          hint={
+            brand && model.trim() && !knownModel
+              ? 'Modèle absent du catalogue ZAFF : enregistrez-le quand même, ZAFF est prévenu et ajoutera sa photo et sa fiche technique.'
+              : brand && !modelOptions.length
+                ? `Aucun modèle ${brand} connu : tapez son nom, il sera mémorisé pour la boutique.`
+                : undefined
+          }
         />
         <Err msg={errors.name} />
+        {knownModel?.specs?.length ? <DeviceSpecs specs={knownModel.specs} title="Fiche technique ZAFF" /> : null}
       </Section>
 
       {/* 3. Version */}
