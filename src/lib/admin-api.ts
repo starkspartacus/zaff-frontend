@@ -150,12 +150,17 @@ export const syncCatalog = () =>
 export interface AiStatus {
   enabled: boolean;
   model: string;
+  /** IA essayées dans l'ordre (secours compris) ; `coolingUntil` : quota atteint jusqu'à cette heure */
+  providers: { label: string; search: boolean; coolingUntil: string | null }[];
+  /** Recherche de secours gratuite (sans IA) */
+  freeSearch: string;
 }
 
 export interface AiJob {
   id: string;
-  status: 'queued' | 'running' | 'done' | 'cancelled' | 'failed';
+  status: 'queued' | 'running' | 'paused' | 'done' | 'cancelled' | 'failed';
   label: string | null;
+  resumeAt: string | null;
   total: number;
   processed: number;
   found: number;
@@ -176,7 +181,7 @@ export interface AiCandidate {
   device: { brand: string; model: string; category: string; photos: number } | null;
   color: string | null;
   score: number;
-  verdict: { view?: string; cleanBackground?: boolean; textOrWatermark?: boolean; reason?: string };
+  verdict: { view?: string; cleanBackground?: boolean; textOrWatermark?: boolean; reason?: string; credit?: string | null };
   source: string | null;
   sourceUrl: string;
   pageUrl: string | null;
@@ -185,7 +190,8 @@ export interface AiCandidate {
   error: string | null;
 }
 
-export const useAiStatus = () => useQuery({ queryKey: ['admin', 'ai', 'status'], queryFn: () => get<AiStatus>('/platform/ai-images/status') });
+export const useAiStatus = (live = false) =>
+  useQuery({ queryKey: ['admin', 'ai', 'status'], queryFn: () => get<AiStatus>('/platform/ai-images/status'), refetchInterval: live ? 15000 : false });
 
 /** Lots de recherche : rechargés toutes les 3 s tant qu'un lot est en cours (l'espace admin n'a pas de WebSocket) */
 export const useAiJobs = () =>

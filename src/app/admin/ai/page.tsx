@@ -28,9 +28,9 @@ const COUNTS = [10, 25, 50, 100];
  * (ou laisse publier automatiquement les meilleures). Publier envoie la photo chez UploadThing et aux boutiques.
  */
 export default function AdminAiPage() {
-  const status = useAiStatus().data;
   const { data: jobs = [] } = useAiJobs();
   const active = jobs.some((j) => j.status === 'running' || j.status === 'queued');
+  const status = useAiStatus(active).data;
   const [jobFilter, setJobFilter] = useState<string>('');
   const { data: candidates = [], isLoading } = useAiCandidates({ status: 'pending', jobId: jobFilter || undefined }, active);
   const refresh = useAdminRefresh();
@@ -91,8 +91,30 @@ export default function AdminAiPage() {
             le modèle, le coloris et la qualité et donne une note. Publier envoie la photo sur UploadThing et la transmet aux produits des boutiques.
           </p>
         </div>
-        {status && <span className="px-2.5 py-1 rounded-full border border-neutral-700 text-[11px] text-neutral-400">Modèle : {status.model}</span>}
       </div>
+
+      {status && (
+        <section className="flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span className="text-neutral-500">IA utilisées dans l&apos;ordre :</span>
+          {status.providers.map((p) => {
+            const cooling = p.coolingUntil && new Date(p.coolingUntil) > new Date();
+            return (
+              <span
+                key={p.label}
+                className={cn('px-2.5 py-1 rounded-full border', cooling ? 'border-amber-500/40 text-amber-400' : 'border-emerald-500/40 text-emerald-400')}
+                title={p.search ? 'Recherche Google + vérification' : 'Vérification des photos seulement'}
+              >
+                {p.label}
+                {!p.search && ' (vérification)'}
+                {cooling && ` · quota atteint jusqu'à ${new Date(p.coolingUntil!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+              </span>
+            );
+          })}
+          <span className="px-2.5 py-1 rounded-full border border-neutral-700 text-neutral-400" title="Utilisée quand la recherche Google des IA est épuisée">
+            Secours gratuit : {status.freeSearch}
+          </span>
+        </section>
+      )}
 
       {/* Lancer une recherche */}
       <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-4 space-y-3">
@@ -239,14 +261,19 @@ export default function AdminAiPage() {
 
 function JobCard({ job, selected, onSelect, onCancel }: { job: AiJob; selected: boolean; onSelect: () => void; onCancel: () => void }) {
   const pct = job.total ? Math.round((job.processed / job.total) * 100) : 0;
-  const live = job.status === 'running' || job.status === 'queued';
-  const label: Record<AiJob['status'], string> = { queued: 'En attente', running: 'En cours', done: 'Terminée', cancelled: 'Arrêtée', failed: 'Interrompue' };
+  const live = job.status === 'running' || job.status === 'queued' || job.status === 'paused';
+  const label: Record<AiJob['status'], string> = { queued: 'En attente', running: 'En cours', paused: 'En pause (quota gratuit)', done: 'Terminée', cancelled: 'Arrêtée', failed: 'Interrompue' };
   return (
     <div className={cn('rounded-2xl border p-3 space-y-2 cursor-pointer', selected ? 'border-gold bg-gold/5' : 'border-neutral-800 bg-neutral-950')} onClick={onSelect}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-white truncate">{job.label || 'Recherche'}</p>
-        <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', live ? 'bg-gold/15 text-gold-soft' : job.status === 'done' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400')}>
-          {live && <Loader2 className="inline w-3 h-3 mr-1 animate-spin" />}
+        <span
+          className={cn(
+            'text-[10px] font-bold px-2 py-0.5 rounded-full',
+            job.status === 'paused' ? 'bg-amber-500/15 text-amber-400' : live ? 'bg-gold/15 text-gold-soft' : job.status === 'done' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'
+          )}
+        >
+          {live && job.status !== 'paused' && <Loader2 className="inline w-3 h-3 mr-1 animate-spin" />}
           {label[job.status]}
         </span>
       </div>
@@ -258,7 +285,9 @@ function JobCard({ job, selected, onSelect, onCancel }: { job: AiJob; selected: 
         {job.notFound ? ` · ${job.notFound} sans résultat` : ''}
         {job.errors ? ` · ${job.errors} erreur(s)` : ''}
       </p>
-      {job.lastError && job.status === 'failed' && <p className="text-[11px] text-red-400">{job.lastError}</p>}
+      {job.lastError && (job.status === 'failed' || job.status === 'paused') && (
+        <p className={cn('text-[11px]', job.status === 'paused' ? 'text-amber-400' : 'text-red-400')}>{job.lastError}</p>
+      )}
       {live && (
         <button onClick={(e) => (e.stopPropagation(), onCancel())} className="h-8 px-3 rounded-lg border border-neutral-700 text-[11px] text-neutral-300 flex items-center gap-1">
           <CircleStop className="w-3.5 h-3.5" /> Arrêter
@@ -284,6 +313,11 @@ function CandidateCard({ c, busy, onZoom, onPublish, onReject }: { c: AiCandidat
         <a href={c.pageUrl || c.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" className="text-[10px] text-neutral-400 hover:text-gold flex items-center gap-1 truncate">
           <ExternalLink className="w-3 h-3 shrink-0" /> {c.source}
         </a>
+        {c.verdict.credit && (
+          <p className="text-[10px] text-neutral-500 truncate" title={`${c.verdict.credit} — à citer si vous publiez cette photo`}>
+            © {c.verdict.credit}
+          </p>
+        )}
         {c.error && <p className="text-[10px] text-red-400">{c.error}</p>}
         <div className="flex gap-1.5">
           <button disabled={busy} onClick={onPublish} className="flex-1 h-8 rounded-lg bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center gap-1 disabled:opacity-50">
