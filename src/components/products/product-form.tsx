@@ -401,6 +401,22 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       <Section n={3} title="Version" done={!!variant || !!color} locked={!category} lockedText="Choisissez d'abord le type d'appareil.">
         <Picker label={profile?.variantLabel || 'Capacité / variante'} icon={HardDrive} value={variant} onChange={setVariant} options={variantOptions} placeholder={`Ex. : ${variantOptions[0] || '256 Go'}`} max={10} />
         <Picker label="Couleur" icon={Palette} value={color} onChange={setColor} options={colorOptions} placeholder={`Ex. : ${colorOptions[0] || 'Noir'}`} max={12} />
+        {knownModel?.colorCodes?.length ? (
+          <div className="flex flex-wrap gap-1.5" aria-label="Coloris officiels">
+            {knownModel.colorCodes.map((c) => (
+              <button
+                key={c.name}
+                type="button"
+                onClick={() => setColor(c.name)}
+                aria-pressed={norm(color) === norm(c.name)}
+                className={cn('h-8 pl-1.5 pr-2.5 rounded-full border text-[11px] flex items-center gap-1.5', norm(color) === norm(c.name) ? 'border-gold text-gold-soft bg-gold/10' : 'border-neutral-800 text-neutral-300')}
+              >
+                <span className="theme-fixed w-5 h-5 rounded-full border border-black/20" style={{ background: c.hex }} />
+                {c.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </Section>
 
       {/* 4. Photo (base partagée par toutes les boutiques) */}

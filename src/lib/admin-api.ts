@@ -44,6 +44,9 @@ export interface AdminDevice {
   variants: string[];
   colors: string[];
   specs: DeviceSpec[];
+  /** Code couleur de chaque coloris (complété par l'IA ou l'admin) */
+  colorCodes: { name: string; hex: string }[];
+  aiFilledAt: string | null;
   /** Nombre de boutiques qui ont ce modèle en catalogue */
   shops: number;
   /** Prix pratiqués (médiane d'au moins 3 boutiques) */
@@ -158,8 +161,12 @@ export interface AiStatus {
 
 export interface AiJob {
   id: string;
+  /** `photos` : recherche de photos ; `specs` : complétion des fiches */
+  kind: 'photos' | 'specs';
   status: 'queued' | 'running' | 'paused' | 'done' | 'cancelled' | 'failed';
   label: string | null;
+  /** Résultat par appareil (le plus récent d'abord) */
+  log: { deviceId: string; name: string; result: 'found' | 'none' | 'error'; detail: string; at: string }[];
   resumeAt: string | null;
   total: number;
   processed: number;
@@ -208,7 +215,14 @@ export const useAiCandidates = (q: { status?: string; jobId?: string }, live = f
     refetchInterval: live ? 4000 : false,
   });
 
-export const createAiJob = (body: { deviceIds?: string[]; selection?: 'missing-popular'; limit?: number; auto?: boolean; minScore?: number }) =>
+export const createAiJob = (body: {
+  deviceIds?: string[];
+  kind?: 'photos' | 'specs';
+  selection?: 'missing-popular' | 'incomplete';
+  limit?: number;
+  auto?: boolean;
+  minScore?: number;
+}) =>
   adminApi.post('/platform/ai-images/jobs', body) as unknown as Promise<AiJob>;
 export const cancelAiJob = (id: string) => adminApi.post(`/platform/ai-images/jobs/${id}/cancel`);
 export const publishAiCandidate = (id: string, color?: string | null) => adminApi.post(`/platform/ai-images/candidates/${id}/publish`, color === undefined ? {} : { color });

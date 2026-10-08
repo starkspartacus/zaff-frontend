@@ -126,13 +126,40 @@ function DeviceView() {
                   <Sparkles className="w-3.5 h-3.5" /> Chercher avec l&apos;IA
                 </button>
               )}
+              {aiEnabled && (
+                <button
+                  onClick={() => act(async () => (await createAiJob({ kind: 'specs', deviceIds: [device.id] }), router.push('/admin/ai')))}
+                  className="h-10 px-3 rounded-xl border border-neutral-700 text-white text-xs font-semibold flex items-center gap-1.5"
+                  title="Coloris officiels, capacités et fiche technique d'après les données du marché"
+                >
+                  Compléter la fiche
+                </button>
+              )}
               <button onClick={() => setEditing(true)} className="h-10 px-3 rounded-xl border border-neutral-700 text-white text-xs font-semibold flex items-center gap-1.5">
                 <Pencil className="w-3.5 h-3.5 text-gold" /> Modifier
               </button>
             </div>
           </div>
           <Info label="Capacités" values={device.variants} />
-          <Info label="Coloris" values={device.colors} />
+          <div>
+            <p className="text-[11px] text-neutral-500">Coloris</p>
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {device.colors.length ? (
+                device.colors.map((c) => {
+                  const hex = device.colorCodes.find((x) => x.name.toLowerCase() === c.toLowerCase())?.hex;
+                  return (
+                    <span key={c} className="px-2.5 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-white flex items-center gap-1.5">
+                      {hex && <span className="theme-fixed w-3 h-3 rounded-full border border-black/20" style={{ background: hex }} />}
+                      {c}
+                    </span>
+                  );
+                })
+              ) : (
+                <span className="text-xs text-neutral-600">—</span>
+              )}
+            </div>
+          </div>
+          {device.aiFilledAt && <p className="text-[11px] text-neutral-500">Fiche complétée par l&apos;IA le {new Date(device.aiFilledAt).toLocaleDateString('fr-FR')} : vérifiez-la.</p>}
           <p className="text-xs text-neutral-400">
             {device.shops ? `Dans le catalogue de ${device.shops} boutique${device.shops > 1 ? 's' : ''} : chaque photo ajoutée est transmise à leurs produits sans photo.` : "Aucune boutique ne l'utilise encore."}
           </p>

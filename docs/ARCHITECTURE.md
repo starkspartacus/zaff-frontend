@@ -113,7 +113,9 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   les 3 s seulement pendant un traitement), photos à valider groupées par appareil (note, coloris, raison, source),
   Publier / Rejeter, « Publier tout ce qui est noté ≥ … ». Aperçus chargés avec le jeton admin (`fetchAiPreview`, blob).
   Bouton « Chercher avec l'IA » sur la fiche appareil. Pastilles des IA utilisées (vert / orange = quota atteint jusqu'à
-  HH:MM) et du secours Wikimedia ; lot « En pause (quota gratuit) » avec l'heure de reprise ; crédit © des photos libres. Sans `GEMINI_API_KEY` côté serveur : explication à la place.
+  HH:MM) et du secours Wikimedia ; « Compléter les fiches avec l'IA » (coloris + codes couleur, capacités, fiche technique,
+  10 → 100 fiches incomplètes) ; « Détail par appareil » de chaque lot (raison d'un « sans résultat ») ; fiche appareil :
+  pastilles de couleur et bouton « Compléter la fiche » ; fiche produit boutique : pastilles des coloris officiels ; lot « En pause (quota gratuit) » avec l'heure de reprise ; crédit © des photos libres. Sans `GEMINI_API_KEY` côté serveur : explication à la place.
 - Boutique : `DeviceSpecs` (`src/components/products/device-specs.tsx`) affiche la fiche technique dans la fiche produit
   (modèle reconnu) et la Vitrine (`useCatalogDevice(product.deviceId)`). Modèle absent du catalogue : le formulaire indique
   que ZAFF est prévenu ; la photo arrive ensuite toute seule (WebSocket `products`, notification `catalog.photo`).

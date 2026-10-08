@@ -61,6 +61,8 @@ export interface DeviceModel {
   imageId?: string | null;
   /** Fiche technique officielle */
   specs?: { label: string; value: string }[];
+  /** Code couleur des coloris officiels (pastilles) */
+  colorCodes?: { name: string; hex: string }[];
   /** Prix de vente pratiqué (médiane d'au moins 3 boutiques), par devise et capacité */
   prices?: { currency: string; variant: string | null; variantKey: string; median: number; shops: number }[];
 }

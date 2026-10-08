@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Check, CircleStop, ExternalLink, Loader2, Sparkles, Wand2, X } from 'lucide-react';
+import { Check, ChevronDown, CircleStop, ClipboardList, ExternalLink, Loader2, Sparkles, Wand2, X } from 'lucide-react';
 import {
   cancelAiJob,
   createAiJob,
@@ -35,6 +35,7 @@ export default function AdminAiPage() {
   const { data: candidates = [], isLoading } = useAiCandidates({ status: 'pending', jobId: jobFilter || undefined }, active);
   const refresh = useAdminRefresh();
   const [count, setCount] = useState(25);
+  const [specsCount, setSpecsCount] = useState(25);
   const [auto, setAuto] = useState(false);
   const [minScore, setMinScore] = useState(90);
   const [bulkScore, setBulkScore] = useState(80);
@@ -158,6 +159,40 @@ export default function AdminAiPage() {
         {message && <p className={cn('text-xs', message.tone === 'ok' ? 'text-emerald-400' : 'text-red-400')}>{message.text}</p>}
       </section>
 
+      {/* Compléter les fiches (texte : peu de quota, 6 appareils par requête) */}
+      <section className="rounded-3xl border border-neutral-800 bg-neutral-950 p-4 space-y-3">
+        <div>
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+            <ClipboardList className="w-4 h-4 text-gold" /> Compléter les fiches avec l&apos;IA
+          </h2>
+          <p className="text-[11px] text-neutral-400 mt-0.5">
+            Coloris officiels (avec leur code couleur), capacités vendues et fiche technique, d&apos;après les données du marché. L&apos;IA ne remplit que ce
+            qui est vide (votre saisie n&apos;est jamais remplacée) et ne répond rien pour un modèle qu&apos;elle ne connaît pas. Les coloris aident ensuite la
+            recherche de photos. Consomme très peu de quota.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-neutral-400">Fiches incomplètes, les plus utilisées d&apos;abord :</span>
+          {COUNTS.map((n) => (
+            <Chip key={n} on={specsCount === n} onClick={() => setSpecsCount(n)}>
+              {n}
+            </Chip>
+          ))}
+          <button
+            disabled={busy}
+            onClick={() =>
+              run(async () => {
+                const job = await createAiJob({ kind: 'specs', selection: 'incomplete', limit: specsCount });
+                return `Complétion lancée : ${job.label}.`;
+              })
+            }
+            className="h-10 px-4 rounded-xl bg-neutral-900 border border-gold/50 text-gold-soft text-sm font-bold flex items-center gap-2 disabled:opacity-60"
+          >
+            <ClipboardList className="w-4 h-4" /> Compléter les fiches
+          </button>
+        </div>
+      </section>
+
       {/* Lots */}
       {jobs.length > 0 && (
         <section className="space-y-2">
@@ -260,16 +295,22 @@ export default function AdminAiPage() {
 }
 
 function JobCard({ job, selected, onSelect, onCancel }: { job: AiJob; selected: boolean; onSelect: () => void; onCancel: () => void }) {
+  const [open, setOpen] = useState(false);
   const pct = job.total ? Math.round((job.processed / job.total) * 100) : 0;
   const live = job.status === 'running' || job.status === 'queued' || job.status === 'paused';
+  const specs = job.kind === 'specs';
   const label: Record<AiJob['status'], string> = { queued: 'En attente', running: 'En cours', paused: 'En pause (quota gratuit)', done: 'Terminée', cancelled: 'Arrêtée', failed: 'Interrompue' };
+  const dot: Record<string, string> = { found: 'bg-emerald-500', none: 'bg-amber-500', error: 'bg-red-500' };
   return (
-    <div className={cn('rounded-2xl border p-3 space-y-2 cursor-pointer', selected ? 'border-gold bg-gold/5' : 'border-neutral-800 bg-neutral-950')} onClick={onSelect}>
+    <div className={cn('rounded-2xl border p-3 space-y-2', !specs && 'cursor-pointer', selected ? 'border-gold bg-gold/5' : 'border-neutral-800 bg-neutral-950')} onClick={specs ? undefined : onSelect}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-white truncate">{job.label || 'Recherche'}</p>
+        <p className="text-xs font-semibold text-white truncate">
+          <span className="text-neutral-500">{specs ? 'Fiches · ' : 'Photos · '}</span>
+          {job.label || 'Recherche'}
+        </p>
         <span
           className={cn(
-            'text-[10px] font-bold px-2 py-0.5 rounded-full',
+            'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
             job.status === 'paused' ? 'bg-amber-500/15 text-amber-400' : live ? 'bg-gold/15 text-gold-soft' : job.status === 'done' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'
           )}
         >
@@ -281,17 +322,35 @@ function JobCard({ job, selected, onSelect, onCancel }: { job: AiJob; selected: 
         <div className="h-full bg-gradient-to-r from-gold to-emerald-500 transition-all" style={{ width: `${pct}%` }} />
       </div>
       <p className="text-[11px] text-neutral-400">
-        {job.processed}/{job.total} appareils · {job.found} photo(s) trouvée(s){job.auto ? ` · ${job.published} publiée(s) auto (≥ ${job.minScore})` : ''}
+        {job.processed}/{job.total} appareils · {job.found} {specs ? 'fiche(s) complétée(s)' : 'photo(s) trouvée(s)'}
+        {!specs && job.auto ? ` · ${job.published} publiée(s) auto (≥ ${job.minScore})` : ''}
         {job.notFound ? ` · ${job.notFound} sans résultat` : ''}
         {job.errors ? ` · ${job.errors} erreur(s)` : ''}
       </p>
       {job.lastError && (job.status === 'failed' || job.status === 'paused') && (
         <p className={cn('text-[11px]', job.status === 'paused' ? 'text-amber-400' : 'text-red-400')}>{job.lastError}</p>
       )}
-      {live && (
-        <button onClick={(e) => (e.stopPropagation(), onCancel())} className="h-8 px-3 rounded-lg border border-neutral-700 text-[11px] text-neutral-300 flex items-center gap-1">
-          <CircleStop className="w-3.5 h-3.5" /> Arrêter
-        </button>
+      <div className="flex flex-wrap gap-2">
+        {job.log?.length > 0 && (
+          <button onClick={(e) => (e.stopPropagation(), setOpen(!open))} className="h-8 px-3 rounded-lg border border-neutral-700 text-[11px] text-neutral-300 flex items-center gap-1">
+            <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', open && 'rotate-180')} /> Détail par appareil
+          </button>
+        )}
+        {live && (
+          <button onClick={(e) => (e.stopPropagation(), onCancel())} className="h-8 px-3 rounded-lg border border-neutral-700 text-[11px] text-neutral-300 flex items-center gap-1">
+            <CircleStop className="w-3.5 h-3.5" /> Arrêter
+          </button>
+        )}
+      </div>
+      {open && (
+        <ul className="max-h-64 overflow-y-auto space-y-1.5 border-t border-neutral-800 pt-2" onClick={(e) => e.stopPropagation()}>
+          {job.log.map((l, i) => (
+            <li key={`${l.deviceId}-${i}`} className="text-[11px] leading-snug">
+              <span className={cn('inline-block w-2 h-2 rounded-full mr-1.5', dot[l.result])} />
+              <strong className="text-white">{l.name}</strong> <span className="text-neutral-400">— {l.detail}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
