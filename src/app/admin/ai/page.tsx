@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Check, CircleStop, ExternalLink, Loader2, Sparkles, Wand2, X } from 'lucide-react';
 import {
@@ -42,7 +42,7 @@ export default function AdminAiPage() {
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const [zoom, setZoom] = useState<AiCandidate | null>(null);
 
-  const run = async (fn: () => Promise<string | void>) => {
+  const run = useCallback(async (fn: () => Promise<string | void>) => {
     setBusy(true);
     setMessage(null);
     try {
@@ -54,7 +54,7 @@ export default function AdminAiPage() {
     } finally {
       setBusy(false);
     }
-  };
+  }, [refresh]);
 
   // Propositions regroupées par appareil, les mieux notées d'abord
   const groups = useMemo(() => {
@@ -96,7 +96,7 @@ export default function AdminAiPage() {
       {status && (
         <section className="flex flex-wrap items-center gap-1.5 text-[11px]">
           <span className="text-neutral-500">IA utilisées dans l&apos;ordre :</span>
-          {status.providers.map((p) => {
+          {(status.providers ?? []).map((p) => {
             const cooling = p.coolingUntil && new Date(p.coolingUntil) > new Date();
             return (
               <span
@@ -333,7 +333,7 @@ function CandidateCard({ c, busy, onZoom, onPublish, onReject }: { c: AiCandidat
 }
 
 /** Aperçu chargé avec le jeton admin (les propositions ne sont pas publiques) */
-function PreviewImage({ id, size, alt, className }: { id: string; size: 'thumb' | 'full'; alt: string; className?: string }) {
+const PreviewImage = React.memo(function PreviewImage({ id, size, alt, className }: { id: string; size: 'thumb' | 'full'; alt: string; className?: string }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let url: string | null = null;
@@ -351,7 +351,7 @@ function PreviewImage({ id, size, alt, className }: { id: string; size: 'thumb' 
   }, [id, size]);
   // eslint-disable-next-line @next/next/no-img-element
   return src ? <img src={src} alt={alt} className={className} /> : <div className={cn(className, 'animate-pulse bg-neutral-200')} />;
-}
+});
 
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
