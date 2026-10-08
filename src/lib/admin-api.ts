@@ -154,7 +154,7 @@ export interface AiStatus {
   enabled: boolean;
   model: string;
   /** IA essayées dans l'ordre (secours compris) ; `coolingUntil` : quota atteint jusqu'à cette heure */
-  providers: { label: string; search: boolean; coolingUntil: string | null }[];
+  providers: { label: string; search: boolean; coolingUntil: string | null; searchBlockedUntil?: string | null }[];
   /** Recherche de secours gratuite (sans IA) */
   freeSearch: string;
 }

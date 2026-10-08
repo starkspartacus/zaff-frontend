@@ -108,11 +108,12 @@ export default function AdminAiPage() {
                 {p.label}
                 {!p.search && ' (vérification)'}
                 {cooling && ` · quota atteint jusqu'à ${new Date(p.coolingUntil!).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+                {p.searchBlockedUntil && new Date(p.searchBlockedUntil) > new Date() && ' · recherche Google en pause'}
               </span>
             );
           })}
           <span className="px-2.5 py-1 rounded-full border border-neutral-700 text-neutral-400" title="Utilisée quand la recherche Google des IA est épuisée">
-            Secours gratuit : {status.freeSearch}
+            Secours gratuit : Wikidata + {status.freeSearch}
           </span>
         </section>
       )}
