@@ -367,6 +367,14 @@ function CandidateCard({ c, busy, onZoom, onPublish, onReject }: { c: AiCandidat
       <button onClick={onZoom} className="theme-fixed relative bg-white" aria-label="Agrandir">
         <PreviewImage id={c.id} size="thumb" alt={c.device?.model || 'Photo'} className="w-full aspect-square object-contain" />
         <span className={cn('absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full text-[11px] font-black', tone)}>{c.score}</span>
+        {c.verdict.modelMatch && c.verdict.modelMatch !== 'exact' && (
+          <span
+            className="absolute bottom-1.5 inset-x-1.5 px-1.5 py-0.5 rounded-md bg-amber-500 text-black text-[10px] font-bold text-center"
+            title="L'IA n'est pas certaine de la génération : vérifiez que c'est bien ce modèle avant de publier"
+          >
+            {c.verdict.modelMatch === 'same-line' ? 'Même gamme : génération à vérifier' : 'Modèle à confirmer'}
+          </span>
+        )}
       </button>
       <div className="p-2 space-y-1.5 flex-1 flex flex-col">
         <p className="text-[11px] font-semibold text-white truncate">{c.color || 'Tous coloris'}</p>
