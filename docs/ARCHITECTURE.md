@@ -111,7 +111,7 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
 - **Photos par l'IA** `/admin/ai` : lancer une recherche (10 / 25 / 50 / 100 appareils sans photo, les plus utilisés
   d'abord), mode « Je valide chaque photo » ou « Publication automatique » (note minimale), suivi des lots (rechargé toutes
   les 3 s seulement pendant un traitement), photos à valider groupées par appareil (note, coloris, raison, source),
-  Publier / Rejeter, « Publier tout ce qui est noté ≥ … » ; bandeau orange « Même gamme : génération à vérifier » / « Modèle à confirmer » (`verdict.modelMatch`). Aperçus chargés avec le jeton admin (`fetchAiPreview`, blob).
+  Publier / Rejeter, « Publier tout ce qui est noté ≥ … » ; bandeau orange « Même gamme : génération à vérifier » / « Modèle à confirmer » (`verdict.modelMatch`), pastille « À défaut » (`verdict.fallback` : meilleure photo du bon modèle quand aucune n'est de qualité catalogue). Aperçus chargés avec le jeton admin (`fetchAiPreview`, blob).
   Bouton « Chercher avec l'IA » sur la fiche appareil. Pastilles des IA utilisées (vert / orange = quota atteint jusqu'à
   HH:MM) et du secours Wikimedia ; « Compléter les fiches avec l'IA » (coloris + codes couleur, capacités, fiche technique,
   10 → 100 fiches incomplètes) ; « Détail par appareil » de chaque lot (raison d'un « sans résultat ») ; fiche appareil :

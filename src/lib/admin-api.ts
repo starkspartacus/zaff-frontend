@@ -190,7 +190,7 @@ export interface AiCandidate {
   device: { brand: string; model: string; category: string; photos: number } | null;
   color: string | null;
   score: number;
-  verdict: { modelMatch?: 'exact' | 'same-line' | 'unsure'; view?: string; cleanBackground?: boolean; textOrWatermark?: boolean; reason?: string; credit?: string | null };
+  verdict: { modelMatch?: 'exact' | 'same-line' | 'unsure'; fallback?: boolean; view?: string; cleanBackground?: boolean; textOrWatermark?: boolean; reason?: string; credit?: string | null };
   source: string | null;
   sourceUrl: string;
   pageUrl: string | null;
