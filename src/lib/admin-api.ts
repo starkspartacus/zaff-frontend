@@ -72,6 +72,8 @@ export interface DeviceStats {
   usedWithPhotos: number;
   /** Demandes d'ajout ouvertes */
   requests: number;
+  /** Fiches complétées par l'IA, pas encore relues */
+  aiToCheck: number;
 }
 
 export type RequestStatus = 'open' | 'added' | 'dismissed';
@@ -105,7 +107,7 @@ export const adminLogin = (email: string, password: string) =>
 
 export const useDeviceStats = (enabled = true) => useQuery({ queryKey: ['admin', 'stats'], queryFn: () => get<DeviceStats>('/platform/devices/stats'), enabled });
 
-export const useAdminDevices = (q: { search?: string; category?: string; photos?: string; sort?: 'name' | 'popular'; page?: number; limit?: number }) =>
+export const useAdminDevices = (q: { search?: string; category?: string; photos?: string; review?: 'ai'; sort?: 'name' | 'popular'; page?: number; limit?: number }) =>
   useQuery({
     queryKey: ['admin', 'devices', q],
     queryFn: () => get<{ total: number; page: number; limit: number; items: AdminDevice[] }>('/platform/devices', q),
@@ -235,6 +237,8 @@ export const fetchAiPreview = (id: string, size: 'thumb' | 'full') =>
 
 export const createDevice = (dto: DeviceInput) => adminApi.post('/platform/devices', dto) as unknown as Promise<AdminDevice>;
 export const updateDevice = (id: string, dto: Partial<DeviceInput>) => adminApi.put(`/platform/devices/${id}`, dto) as unknown as Promise<AdminDevice>;
+/** Fiche complétée par l'IA relue : elle sort de « À vérifier » */
+export const markAiChecked = (id: string) => adminApi.patch(`/platform/devices/${id}/ai-checked`) as unknown as Promise<AdminDevice>;
 export const deleteDevice = (id: string) => adminApi.delete(`/platform/devices/${id}`);
 export const setDefaultPhoto = (id: string, imageId: string) => adminApi.patch(`/platform/devices/${id}/photos/${imageId}/default`) as unknown as Promise<AdminDevice>;
 export const removeDevicePhoto = (id: string, imageId: string) => adminApi.delete(`/platform/devices/${id}/photos/${imageId}`);

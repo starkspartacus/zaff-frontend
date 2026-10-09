@@ -23,11 +23,12 @@ function DevicesList() {
   const [category, setCategory] = useState('');
   const [photos, setPhotos] = useState(params.get('photos') || '');
   const [sort, setSort] = useState<'name' | 'popular'>(params.get('sort') === 'popular' ? 'popular' : 'name');
+  const [review, setReview] = useState(params.get('review') === 'ai');
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
   const reference = useAdminReference();
   const stats = useDeviceStats().data;
-  const { data, isFetching } = useAdminDevices({ search: search || undefined, category: category || undefined, photos: photos || undefined, sort, page, limit: 48 });
+  const { data, isFetching } = useAdminDevices({ search: search || undefined, category: category || undefined, photos: photos || undefined, review: review ? 'ai' : undefined, sort, page, limit: 48 });
   const pages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
 
   return (
@@ -71,6 +72,9 @@ function DevicesList() {
           <Pill on={sort === 'popular'} onClick={() => (setSort(sort === 'popular' ? 'name' : 'popular'), setPage(1))}>
             Les plus utilisés
           </Pill>
+          <Pill on={review} onClick={() => (setReview(!review), setPage(1))}>
+            À vérifier (IA){stats?.aiToCheck ? ` · ${stats.aiToCheck}` : ''}
+          </Pill>
           <span className="w-px bg-neutral-800 mx-1 shrink-0" />
           <Pill on={!category} onClick={() => (setCategory(''), setPage(1))}>
             Toutes catégories
@@ -96,6 +100,11 @@ function DevicesList() {
               >
                 {d.photos.length ? `${d.photos.length} photo${d.photos.length > 1 ? 's' : ''}` : 'Sans photo'}
               </span>
+              {d.aiFilledAt && (
+                <span className="theme-fixed absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-600 text-white" title="Fiche complétée par l'IA, à vérifier">
+                  IA
+                </span>
+              )}
             </div>
             <p className="mt-2 px-1 text-xs font-bold text-white truncate">{d.model}</p>
             <p className="px-1 text-[11px] text-neutral-500 truncate">

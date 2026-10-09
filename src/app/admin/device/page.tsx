@@ -4,7 +4,7 @@ import React, { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Camera, Loader2, Pencil, Sparkles, Star, Trash2, UploadCloud, X } from 'lucide-react';
-import { createAiJob, removeDevicePhoto, setDefaultPhoto, uploadDevicePhoto, useAiStatus, useAdminCategories, useAdminDevice, useAdminRefresh } from '@/lib/admin-api';
+import { createAiJob, markAiChecked, removeDevicePhoto, setDefaultPhoto, uploadDevicePhoto, useAiStatus, useAdminCategories, useAdminDevice, useAdminRefresh } from '@/lib/admin-api';
 import { prepareImage, type PreparedImage } from '@/lib/images';
 import { errorMessage } from '@/lib/types';
 import { ProductVisual } from '@/components/products/product-visual';
@@ -159,7 +159,20 @@ function DeviceView() {
               )}
             </div>
           </div>
-          {device.aiFilledAt && <p className="text-[11px] text-neutral-500">Fiche complétée par l&apos;IA le {new Date(device.aiFilledAt).toLocaleDateString('fr-FR')} : vérifiez-la.</p>}
+          {device.aiFilledAt && (
+            <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-neutral-200">
+                Coloris, capacités et fiche technique complétés par l&apos;IA le {new Date(device.aiFilledAt).toLocaleDateString('fr-FR')} : relisez-les
+                (« Modifier » pour corriger).
+              </p>
+              <button
+                onClick={() => act(() => markAiChecked(device.id))}
+                className="h-9 px-3 rounded-xl bg-violet-600 text-white text-xs font-bold"
+              >
+                Fiche vérifiée
+              </button>
+            </div>
+          )}
           <p className="text-xs text-neutral-400">
             {device.shops ? `Dans le catalogue de ${device.shops} boutique${device.shops > 1 ? 's' : ''} : chaque photo ajoutée est transmise à leurs produits sans photo.` : "Aucune boutique ne l'utilise encore."}
           </p>

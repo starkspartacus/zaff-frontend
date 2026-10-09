@@ -348,7 +348,10 @@ function JobCard({ job, selected, onSelect, onCancel }: { job: AiJob; selected: 
           {job.log.map((l, i) => (
             <li key={`${l.deviceId}-${i}`} className="text-[11px] leading-snug">
               <span className={cn('inline-block w-2 h-2 rounded-full mr-1.5', dot[l.result])} />
-              <strong className="text-white">{l.name}</strong> <span className="text-neutral-400">— {l.detail}</span>
+              <Link href={`/admin/device?id=${l.deviceId}`} className="font-bold text-white hover:text-gold underline-offset-2 hover:underline">
+                {l.name}
+              </Link>{' '}
+              <span className="text-neutral-400">— {l.detail}</span>
             </li>
           ))}
         </ul>
