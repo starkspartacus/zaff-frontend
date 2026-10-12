@@ -97,12 +97,12 @@ export function LandingHero() {
                 <div className="w-3 h-3 rounded-full bg-red-500/80" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
                 <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                <span className="ml-3 text-xs text-zinc-400 font-mono">zaff.app/caisse-pos</span>
+                <span className="ml-3 text-xs text-zinc-400 font-mono">zaff.ci/caisse-pos</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  Caisse Ouverte • Connecté à zaff_backend
+                  Caisse Ouverte • Connecté
                 </span>
               </div>
             </div>

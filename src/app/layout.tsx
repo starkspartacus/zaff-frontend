@@ -19,7 +19,7 @@ const robotoMono = Roboto_Mono({
 
 export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "ZAFF", statusBarStyle: "black-translucent" },
-  icons: { icon: "/favicon.ico", apple: "/apple-touch-icon.png" },
+  icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
   title: "Zaff | ERP & Caisse POS High-Tech",
   description: "Plateforme de gestion de stock, caisse tactile POS, facturation thermique, SAV et traçabilité pour boutiques et ateliers high-tech.",
 };
