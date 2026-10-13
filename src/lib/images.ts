@@ -106,3 +106,50 @@ export async function uploadShopImage(img: PreparedImage, meta: { brand: string;
 
 /** Produit pas enregistré : la photo envoyée juste avant est effacée (aucun fichier orphelin) */
 export const discardShopImage = (id: string) => api.delete(`/global/images/${id}/pending`).catch(() => undefined);
+
+/** Résultat du studio photo : photo recadrée et mise au format par le serveur (IA si disponible) */
+export interface StudioPhoto extends PreparedImage {
+  steps: string[];
+  tips: string[];
+  ai: { used: boolean; cropped: boolean; matches: boolean | null; device: string | null };
+  /** Photo d'origine (pour comparer « avant / après ») */
+  original: Blob;
+  /** false : optimisation indisponible, photo seulement réduite dans le navigateur */
+  optimized: boolean;
+}
+
+const b64ToBlob = (b64: string, type: string) => {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
+};
+
+/**
+ * Studio photo : la photo (réduite à 1600 px pour aller vite en 3G) est envoyée au serveur, qui la recadre sur l'appareil,
+ * la corrige et la met au format du catalogue. Rien n'est enregistré à ce moment-là. En cas d'échec : simple réduction locale.
+ */
+export async function studioPhoto(file: File, meta: { brand?: string; model?: string; color?: string }): Promise<StudioPhoto> {
+  const original = await shrinkImage(file, 1600, 1500 * 1024);
+  try {
+    const form = new FormData();
+    form.append('file', original, 'photo.' + (original.type === 'image/webp' ? 'webp' : 'jpg'));
+    if (meta.brand) form.append('brand', meta.brand);
+    if (meta.model) form.append('model', meta.model);
+    if (meta.color) form.append('color', meta.color);
+    const r = (await api.post('/global/images/shop/prepare', form, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60_000 })) as unknown as {
+      full: string;
+      thumb: string;
+      mime: string;
+      steps: string[];
+      tips: string[];
+      ai: StudioPhoto['ai'];
+    };
+    return { blob: b64ToBlob(r.full, r.mime), thumb: b64ToBlob(r.thumb, r.mime), steps: r.steps, tips: r.tips, ai: r.ai, original, optimized: true };
+  } catch (err) {
+    // Photo refusée (pas une photo, trop petite) : le message du serveur est affiché
+    if ((err as { status?: number })?.status === 400) throw err;
+    const local = await prepareImage(file);
+    return { ...local, steps: [], tips: ['Optimisation indisponible pour le moment : la photo sera envoyée simplement réduite.'], ai: { used: false, cropped: false, matches: null, device: null }, original, optimized: false };
+  }
+}

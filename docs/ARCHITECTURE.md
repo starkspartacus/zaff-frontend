@@ -110,8 +110,11 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   Alerte doublon (« Utiliser ce produit »), validation Zod `ProductFormSchema`.
 - **Images produits** : section « Photo » de la fiche produit : photos du catalogue global (la bonne couleur d'abord,
   choisie automatiquement), **« Prendre / choisir une photo »** (appareil photo du téléphone `capture="environment"` ou
-  galerie, réduite dans le navigateur `prepareImage`, envoyée seulement à l'enregistrement `uploadShopImage` →
-  `/global/images/shop`, annulée si l'enregistrement échoue ; visible par la boutique seulement), ou « Sans photo » ;
+  galerie) : **studio photo** `studioPhoto` (`src/lib/images.ts`) — photo réduite à 1600 px puis optimisée par le serveur
+  (`/global/images/shop/prepare` : recadrage par l'IA, lumière, carré du catalogue), résultat affiché tout de suite avec
+  « Optimisée », les étapes, les conseils (floue, sombre, main, boîte…) et « Avant / après » ; serveur indisponible → simple
+  réduction locale. Envoyée seulement à l'enregistrement (`uploadShopImage` → `/global/images/shop`), annulée si
+  l'enregistrement échoue ; visible par la boutique seulement. Ou « Sans photo » ;
   bouton « Signaler » si une photo est inadaptée. Le produit enregistre `imageId` + `deviceId`. `ProductVisual`
   affiche la photo (vignette ou pleine taille), sinon une illustration colorée par catégorie.
 - **Espace administrateur `/admin`** (hors `/app`, session séparée `stores/admin-store.ts` clé `zaff-admin`, client

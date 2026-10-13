@@ -41,7 +41,7 @@ import { CONDITION_LABELS, type ProductCondition } from '@/lib/contract';
 import { DeviceSpecs } from '@/components/products/device-specs';
 import { errorMessage, type Category, type Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { prepareImage, reportImage, uploadShopImage, discardShopImage, useSharedImages, type PreparedImage } from '@/lib/images';
+import { reportImage, uploadShopImage, discardShopImage, studioPhoto, useSharedImages, type StudioPhoto } from '@/lib/images';
 import { useAuth } from '@/contexts/auth-context';
 import { ProductVisual } from './product-visual';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
@@ -159,11 +159,21 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   /** L'utilisateur a choisi lui-même (photo ou « sans photo ») : plus de choix automatique */
   const [imageTouched, setImageTouched] = useState(!!initial);
   /** Photo prise / choisie sur l'appareil : réduite tout de suite, envoyée seulement à l'enregistrement */
-  const [localPhoto, setLocalPhoto] = useState<(PreparedImage & { url: string }) | null>(null);
+  const [localPhoto, setLocalPhoto] = useState<(StudioPhoto & { url: string; originalUrl: string }) | null>(null);
+  /** « Avant / après » : la photo d'origine affichée à la place de la photo optimisée */
+  const [showOriginal, setShowOriginal] = useState(false);
   const [useLocal, setUseLocal] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const photoInput = useRef<HTMLInputElement>(null);
-  useEffect(() => () => { if (localPhoto) URL.revokeObjectURL(localPhoto.url); }, [localPhoto]);
+  useEffect(
+    () => () => {
+      if (localPhoto) {
+        URL.revokeObjectURL(localPhoto.url);
+        URL.revokeObjectURL(localPhoto.originalUrl);
+      }
+    },
+    [localPhoto],
+  );
   const { establishment } = useAuth();
   const [reported, setReported] = useState<Record<string, string>>({});
   const [imageError, setImageError] = useState<string | null>(null);
@@ -213,8 +223,10 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
     setImageError(null);
     setPhotoBusy(true);
     try {
-      const prepared = await prepareImage(file);
-      setLocalPhoto({ ...prepared, url: URL.createObjectURL(prepared.blob) });
+      // Studio photo : recadrage sur l'appareil (IA), lumière, format du catalogue — rien n'est enregistré avant « Enregistrer »
+      const prepared = await studioPhoto(file, { brand: brand.trim() || undefined, model: effectiveName.trim() || undefined, color: color.trim() || undefined });
+      setLocalPhoto({ ...prepared, url: URL.createObjectURL(prepared.blob), originalUrl: URL.createObjectURL(prepared.original) });
+      setShowOriginal(false);
       setUseLocal(true);
       setImageTouched(true);
     } catch (err) {
@@ -507,9 +519,11 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
             <div className={cn('relative aspect-square rounded-2xl border-2 overflow-hidden', useLocal ? 'border-gold' : 'border-neutral-800')}>
               <button type="button" onClick={() => setUseLocal(true)} aria-pressed={useLocal} className="theme-fixed absolute inset-0 bg-white" aria-label="Utiliser ma photo">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={localPhoto.url} alt="Ma photo" className="w-full h-full object-cover" />
+                <img src={showOriginal ? localPhoto.originalUrl : localPhoto.url} alt="Ma photo" className={cn('w-full h-full', showOriginal ? 'object-contain bg-neutral-200' : 'object-cover')} />
               </button>
-              <span className="pointer-events-none absolute bottom-1 left-1 right-1 truncate rounded-md bg-black/60 px-1 text-[9px] font-semibold text-white theme-fixed">Ma photo</span>
+              <span className="pointer-events-none absolute bottom-1 left-1 right-1 truncate rounded-md bg-black/60 px-1 text-[9px] font-semibold text-white theme-fixed flex items-center gap-0.5">
+                {showOriginal ? 'Original' : localPhoto.optimized ? <><Sparkles className="w-2.5 h-2.5 text-gold-soft" /> Optimisée</> : 'Ma photo'}
+              </span>
               {useLocal && (
                 <span className="pointer-events-none absolute top-1 right-1 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
                   <Check className="w-3 h-3 text-ink" />
@@ -534,7 +548,15 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
             onClick={() => photoInput.current?.click()}
             className="aspect-square rounded-2xl border-2 border-dashed border-gold/40 text-gold-soft hover:border-gold flex flex-col items-center justify-center gap-1 text-[11px] font-semibold text-center px-1 disabled:opacity-60"
           >
-            <Camera className="w-6 h-6" /> {photoBusy ? 'Préparation…' : localPhoto ? 'Reprendre la photo' : 'Prendre / choisir une photo'}
+            {photoBusy ? (
+              <>
+                <Sparkles className="w-6 h-6 animate-pulse" /> Optimisation…
+              </>
+            ) : (
+              <>
+                <Camera className="w-6 h-6" /> {localPhoto ? 'Reprendre la photo' : 'Prendre / choisir une photo'}
+              </>
+            )}
           </button>
           <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp,image/*" capture="environment" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
           <button
@@ -560,6 +582,37 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
               ? `${sharedImages.length} photo${sharedImages.length > 1 ? 's' : ''} disponible${sharedImages.length > 1 ? 's' : ''} pour ce modèle. Sans photo, une illustration colorée est affichée.`
               : 'Pas encore de photo de ce modèle dans le catalogue : prenez la vôtre (elle reste propre à votre boutique), ou laissez une illustration colorée.'}
         </p>
+        {/* Studio photo : ce qui a été fait, et comment faire une meilleure photo */}
+        {localPhoto && useLocal && (
+          <div className="rounded-2xl border border-gold/30 bg-gold/5 p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold text-gold-soft flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                {localPhoto.optimized ? (localPhoto.ai.cropped ? "Photo recadrée par l'IA et optimisée" : 'Photo optimisée') : 'Photo réduite'}
+              </p>
+              {localPhoto.optimized && (
+                <button type="button" onClick={() => setShowOriginal((v) => !v)} className="h-7 px-2.5 rounded-lg border border-neutral-700 text-[11px] text-neutral-300">
+                  {showOriginal ? 'Voir le résultat' : 'Avant / après'}
+                </button>
+              )}
+            </div>
+            {!!localPhoto.steps.length && (
+              <div className="flex flex-wrap gap-1">
+                {localPhoto.steps.map((st) => (
+                  <span key={st} className="px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] text-neutral-300 flex items-center gap-1">
+                    <Check className="w-2.5 h-2.5 text-emerald-400" /> {st}
+                  </span>
+                ))}
+              </div>
+            )}
+            {localPhoto.tips.map((t) => (
+              <p key={t} className="text-[11px] text-amber-400 flex items-start gap-1.5">
+                <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" /> {t}
+              </p>
+            ))}
+            <p className="text-[10px] text-neutral-500">La photo sera enregistrée avec le produit, visible par votre boutique seulement.</p>
+          </div>
+        )}
         {imageError && <p className="text-xs text-red-400">{imageError}</p>}
       </Section>
 
