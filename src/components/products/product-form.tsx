@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -41,7 +41,7 @@ import { CONDITION_LABELS, type ProductCondition } from '@/lib/contract';
 import { DeviceSpecs } from '@/components/products/device-specs';
 import { errorMessage, type Category, type Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { reportImage, useSharedImages } from '@/lib/images';
+import { prepareImage, reportImage, uploadShopImage, discardShopImage, useSharedImages, type PreparedImage } from '@/lib/images';
 import { useAuth } from '@/contexts/auth-context';
 import { ProductVisual } from './product-visual';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
@@ -159,6 +159,11 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   /** L'utilisateur a choisi lui-même (photo ou « sans photo ») : plus de choix automatique */
   const [imageTouched, setImageTouched] = useState(!!initial);
   /** Photo prise / choisie sur l'appareil : réduite tout de suite, envoyée seulement à l'enregistrement */
+  const [localPhoto, setLocalPhoto] = useState<(PreparedImage & { url: string }) | null>(null);
+  const [useLocal, setUseLocal] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoInput = useRef<HTMLInputElement>(null);
+  useEffect(() => () => { if (localPhoto) URL.revokeObjectURL(localPhoto.url); }, [localPhoto]);
   const { establishment } = useAuth();
   const [reported, setReported] = useState<Record<string, string>>({});
   const [imageError, setImageError] = useState<string | null>(null);
@@ -197,10 +202,27 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   const shared = useSharedImages({ brand, model: effectiveName, color, category: slug });
   const sharedImages = shared.data ?? [];
   // Tant que l'utilisateur n'a rien choisi : la meilleure photo partagée de ce modèle
-  const imageId = imageTouched ? chosenImage : sharedImages[0]?.id ?? null;
+  const imageId = useLocal ? null : imageTouched ? chosenImage : sharedImages[0]?.id ?? null;
   const setImageId = (id: string | null) => {
     setChosenImage(id);
     setImageTouched(true);
+    setUseLocal(false);
+  };
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    setImageError(null);
+    setPhotoBusy(true);
+    try {
+      const prepared = await prepareImage(file);
+      setLocalPhoto({ ...prepared, url: URL.createObjectURL(prepared.blob) });
+      setUseLocal(true);
+      setImageTouched(true);
+    } catch (err) {
+      setImageError(errorMessage(err));
+    } finally {
+      setPhotoBusy(false);
+      if (photoInput.current) photoInput.current.value = '';
+    }
   };
 
   const duplicate = !initial
@@ -265,8 +287,12 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
     }
     setSaving(true);
     setSaveError(null);
+    let uploadedId: string | null = null;
     try {
       // La photo prise sur l'appareil n'est envoyée que maintenant, au clic sur « Enregistrer »
+      if (useLocal && localPhoto) {
+        uploadedId = await uploadShopImage(localPhoto, { brand: brand.trim() || category.trim(), model: effectiveName.trim(), color: color.trim() || undefined, category: slug || undefined });
+      }
       // Catégorie / marque : réutilise l'existante de la boutique ou la crée
       let cat = shopCat;
       if (!cat) cat = (await api.post('/catalog/categories', { name: category.trim() })) as unknown as Category;
@@ -286,7 +312,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
         condition,
         accessories: accessories.join(', ') || undefined,
         // Photo et fiche technique viennent du catalogue global ZAFF
-        imageId: imageId || (initial?.imageId ? null : undefined),
+        imageId: uploadedId || imageId || (initial?.imageId ? null : undefined),
         deviceId: knownModel?.id || undefined,
         purchasePrice: cost,
         salePrice: sale,
@@ -304,6 +330,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       onSaved(saved);
     } catch (err) {
       // Produit non enregistré : la photo tout juste envoyée est annulée (aucun fichier orphelin)
+      if (uploadedId) await discardShopImage(uploadedId);
       setSaveError(errorMessage(err));
     } finally {
       setSaving(false);
@@ -317,7 +344,12 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       {/* Aperçu vivant de la fiche */}
       <div className="sticky top-0 z-10 -mx-1 px-1 pb-2 bg-neutral-950">
         <div className="rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3 flex items-center gap-3">
-          <ProductVisual imageId={imageId} size="thumb" category={slug} brand={brand} name={fullDesignation} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
+          {useLocal && localPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={localPhoto.url} alt="" className="theme-fixed w-12 h-12 shrink-0 rounded-xl object-cover bg-white" />
+          ) : (
+            <ProductVisual imageId={imageId} size="thumb" category={slug} brand={brand} name={fullDesignation} className="w-12 h-12 shrink-0" rounded="rounded-xl" />
+          )}
           <div className="min-w-0 flex-1">
             <p className={cn('text-sm font-bold truncate', fullDesignation ? 'text-white' : 'text-neutral-500')}>
               {fullDesignation || 'Votre produit apparaîtra ici'}
@@ -423,8 +455,8 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       <Section
         n={4}
         title="Photo"
-        subtitle="Photos officielles du catalogue ZAFF : rien à photographier"
-        done={!!imageId}
+        subtitle="Photo du catalogue ZAFF, ou prenez la vôtre"
+        done={!!imageId || useLocal}
         locked={!brand || !effectiveName}
         lockedText="Choisissez la marque et le modèle pour voir les photos disponibles."
       >
@@ -470,16 +502,51 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
               </div>
             );
           })}
+          {/* Photo de la boutique : prise avec l'appareil photo du téléphone ou choisie dans la galerie */}
+          {localPhoto && (
+            <div className={cn('relative aspect-square rounded-2xl border-2 overflow-hidden', useLocal ? 'border-gold' : 'border-neutral-800')}>
+              <button type="button" onClick={() => setUseLocal(true)} aria-pressed={useLocal} className="theme-fixed absolute inset-0 bg-white" aria-label="Utiliser ma photo">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={localPhoto.url} alt="Ma photo" className="w-full h-full object-cover" />
+              </button>
+              <span className="pointer-events-none absolute bottom-1 left-1 right-1 truncate rounded-md bg-black/60 px-1 text-[9px] font-semibold text-white theme-fixed">Ma photo</span>
+              {useLocal && (
+                <span className="pointer-events-none absolute top-1 right-1 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
+                  <Check className="w-3 h-3 text-ink" />
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setLocalPhoto(null);
+                  setUseLocal(false);
+                }}
+                className="theme-fixed absolute top-1 left-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center"
+                aria-label="Retirer ma photo"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            disabled={photoBusy}
+            onClick={() => photoInput.current?.click()}
+            className="aspect-square rounded-2xl border-2 border-dashed border-gold/40 text-gold-soft hover:border-gold flex flex-col items-center justify-center gap-1 text-[11px] font-semibold text-center px-1 disabled:opacity-60"
+          >
+            <Camera className="w-6 h-6" /> {photoBusy ? 'Préparation…' : localPhoto ? 'Reprendre la photo' : 'Prendre / choisir une photo'}
+          </button>
+          <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp,image/*" capture="environment" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
           <button
             type="button"
             onClick={() => {
               setImageId(null);
               setImageTouched(true);
             }}
-            aria-pressed={!imageId}
+            aria-pressed={!imageId && !useLocal}
             className={cn(
               'aspect-square rounded-2xl border-2 flex flex-col items-center justify-center gap-1 text-[11px] font-semibold',
-              !imageId ? 'border-gold text-gold-soft' : 'border-neutral-800 text-neutral-500 hover:border-neutral-600'
+              !imageId && !useLocal ? 'border-gold text-gold-soft' : 'border-neutral-800 text-neutral-500 hover:border-neutral-600'
             )}
           >
             <ImageOff className="w-6 h-6" /> Sans photo
@@ -491,7 +558,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
             ? 'Recherche des photos de ce modèle…'
             : sharedImages.length
               ? `${sharedImages.length} photo${sharedImages.length > 1 ? 's' : ''} disponible${sharedImages.length > 1 ? 's' : ''} pour ce modèle. Sans photo, une illustration colorée est affichée.`
-              : 'Photo pas encore disponible pour ce modèle : ZAFF ajoute les photos au catalogue, elle apparaîtra automatiquement. En attendant, une illustration colorée est affichée.'}
+              : 'Pas encore de photo de ce modèle dans le catalogue : prenez la vôtre (elle reste propre à votre boutique), ou laissez une illustration colorée.'}
         </p>
         {imageError && <p className="text-xs text-red-400">{imageError}</p>}
       </Section>

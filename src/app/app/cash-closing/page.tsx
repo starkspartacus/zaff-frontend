@@ -109,10 +109,10 @@ export default function CashClosingPage() {
 
       {isLoading ? (
         <div className="rounded-3xl border border-neutral-800 p-10 text-center text-neutral-500 text-sm">Chargement de votre caisse…</div>
-      ) : !register || register.salesCount === 0 ? (
+      ) : !register || (register.salesCount === 0 && !register.collections?.count) ? (
         <div className="rounded-3xl border border-dashed border-neutral-800 p-8 text-center space-y-2">
           <ReceiptText className="w-10 h-10 mx-auto text-neutral-600" />
-          <p className="text-sm text-white font-semibold">Aucune vente à clôturer</p>
+          <p className="text-sm text-white font-semibold">Rien à clôturer</p>
           <p className="text-xs text-neutral-500">Vos prochaines ventes apparaîtront ici jusqu&apos;à la prochaine clôture.</p>
         </div>
       ) : (
@@ -123,8 +123,17 @@ export default function CashClosingPage() {
               <div>
                 <p className="text-[11px] uppercase tracking-wider text-neutral-500">Total encaissé</p>
                 <p className="text-3xl font-black text-gold-soft">
-                  <NumberTicker value={register.totalAmount} suffix={currency} />
+                  {/* Les ventes à crédit ne sont pas de l'argent reçu : elles sont suivies dans la fiche du client */}
+                  <NumberTicker value={register.totalAmount - (register.totals.credit || 0)} suffix={currency} />
                 </p>
+                {!!register.collections?.count && (
+                  <p className="text-[11px] text-emerald-400">
+                    dont {money(register.collections.amount, currency)} reçus de clients à crédit ({register.collections.count})
+                  </p>
+                )}
+                {(register.totals.credit || 0) > 0 && (
+                  <p className="text-[11px] text-amber-400">+ {money(register.totals.credit, currency)} vendus à crédit (à encaisser plus tard)</p>
+                )}
               </div>
               <p className="text-xs text-neutral-400 text-right">
                 {register.salesCount} vente{register.salesCount > 1 ? 's' : ''}

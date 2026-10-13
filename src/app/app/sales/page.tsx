@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
+import { useCategories, useCreateCustomer, useCreateSale, useCustomers, useProducts, useReturnPolicy } from '@/lib/queries';
+import { PhoneInput } from '@/components/forms/geo-fields';
+import { toE164 } from '@/lib/geo';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import {
@@ -18,74 +21,77 @@ import {
   Banknote,
   Smartphone,
   CheckCircle2,
-  Printer,
   X,
   UserPlus,
   Tag,
-  Boxes,
-  Percent,
+  Clock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { scanFeedback } from '@/components/scan/feedback';
-import { errorMessage, type Product, type ScanLookup } from '@/lib/types';
+import { errorMessage, type Customer, type Product, type Sale, type ScanLookup } from '@/lib/types';
+
+type PayMethod = 'cash' | 'card' | 'mobile' | 'bank_transfer' | 'credit';
+
+interface CartLine {
+  product: Product;
+  quantity: number;
+  unitPrice: number;
+  serialNumber?: string;
+}
+
+/** Tarif revendeur pour un client revendeur (si le produit en a un), sinon prix de vente */
+const priceFor = (p: Product, reseller: boolean) => (reseller && (p.resellerPrice || 0) > 0 ? p.resellerPrice! : p.salePrice);
 
 export default function SalesPosPage() {
-  const { establishment, user } = useAuth();
+  const { establishment } = useAuth();
 
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
+  // Lectures en direct (WebSocket) : stock, catégories et clients toujours à jour
+  const { data: products = [] } = useProducts();
+  const { data: categories = [] } = useCategories();
+  const { data: customers = [] } = useCustomers('all');
+  const createSale = useCreateSale();
+  const createCustomer = useCreateCustomer();
+  // Garantie par défaut de la boutique (même règle que les retours et le contrat)
+  const { data: policy } = useReturnPolicy();
+  const warrantyMonths = policy?.defective.defaultWarrantyMonths ?? 12;
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isResellerPricing, setIsResellerPricing] = useState(false);
 
-  // Cart state
-  const [cart, setCart] = useState<any[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  // Panier
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discount, setDiscount] = useState<number>(0);
+  // Le tarif revendeur s'applique seulement à un client enregistré comme revendeur
+  const isResellerPricing = !!selectedCustomer?.isReseller;
 
-  // Checkout modal
+  // Encaissement
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile' | 'bank_transfer'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<PayMethod>('cash');
   const [amountPaid, setAmountPaid] = useState<number>(0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [completedSale, setCompletedSale] = useState<any>(null);
+  const [deposit, setDeposit] = useState<number>(0);
+  const [depositMethod, setDepositMethod] = useState<'cash' | 'mobile'>('cash');
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const isSubmitting = createSale.isPending;
+  const [completedSale, setCompletedSale] = useState<(Sale & { change?: number }) | null>(null);
 
   // Produit à N° de série en attente de scan
   const [serialPicker, setSerialPicker] = useState<Product | null>(null);
   const [serialError, setSerialError] = useState<string | null>(null);
 
-  // New Customer modal
+  // Nouveau client
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
+  const [newCustCountry, setNewCustCountry] = useState(establishment?.countryCode || 'CI');
   const [newCustIsReseller, setNewCustIsReseller] = useState(false);
+  const [newCustError, setNewCustError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchInitialData();
-  }, []);
-
-  const fetchInitialData = async () => {
-    try {
-      const [prodRes, catRes, custRes] = await Promise.allSettled([
-        api.get('/catalog/products'),
-        api.get('/catalog/categories'),
-        api.get('/customers'),
-      ]);
-
-      if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
-        setProducts(prodRes.value);
-      }
-      if (catRes.status === 'fulfilled' && Array.isArray(catRes.value)) {
-        setCategories(catRes.value);
-      }
-      if (custRes.status === 'fulfilled' && Array.isArray(custRes.value)) {
-        setCustomers(custRes.value);
-      }
-    } catch (e) {
-      console.error('Error loading POS data:', e);
-    }
+  // Les quantités et prix du panier suivent le stock et le tarif du client choisi
+  const chooseCustomer = (cust: Customer | null) => {
+    setSelectedCustomer(cust);
+    setCart((prev) => prev.map((item) => ({ ...item, unitPrice: priceFor(item.product, !!cust?.isReseller) })));
+    if (!cust && paymentMethod === 'credit') setPaymentMethod('cash');
   };
 
   const currency = establishment?.currency || 'F CFA';
@@ -110,8 +116,7 @@ export default function SalesPosPage() {
     if (cart.some((item) => item.serialNumber === serialNumber)) {
       throw new Error(`L'appareil ${serialNumber} est déjà dans le panier.`);
     }
-    const unitPrice = isResellerPricing && product.resellerPrice ? product.resellerPrice : product.salePrice;
-    setCart((prev) => [...prev, { product, quantity: 1, unitPrice, serialNumber }]);
+    setCart((prev) => [...prev, { product, quantity: 1, unitPrice: priceFor(product, isResellerPricing), serialNumber }]);
   };
 
   const resolveScan = async (code: string, expectedProduct?: Product | null) => {
@@ -167,114 +172,80 @@ export default function SalesPosPage() {
   };
 
   // Add to cart
-  const addToCart = (product: any) => {
+  const addToCart = (product: Product) => {
     if (product.hasSerialNumbers) {
       // Chaque appareil est identifié : on demande son N° de série
       setSerialError(null);
       setSerialPicker(product);
       return;
     }
-    const existingIndex = cart.findIndex((item) => item.product._id === product._id);
-    const unitPrice = isResellerPricing && product.resellerPrice ? product.resellerPrice : product.salePrice;
-
-    if (existingIndex > -1) {
-      const updated = [...cart];
-      if (updated[existingIndex].quantity < product.stockQuantity) {
-        updated[existingIndex].quantity += 1;
-        setCart(updated);
+    setCart((prev) => {
+      const i = prev.findIndex((item) => item.product._id === product._id && !item.serialNumber);
+      if (i > -1) {
+        if (prev[i].quantity >= product.stockQuantity) return prev;
+        return prev.map((item, k) => (k === i ? { ...item, quantity: item.quantity + 1 } : item));
       }
-    } else {
-      if (product.stockQuantity > 0) {
-        setCart([
-          ...cart,
-          {
-            product,
-            quantity: 1,
-            unitPrice,
-            serialNumbers: [],
-          },
-        ]);
-      }
-    }
+      return product.stockQuantity > 0 ? [...prev, { product, quantity: 1, unitPrice: priceFor(product, isResellerPricing) }] : prev;
+    });
   };
 
-  // Update line quantity
   const updateQuantity = (index: number, delta: number) => {
-    if (cart[index].serialNumber && delta > 0) return; // un N° de série = un appareil
-    const updated = [...cart];
-    const newQty = updated[index].quantity + delta;
-    if (newQty <= 0) {
-      updated.splice(index, 1);
-    } else if (newQty <= updated[index].product.stockQuantity) {
-      updated[index].quantity = newQty;
-    }
-    setCart(updated);
+    setCart((prev) => {
+      const item = prev[index];
+      if (!item || (item.serialNumber && delta > 0)) return prev; // un N° de série = un appareil
+      const qty = item.quantity + delta;
+      if (qty <= 0) return prev.filter((_, k) => k !== index);
+      // Stock à jour (temps réel) : on ne vend pas plus que ce qui est disponible
+      const live = products.find((p) => p._id === item.product._id)?.stockQuantity ?? item.product.stockQuantity;
+      return qty <= live ? prev.map((x, k) => (k === index ? { ...x, quantity: qty } : x)) : prev;
+    });
   };
 
-  const removeFromCart = (index: number) => {
-    const updated = [...cart];
-    updated.splice(index, 1);
-    setCart(updated);
-  };
+  const removeFromCart = (index: number) => setCart((prev) => prev.filter((_, k) => k !== index));
 
-  // Re-calculate prices when switching pricing mode
-  const handleToggleReseller = (reseller: boolean) => {
-    setIsResellerPricing(reseller);
-    setCart((prev) =>
-      prev.map((item) => ({
-        ...item,
-        unitPrice:
-          reseller && item.product.resellerPrice
-            ? item.product.resellerPrice
-            : item.product.salePrice,
-      }))
-    );
-  };
-
-  // Cart computations
-  const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  }, [cart]);
-
-  const total = Math.max(0, subtotal - (discount || 0));
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0), [cart]);
+  // Remise : jamais négative, jamais plus que le panier
+  const safeDiscount = Math.min(Math.max(0, Math.round(discount || 0)), subtotal);
+  const total = subtotal - safeDiscount;
   const changeToReturn = Math.max(0, (amountPaid || 0) - total);
+  const missing = paymentMethod === 'cash' ? Math.max(0, total - (amountPaid || 0)) : 0;
+  const safeDeposit = Math.min(Math.max(0, Math.round(deposit || 0)), total);
+  const dueAfter = total - safeDeposit;
+  const canValidate =
+    cart.length > 0 && !isSubmitting && (paymentMethod === 'credit' ? !!selectedCustomer : paymentMethod !== 'cash' || missing === 0);
 
-  // Quick Customer Creation
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCustName || !newCustPhone) return;
-
+    setNewCustError(null);
+    if (!newCustName.trim()) return setNewCustError('Indiquez le nom du client.');
+    const phone = newCustPhone ? toE164(newCustPhone, newCustCountry) : null;
+    if (newCustPhone && !phone) return setNewCustError("Ce numéro n'est pas valide pour ce pays.");
     try {
-      const created: any = await api.post('/customers', {
-        name: newCustName,
-        phone: newCustPhone,
-        isReseller: newCustIsReseller,
-      });
-      setCustomers((prev) => [created, ...prev]);
-      setSelectedCustomer(created);
-      if (created.isReseller) {
-        handleToggleReseller(true);
-      }
+      const created = await createCustomer.mutateAsync({ name: newCustName.trim(), phone: phone || undefined, isReseller: newCustIsReseller });
+      chooseCustomer(created);
       setIsNewCustomerOpen(false);
       setNewCustName('');
       setNewCustPhone('');
+      setNewCustIsReseller(false);
     } catch (err) {
-      console.error('Error creating customer:', err);
+      setNewCustError(errorMessage(err));
     }
   };
 
-  // Open checkout
   const handleOpenCheckout = () => {
     setAmountPaid(total);
+    setDeposit(0);
+    setCheckoutError(null);
     setIsCheckoutOpen(true);
   };
 
-  // Submit sale
   const handleFinalizeSale = async () => {
-    setIsSubmitting(true);
+    if (!canValidate) return;
+    setCheckoutError(null);
     try {
-      // Sans client sélectionné : vente comptant, aucun client n'est créé
-      const payload = {
+      // Le serveur recalcule prix et totaux ; sans client choisi : vente comptant
+      const withCustomer = !!selectedCustomer;
+      const result = await createSale.mutateAsync({
         customerId: selectedCustomer?._id || undefined,
         items: cart.map((item) => ({
           productId: item.product._id,
@@ -283,36 +254,26 @@ export default function SalesPosPage() {
           productCategory: item.product.category || undefined,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          total: item.unitPrice * item.quantity,
           serialNumber: item.serialNumber || undefined,
+          // Garantie enregistrée pour un client connu (appareils à N° de série)
+          warrantyEnabled: withCustomer && !!item.serialNumber,
+          warrantyMonths: withCustomer && item.serialNumber ? warrantyMonths : 0,
         })),
-        subtotal,
-        discount: Number(discount) || 0,
-        total,
-        paidAmount: paymentMethod === 'cash' ? Number(amountPaid) || total : total,
+        discount: safeDiscount,
+        paidAmount: paymentMethod === 'cash' ? Number(amountPaid) || total : undefined,
+        depositAmount: paymentMethod === 'credit' ? safeDeposit : undefined,
+        depositMethod: paymentMethod === 'credit' && safeDeposit > 0 ? depositMethod : undefined,
         paymentMethod,
         saleType: isResellerPricing ? 'reseller' : 'purchase',
-      };
-
-      const result: any = await api.post('/sales', payload);
-
-      setCompletedSale(result);
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.6 },
-        colors: ['#d4a017', '#e5b83b', '#ffffff'],
       });
 
-      // Reset cart
+      setCompletedSale({ ...result, change: paymentMethod === 'cash' ? changeToReturn : 0 });
+      confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ['#d4a017', '#e5b83b', '#ffffff'] });
       setCart([]);
       setDiscount(0);
-      fetchInitialData(); // reload stock
-    } catch (err: any) {
-      console.error('Failed to submit sale:', err);
-      alert(err.message || 'Erreur lors de l’encaissement.');
-    } finally {
-      setIsSubmitting(false);
+      setIsCheckoutOpen(false);
+    } catch (err) {
+      setCheckoutError(errorMessage(err));
     }
   };
 
@@ -340,30 +301,14 @@ export default function SalesPosPage() {
               />
             </div>
 
-            {/* Mode Tarif Switch */}
-            <div className="flex items-center gap-2 bg-neutral-900 p-1 rounded-xl border border-neutral-800 self-stretch sm:self-auto justify-center">
-              <button
-                type="button"
-                onClick={() => handleToggleReseller(false)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  !isResellerPricing
-                    ? 'bg-neutral-800 text-white shadow-sm'
-                    : 'text-neutral-400 hover:text-white'
-                }`}
-              >
-                Tarif Détail
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleReseller(true)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  isResellerPricing
-                    ? 'bg-gradient-to-r from-gold to-gold-deep text-ink shadow-sm'
-                    : 'text-neutral-400 hover:text-white'
-                }`}
-              >
-                Tarif Revendeur (Gros)
-              </button>
+            {/* Tarif : déterminé par le client choisi (un revendeur enregistré a le tarif revendeur) */}
+            <div
+              className={`self-stretch sm:self-auto px-3 py-2 rounded-xl border text-xs font-semibold text-center ${
+                isResellerPricing ? 'bg-gold/15 border-gold/50 text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+              }`}
+              title="Choisissez un client revendeur pour appliquer le tarif revendeur"
+            >
+              {isResellerPricing ? `Tarif revendeur · ${selectedCustomer?.name}` : 'Tarif détail'}
             </div>
           </div>
 
@@ -399,7 +344,7 @@ export default function SalesPosPage() {
         <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5 scrollbar-thin scrollbar-thumb-neutral-800">
           {filteredProducts.map((p) => {
             const isOutOfStock = p.stockQuantity <= 0;
-            const displayPrice = isResellerPricing && p.resellerPrice ? p.resellerPrice : p.salePrice;
+            const displayPrice = priceFor(p, isResellerPricing);
 
             return (
               <button
@@ -465,22 +410,21 @@ export default function SalesPosPage() {
 
           <select
             value={selectedCustomer?._id || ''}
-            onChange={(e) => {
-              const cust = customers.find((c) => c._id === e.target.value);
-              setSelectedCustomer(cust || null);
-              if (cust?.isReseller) {
-                handleToggleReseller(true);
-              }
-            }}
+            onChange={(e) => chooseCustomer(customers.find((c) => c._id === e.target.value) || null)}
             className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-gold"
           >
-            <option value="">Client Comptant (Passage)</option>
+            <option value="">Client de passage (comptant)</option>
             {customers.map((c) => (
               <option key={c._id} value={c._id}>
-                {c.name} {c.isReseller ? '· Revendeur' : ''} ({c.phone})
+                {c.name} {c.isReseller ? '· Revendeur' : ''}{c.phone ? ` (${c.phone})` : ''}{(c.balance || 0) > 0 ? ` · doit ${(c.balance || 0).toLocaleString('fr-FR')}` : ''}
               </option>
             ))}
           </select>
+          {selectedCustomer && (selectedCustomer.balance || 0) > 0 && (
+            <p className="text-[11px] text-amber-400 flex items-center gap-1">
+              <Clock className="w-3 h-3" /> Doit déjà {formatPrice(selectedCustomer.balance || 0)}
+            </p>
+          )}
         </div>
 
         {/* Cart Items List */}
@@ -490,7 +434,7 @@ export default function SalesPosPage() {
               <ShoppingCart className="w-10 h-10 mb-2 stroke-[1.5] text-neutral-600" />
               <p className="text-xs">Panier vide</p>
               <p className="text-[11px] text-neutral-600 mt-1">
-                Touchez un produit pour l'ajouter à l'encaissement
+                Touchez un produit pour l&apos;ajouter à l&apos;encaissement
               </p>
             </div>
           ) : (
@@ -544,7 +488,7 @@ export default function SalesPosPage() {
         {/* Cart Totals & Checkout Button */}
         <div className="pt-4 border-t border-neutral-800 space-y-3">
           <div className="flex items-center justify-between text-xs text-neutral-400">
-            <span>Sous-total HT</span>
+            <span>Sous-total</span>
             <span>{formatPrice(subtotal)}</span>
           </div>
 
@@ -555,15 +499,17 @@ export default function SalesPosPage() {
             <input
               type="number"
               min="0"
+              max={subtotal}
+              inputMode="numeric"
               value={discount || ''}
-              onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+              onChange={(e) => setDiscount(Math.max(0, Number(e.target.value) || 0))}
               placeholder="0"
               className="w-24 text-right bg-neutral-900 border border-neutral-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-gold"
             />
           </div>
 
           <div className="pt-2 border-t border-neutral-800 flex items-baseline justify-between">
-            <span className="text-sm font-semibold text-white">Total Net</span>
+            <span className="text-sm font-semibold text-white">Total à payer</span>
             <span className="text-2xl font-black text-gold-soft tracking-tight">
               {formatPrice(total)}
             </span>
@@ -593,9 +539,10 @@ export default function SalesPosPage() {
             </button>
 
             <div>
-              <h2 className="text-xl font-bold text-white">Finaliser l'Encaissement</h2>
+              <h2 className="text-xl font-bold text-white">Finaliser l&apos;encaissement</h2>
               <p className="text-xs text-neutral-400 mt-0.5">
-                Client: {selectedCustomer?.name || 'Client Comptant'}
+                Client : {selectedCustomer?.name || 'client de passage'}
+                {isResellerPricing && ' · tarif revendeur'}
               </p>
             </div>
 
@@ -612,19 +559,25 @@ export default function SalesPosPage() {
             <div className="space-y-2">
               <label className="text-xs font-medium text-neutral-300">Mode de règlement</label>
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'cash', label: 'Espèces', icon: Banknote },
-                  { id: 'mobile', label: 'Wave / MoMo', icon: Smartphone },
-                  { id: 'card', label: 'Carte Bancaire', icon: CreditCard },
-                  { id: 'bank_transfer', label: 'Virement', icon: Barcode },
-                ].map((m) => {
+                {(
+                  [
+                    { id: 'cash', label: 'Espèces', icon: Banknote },
+                    { id: 'mobile', label: 'Wave / MoMo', icon: Smartphone },
+                    { id: 'card', label: 'Carte bancaire', icon: CreditCard },
+                    { id: 'bank_transfer', label: 'Virement', icon: Barcode },
+                    { id: 'credit', label: 'À crédit', icon: Clock },
+                  ] as const
+                ).map((m) => {
                   const Icon = m.icon;
+                  const locked = m.id === 'credit' && !selectedCustomer;
                   return (
                     <button
                       key={m.id}
                       type="button"
-                      onClick={() => setPaymentMethod(m.id as any)}
-                      className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs font-semibold transition-all ${
+                      disabled={locked}
+                      title={locked ? 'Choisissez le client (ou le revendeur) qui paiera plus tard' : undefined}
+                      onClick={() => setPaymentMethod(m.id)}
+                      className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs font-semibold transition-all disabled:opacity-40 ${
                         paymentMethod === m.id
                           ? 'bg-gold/15 border-gold text-gold-soft'
                           : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
@@ -653,18 +606,72 @@ export default function SalesPosPage() {
                   />
                 </div>
 
-                <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between text-xs">
-                  <span className="text-neutral-400">Monnaie à rendre :</span>
-                  <span className="text-base font-bold text-emerald-400">
-                    {formatPrice(changeToReturn)}
-                  </span>
+                {missing > 0 ? (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-between text-xs">
+                    <span className="text-red-300">Il manque :</span>
+                    <span className="text-base font-bold text-red-400">{formatPrice(missing)}</span>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between text-xs">
+                    <span className="text-neutral-400">Monnaie à rendre :</span>
+                    <span className="text-base font-bold text-emerald-400">{formatPrice(changeToReturn)}</span>
+                  </div>
+                )}
+                {missing > 0 && (
+                  <p className="text-[11px] text-neutral-500">
+                    Le client ne paie pas tout maintenant ? Choisissez « À crédit » (client obligatoire) : le reste sera suivi dans sa fiche.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* À crédit : acompte éventuel, le reste est dû par le client */}
+            {paymentMethod === 'credit' && selectedCustomer && (
+              <div className="space-y-3 pt-2">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-300 mb-1">Acompte versé maintenant ({currency}) — facultatif</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={total}
+                    inputMode="numeric"
+                    value={deposit || ''}
+                    onChange={(e) => setDeposit(Math.max(0, Number(e.target.value) || 0))}
+                    placeholder="0"
+                    className="bg-neutral-900 border-neutral-800 text-white font-bold text-base h-11 rounded-xl"
+                  />
+                </div>
+                {safeDeposit > 0 && (
+                  <div className="flex gap-2">
+                    {(['cash', 'mobile'] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setDepositMethod(m)}
+                        className={`flex-1 h-9 rounded-xl border text-xs font-semibold ${depositMethod === m ? 'bg-gold/15 border-gold text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-400'}`}
+                      >
+                        Acompte en {m === 'cash' ? 'espèces' : 'Mobile Money'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-amber-200">Reste à payer par {selectedCustomer.name} :</span>
+                    <span className="text-base font-bold text-amber-400">{formatPrice(dueAfter)}</span>
+                  </div>
+                  {(selectedCustomer.balance || 0) > 0 && (
+                    <p className="text-[11px] text-amber-200/80">Sa dette passera à {formatPrice((selectedCustomer.balance || 0) + dueAfter)}.</p>
+                  )}
                 </div>
               </div>
             )}
 
+            {checkoutError && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-xl p-3">{checkoutError}</p>}
+
             <button
               onClick={handleFinalizeSale}
-              disabled={isSubmitting}
+              disabled={!canValidate}
               className="w-full h-12 bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold rounded-2xl hover:brightness-110 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-sm shadow-lg shadow-gold/20"
             >
               {isSubmitting ? (
@@ -672,7 +679,7 @@ export default function SalesPosPage() {
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  Valider et Imprimer Ticket
+                  {paymentMethod === 'credit' ? 'Valider la vente à crédit' : 'Valider la vente'}
                 </>
               )}
             </button>
@@ -725,10 +732,10 @@ export default function SalesPosPage() {
               </div>
 
               <div className="space-y-1 py-1 border-b border-neutral-800">
-                {completedSale.items?.map((it: any, i: number) => (
+                {completedSale.items?.map((it, i) => (
                   <div key={i} className="flex justify-between">
                     <span>
-                      {it.quantity}x {it.productName}
+                      {it.quantity}× {it.productName}
                       {it.serialNumber && <span className="block text-[10px] text-neutral-500">N° {it.serialNumber}</span>}
                     </span>
                     <span>{formatPrice(it.total)}</span>
@@ -736,10 +743,37 @@ export default function SalesPosPage() {
                 ))}
               </div>
 
+              {!!completedSale.discount && (
+                <div className="flex justify-between text-neutral-400">
+                  <span>Remise</span>
+                  <span>− {formatPrice(completedSale.discount)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-bold text-white pt-1">
-                <span>TOTAL PAYÉ:</span>
+                <span>TOTAL</span>
                 <span>{formatPrice(completedSale.total)}</span>
               </div>
+              {completedSale.paymentMethod === 'credit' ? (
+                <>
+                  {!!completedSale.depositAmount && (
+                    <div className="flex justify-between">
+                      <span>Acompte versé</span>
+                      <span>{formatPrice(completedSale.depositAmount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-amber-400">
+                    <span>RESTE À PAYER</span>
+                    <span>{formatPrice(completedSale.amountDue || 0)}</span>
+                  </div>
+                </>
+              ) : (
+                !!completedSale.change && (
+                  <div className="flex justify-between">
+                    <span>Monnaie rendue</span>
+                    <span>{formatPrice(completedSale.change)}</span>
+                  </div>
+                )
+              )}
               <div className="text-[10px] text-neutral-500 text-center pt-2">
                 Merci de votre visite et à bientôt !
               </div>
@@ -753,19 +787,13 @@ export default function SalesPosPage() {
             </Link>
             <div className="flex gap-3">
               <button
-                onClick={() => window.print()}
-                className="flex-1 py-2.5 rounded-xl bg-neutral-900 border border-neutral-700 text-white text-xs font-semibold hover:border-gold transition-all flex items-center justify-center gap-2"
-              >
-                <Printer className="w-4 h-4 text-gold" /> Imprimer
-              </button>
-              <button
                 onClick={() => {
                   setCompletedSale(null);
                   setIsCheckoutOpen(false);
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-gold text-ink text-xs font-bold hover:brightness-110 transition-all"
               >
-                Nouvelle Vente
+                Nouvelle vente
               </button>
             </div>
           </div>
@@ -787,7 +815,7 @@ export default function SalesPosPage() {
               <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-base font-bold text-white">Ajouter un Client</h3>
+            <h3 className="text-base font-bold text-white">Ajouter un client</h3>
 
             <div>
               <label className="text-xs text-neutral-400 block mb-1">Nom complet *</label>
@@ -802,15 +830,8 @@ export default function SalesPosPage() {
             </div>
 
             <div>
-              <label className="text-xs text-neutral-400 block mb-1">Numéro de téléphone *</label>
-              <Input
-                type="tel"
-                placeholder="+225 07..."
-                value={newCustPhone}
-                onChange={(e) => setNewCustPhone(e.target.value)}
-                required
-                className="bg-neutral-900 border-neutral-800 text-white rounded-xl h-10"
-              />
+              <label className="text-xs text-neutral-400 block mb-1">Téléphone</label>
+              <PhoneInput country={newCustCountry} onCountryChange={setNewCustCountry} value={newCustPhone} onChange={setNewCustPhone} />
             </div>
 
             <div className="flex items-center gap-2 pt-1">
@@ -822,15 +843,17 @@ export default function SalesPosPage() {
                 className="w-4 h-4 accent-gold"
               />
               <label htmlFor="isResellerCheck" className="text-xs text-neutral-300">
-                Client Revendeur (Tarif Grossiste)
+                Revendeur (tarif revendeur, peut acheter à crédit)
               </label>
             </div>
+            {newCustError && <p className="text-xs text-red-400">{newCustError}</p>}
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all mt-2"
+              disabled={createCustomer.isPending}
+              className="w-full py-2.5 rounded-xl bg-gold text-ink font-bold text-xs hover:brightness-110 transition-all mt-2 disabled:opacity-50"
             >
-              Enregistrer Client
+              Enregistrer le client
             </button>
           </form>
         </div>

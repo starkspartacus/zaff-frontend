@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
+import { useProducts, useStockMovements } from '@/lib/queries';
+import { errorMessage } from '@/lib/types';
 import { UnitsTable } from '@/components/stock/units-table';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
@@ -22,11 +25,15 @@ import {
 export default function StockPage() {
   const { establishment, user } = useAuth();
   const canManage = user?.role !== 'seller';
-  const [products, setProducts] = useState<any[]>([]);
-  const [movements, setMovements] = useState<any[]>([]);
+  // Lectures en direct : chaque vente, mise en stock ou mouvement met l'écran à jour (WebSocket)
+  const queryClient = useQueryClient();
+  const productsQuery = useProducts();
+  const movementsQuery = useStockMovements(100);
+  const products = productsQuery.data ?? [];
+  const movements = movementsQuery.data ?? [];
+  const isLoading = productsQuery.isLoading || movementsQuery.isLoading;
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'levels' | 'units' | 'history'>('levels');
-  const [isLoading, setIsLoading] = useState(true);
 
   // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,31 +41,6 @@ export default function StockPage() {
   const [type, setType] = useState<'in' | 'out' | 'adjustment' | 'loss'>('in');
   const [quantity, setQuantity] = useState<number>(1);
   const [reason, setReason] = useState('');
-
-  useEffect(() => {
-    fetchStockData();
-  }, []);
-
-  const fetchStockData = async () => {
-    setIsLoading(true);
-    try {
-      const [prodRes, movRes] = await Promise.allSettled([
-        api.get('/catalog/products'),
-        api.get('/stock/movements'),
-      ]);
-
-      if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
-        setProducts(prodRes.value);
-      }
-      if (movRes.status === 'fulfilled' && Array.isArray(movRes.value)) {
-        setMovements(movRes.value);
-      }
-    } catch (e) {
-      console.error('Error fetching stock data:', e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleRecordMovement = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,9 +61,10 @@ export default function StockPage() {
       setSelectedProductId('');
       setQuantity(1);
       setReason('');
-      fetchStockData();
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors du mouvement de stock');
+      await queryClient.invalidateQueries({ queryKey: ['products'] });
+      await queryClient.invalidateQueries({ queryKey: ['stock'] });
+    } catch (err) {
+      alert(errorMessage(err));
     }
   };
 
@@ -142,10 +125,13 @@ export default function StockPage() {
             {lowStockCount} alertes
           </p>
         </div>
-        <div className="p-4 rounded-2xl bg-neutral-950/80 border border-neutral-800/80">
-          <span className="text-xs text-neutral-400">Valeur d'Achat du Stock</span>
-          <p className="text-2xl font-bold text-gold-soft mt-1">{formatPrice(totalStockValue)}</p>
-        </div>
+        {/* Prix d'achat : jamais montré aux vendeurs */}
+        {canManage && (
+          <div className="p-4 rounded-2xl bg-neutral-950/80 border border-neutral-800/80">
+            <span className="text-xs text-neutral-400">Valeur d&apos;achat du stock</span>
+            <p className="text-2xl font-bold text-gold-soft mt-1">{formatPrice(totalStockValue)}</p>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -206,10 +192,10 @@ export default function StockPage() {
                 <tr>
                   <th className="py-3.5 px-4">Désignation</th>
                   <th className="py-3.5 px-4">SKU</th>
-                  <th className="py-3.5 px-4">Prix Achat</th>
+                  {canManage && <th className="py-3.5 px-4">Prix achat</th>}
                   <th className="py-3.5 px-4 text-center">Seuil Min</th>
                   <th className="py-3.5 px-4 text-center">Quantité Actuelle</th>
-                  <th className="py-3.5 px-4 text-right">Valeur Stock</th>
+                  {canManage && <th className="py-3.5 px-4 text-right">Valeur stock</th>}
                   <th className="py-3.5 px-4 text-center">Statut</th>
                 </tr>
               </thead>
@@ -222,14 +208,16 @@ export default function StockPage() {
                     <tr key={p._id} className="hover:bg-neutral-900/40 transition-colors">
                       <td className="py-3.5 px-4 font-semibold text-white">{p.name}</td>
                       <td className="py-3.5 px-4 font-mono text-neutral-400">{p.sku}</td>
-                      <td className="py-3.5 px-4 text-neutral-400">{formatPrice(p.purchasePrice)}</td>
+                      {canManage && <td className="py-3.5 px-4 text-neutral-400">{formatPrice(p.purchasePrice || 0)}</td>}
                       <td className="py-3.5 px-4 text-center text-neutral-400">{p.minStockAlert ?? 3}</td>
                       <td className="py-3.5 px-4 text-center font-bold text-white text-sm">
                         {p.stockQuantity}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-gold-soft">
-                        {formatPrice((p.purchasePrice || 0) * (p.stockQuantity || 0))}
-                      </td>
+                      {canManage && (
+                        <td className="py-3.5 px-4 text-right font-bold text-gold-soft">
+                          {formatPrice((p.purchasePrice || 0) * (p.stockQuantity || 0))}
+                        </td>
+                      )}
                       <td className="py-3.5 px-4 text-center">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -296,7 +284,7 @@ export default function StockPage() {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-white">
-                        {m.productId?.name || 'Article supprimé'}
+                        {(typeof m.productId === 'object' && m.productId?.name) || 'Article supprimé'}
                       </td>
                       <td className="py-3.5 px-4 text-center font-bold text-white">
                         {m.movementType === 'in' ? `+${m.quantity}` : m.movementType === 'adjustment' ? `= ${m.quantity}` : `-${m.quantity}`}

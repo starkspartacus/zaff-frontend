@@ -85,12 +85,19 @@ export default function AppPage() {
             </div>
           </div>
           <div className="text-2xl font-bold text-white tracking-tight">
-            <NumberTicker value={stats?.sales?.revenue || 0} suffix={establishment?.currency || 'F CFA'} />
+            <NumberTicker value={stats?.sales?.netRevenue ?? stats?.sales?.revenue ?? 0} suffix={establishment?.currency || 'F CFA'} />
           </div>
           <p className="text-[11px] text-neutral-400 mt-1 flex items-center gap-1">
-            <span className="text-emerald-400 font-medium">Bénéfice net estimé:</span>{' '}
-            {formatPrice(stats?.sales?.profit || 0)}
+            <span className="text-emerald-400 font-medium">Bénéfice net estimé :</span> {formatPrice(stats?.sales?.profit || 0)}
           </p>
+          {!!stats?.sales?.returns?.amount && (
+            <p className="text-[11px] text-neutral-500">Retours déduits : {formatPrice(stats.sales.returns.amount)}</p>
+          )}
+          {!!stats?.sales?.receivables?.amount && (
+            <Link href="/app/customers" className="text-[11px] text-amber-400 font-semibold hover:underline block">
+              {formatPrice(stats.sales.receivables.amount)} à encaisser ({stats.sales.receivables.customers} client{stats.sales.receivables.customers > 1 ? 's' : ''})
+            </Link>
+          )}
         </SpotlightCard>
 
         <SpotlightCard className="p-5 rounded-2xl bg-neutral-950/70 border-neutral-800/80">

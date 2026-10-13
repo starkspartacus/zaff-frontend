@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { api } from '@/lib/api';
+import { useDashboard } from '@/lib/queries';
 import { SpotlightCard } from '@/components/seraui/spotlight-card';
 import {
   TrendingUp,
@@ -20,33 +20,19 @@ import {
 export default function DashboardPage() {
   const { establishment } = useAuth();
   const [period, setPeriod] = useState('month');
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchStats = async () => {
-    setIsLoading(true);
-    try {
-      const res: any = await api.get(`/analytics/dashboard?period=${period}`);
-      setData(res);
-    } catch (err) {
-      console.error('Error fetching analytics:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-  }, [period]);
+  // Chiffres en direct (WebSocket : ventes, retours, paiements)
+  const { data, isLoading, refetch } = useDashboard(period);
 
   const formatPrice = (amount: number) => {
     return `${(amount || 0).toLocaleString('fr-FR')} ${establishment?.currency || 'F CFA'}`;
   };
 
-  const revenue = data?.sales?.revenue || 0;
+  // Chiffre d'affaires net : retours de la période déduits (même base que le bénéfice)
+  const revenue = data?.sales?.netRevenue ?? data?.sales?.revenue ?? 0;
   const profit = data?.sales?.profit || 0;
   const marginPercent = revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : '0';
-  const averageTicket = data?.sales?.count > 0 ? Math.round(revenue / data.sales.count) : 0;
+  const salesCount = data?.sales?.count || 0;
+  const averageTicket = salesCount > 0 ? Math.round((data?.sales?.revenue || 0) / salesCount) : 0;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -83,7 +69,7 @@ export default function DashboardPage() {
             </button>
           ))}
           <button
-            onClick={fetchStats}
+            onClick={() => refetch()}
             title="Rafraîchir"
             className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
           >
@@ -96,7 +82,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SpotlightCard className="p-5 rounded-2xl bg-neutral-950/70 border-neutral-800/80">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-neutral-400">Chiffre d'Affaires</span>
+            <span className="text-xs font-medium text-neutral-400">Chiffre d&apos;affaires net</span>
             <DollarSign className="w-4 h-4 text-gold" />
           </div>
           <div className="text-2xl font-bold text-white tracking-tight">
@@ -104,7 +90,11 @@ export default function DashboardPage() {
           </div>
           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-neutral-400">
             <span className="text-gold-soft font-medium">{data?.sales?.count || 0}</span> ventes réalisées
+            {!!data?.sales?.returns?.amount && <span>· retours déduits {formatPrice(data.sales.returns.amount)}</span>}
           </div>
+          {!!data?.sales?.receivables?.amount && (
+            <p className="mt-1 text-[11px] text-amber-400 font-semibold">{formatPrice(data.sales.receivables.amount)} encore dus par les clients à crédit</p>
+          )}
         </SpotlightCard>
 
         <SpotlightCard className="p-5 rounded-2xl bg-neutral-950/70 border-neutral-800/80">
@@ -165,7 +155,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {data.topProducts.map((p: any, index: number) => {
+              {data.topProducts.map((p, index) => {
                 const maxQuantity = data.topProducts[0]?.quantitySold || 1;
                 const percent = Math.round((p.quantitySold / maxQuantity) * 100);
 

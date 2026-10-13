@@ -11,6 +11,9 @@ import type {
   Category,
   CreditNoteInfo,
   CurrentRegister,
+  Customer,
+  CustomerDetail,
+  CustomerPayment,
   MyStats,
   OpenRegister,
   Product,
@@ -34,7 +37,16 @@ export interface ReferenceCategory {
 }
 
 export interface DashboardStats {
-  sales: { count: number; revenue: number; profit: number };
+  sales: {
+    count: number;
+    revenue: number;
+    profit: number;
+    /** Retours de la période (déduits du CA) */
+    returns?: { count: number; amount: number };
+    netRevenue?: number;
+    /** Argent encore dû par les clients à crédit */
+    receivables?: { amount: number; customers: number };
+  };
   inventory: { totalProducts: number; totalUnits: number; totalStockValue: number; lowStockCount: number };
   repairs: { pending: number; completed: number };
   bySeller: { sellerId: string | null; sellerName: string; count: number; revenue: number; lastSaleAt: string }[];
@@ -102,6 +114,32 @@ export const useMyStats = (period: string) =>
 export const useDashboard = (period: string, enabled = true) =>
   useQuery({ queryKey: qk.dashboard(period), queryFn: () => get<DashboardStats>(`/analytics/dashboard?period=${period}`), enabled });
 
+export const useSales = (enabled = true) => useQuery({ queryKey: qk.sales(), queryFn: () => get<Sale[]>('/sales'), enabled });
+
+export const useCustomers = (type: 'all' | 'resellers' | 'standard' | 'debtors' = 'all', enabled = true) =>
+  useQuery({ queryKey: qk.customers(type), queryFn: () => get<Customer[]>(`/customers?type=${type}`), enabled });
+
+export const useCustomer = (id: string | null) =>
+  useQuery({ queryKey: qk.customer(id || ''), queryFn: () => get<CustomerDetail>(`/customers/${id}`), enabled: !!id });
+
+export const useStockOverview = () =>
+  useQuery({ queryKey: qk.stockOverview(), queryFn: () => get<{ totalProducts: number; lowStockCount: number; lowStockProducts: Product[]; products: Product[] }>('/stock/overview') });
+
+/** Mouvement de stock (produit peuplé par l'API) */
+export interface StockMovementRow {
+  _id: string;
+  productId: Product | string | null;
+  movementType: 'in' | 'out' | 'adjustment';
+  quantity: number;
+  referenceType?: string;
+  referenceId?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export const useStockMovements = (limit = 100) =>
+  useQuery({ queryKey: qk.stockMovements(limit), queryFn: () => get<StockMovementRow[]>(`/stock/movements?limit=${limit}`) });
+
 export const useRecentSales = (enabled = true) =>
   useQuery({ queryKey: qk.sales(), queryFn: () => get<Sale[]>('/sales'), enabled, select: (s) => s.slice(0, 5) });
 
@@ -144,7 +182,7 @@ export function useSellUnit() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) => post<{ sale: Sale; unit: ProductUnit }>('/units/sell', body),
-    onSuccess: () => invalidate('my-stats', 'units', 'products', 'sales', 'dashboard', 'cash-closings'),
+    onSuccess: () => invalidate('my-stats', 'units', 'products', 'stock', 'sales', 'dashboard', 'cash-closings', 'customers'),
   });
 }
 
@@ -152,7 +190,35 @@ export function useCreateSale() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (body: Record<string, unknown>) => post<Sale>('/sales', body),
-    onSuccess: () => invalidate('my-stats', 'units', 'products', 'sales', 'dashboard', 'cash-closings'),
+    onSuccess: () => invalidate('my-stats', 'units', 'products', 'stock', 'sales', 'dashboard', 'cash-closings', 'customers'),
+  });
+}
+
+export function useCreateCustomer() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) => post<Customer>('/customers', body),
+    onSuccess: () => invalidate('customers'),
+  });
+}
+
+/** Encaisser un paiement d'un client à crédit (revendeur) */
+export function useCustomerPayment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; amount: number; method: string; notes?: string }) =>
+      post<{ payment: CustomerPayment; balance: number }>(`/customers/${id}/payments`, body),
+    onSuccess: () => invalidate('customers', 'sales', 'cash-closings', 'dashboard', 'my-stats'),
+  });
+}
+
+/** Retour de marchandise sur une facture (lot invendu d'un revendeur), propriétaire */
+export function useReturnSaleItems() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ saleId, ...body }: { saleId: string; reason?: string; refundMethod?: string; items: { productId: string; quantity: number; serialNumber?: string }[] }) =>
+      post<{ message: string; value: number; debtReduction: number; refundDue: number; refunded: number }>(`/sales/${saleId}/return`, body),
+    onSuccess: () => invalidate('sales', 'units', 'products', 'stock', 'customers', 'dashboard', 'cash-closings'),
   });
 }
 

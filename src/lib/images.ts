@@ -87,3 +87,22 @@ export interface ImageUsage {
 
 export const formatBytes = (n: number) =>
   n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} Go` : n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(1)} Mo` : `${Math.max(1, Math.round(n / 1024))} Ko`;
+
+/**
+ * Photo prise par la boutique pour son produit : envoyée au moment d'enregistrer le produit,
+ * visible par cette boutique seulement. Renvoie l'identifiant de la photo.
+ */
+export async function uploadShopImage(img: PreparedImage, meta: { brand: string; model: string; color?: string; category?: string }) {
+  const form = new FormData();
+  form.append('file', img.blob, 'photo.' + (img.blob.type === 'image/webp' ? 'webp' : 'jpg'));
+  form.append('thumb', img.thumb, 'vignette.' + (img.thumb.type === 'image/webp' ? 'webp' : 'jpg'));
+  form.append('brand', meta.brand);
+  form.append('model', meta.model);
+  if (meta.color) form.append('color', meta.color);
+  if (meta.category) form.append('category', meta.category);
+  const res = (await api.post('/global/images/shop', form, { headers: { 'Content-Type': 'multipart/form-data' } })) as unknown as SharedImage;
+  return res.id;
+}
+
+/** Produit pas enregistré : la photo envoyée juste avant est effacée (aucun fichier orphelin) */
+export const discardShopImage = (id: string) => api.delete(`/global/images/${id}/pending`).catch(() => undefined);

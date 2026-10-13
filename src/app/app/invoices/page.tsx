@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
-import { api } from '@/lib/api';
+import { useSales } from '@/lib/queries';
+import type { Sale } from '@/lib/types';
+import { ReturnModal } from '@/components/sales/return-modal';
 import { Input } from '@/components/ui/input';
 import {
   FileSignature,
@@ -19,6 +21,7 @@ import {
   User,
   CheckCircle2,
   FileText,
+  Undo2,
 } from 'lucide-react';
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -32,29 +35,14 @@ const paymentLabel = (method?: string) => PAYMENT_LABELS[method || 'cash'] || me
 
 export default function InvoicesPage() {
   const { establishment } = useAuth();
-  const [sales, setSales] = useState<any[]>([]);
+  // Liste en direct : nouvelles ventes, paiements et retours apparaissent sans recharger
+  const { data: sales = [], isLoading } = useSales();
   const [search, setSearch] = useState('');
-  const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedSale = sales.find((s) => s._id === selectedId) || null;
+  const setSelectedSale = (s: Sale | null) => setSelectedId(s?._id || null);
+  const [returning, setReturning] = useState<Sale | null>(null);
   const [printFormat, setPrintFormat] = useState<'thermal' | 'a4'>('thermal');
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchSales();
-  }, []);
-
-  const fetchSales = async () => {
-    setIsLoading(true);
-    try {
-      const res: any = await api.get('/sales');
-      if (Array.isArray(res)) {
-        setSales(res);
-      }
-    } catch (err) {
-      console.error('Error fetching sales:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const currency = establishment?.currency || 'F CFA';
   const formatPrice = (val: number) => `${(val || 0).toLocaleString('fr-FR')} ${currency}`;
@@ -131,7 +119,7 @@ export default function InvoicesPage() {
                       {sale.invoiceNumber}
                     </td>
                     <td className="py-3.5 px-4 text-neutral-300">
-                      {new Date(sale.createdAt).toLocaleDateString('fr-FR', {
+                      {new Date(sale.saleDate || sale.createdAt || Date.now()).toLocaleDateString('fr-FR', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
@@ -149,6 +137,12 @@ export default function InvoicesPage() {
                       <span className="capitalize px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-900 text-neutral-300 border border-neutral-800">
                         {paymentLabel(sale.paymentMethod)}
                       </span>
+                      {(sale.amountDue || 0) > 0 && (
+                        <span className="block mt-1 text-[10px] font-bold text-amber-400">Reste {formatPrice(sale.amountDue || 0)}</span>
+                      )}
+                      {sale.returnStatus && (
+                        <span className="block mt-1 text-[10px] text-neutral-400">{sale.returnStatus === 'returned' ? 'Retournée' : 'Retour partiel'}</span>
+                      )}
                     </td>
                     <td className="py-3.5 px-4 text-right font-extrabold text-gold-soft">
                       {formatPrice(sale.total)}
@@ -197,7 +191,7 @@ export default function InvoicesPage() {
                   Facture {selectedSale.invoiceNumber}
                 </h2>
                 <p className="text-xs text-neutral-400">
-                  Émise le {new Date(selectedSale.createdAt).toLocaleDateString('fr-FR')}
+                  Émise le {new Date(selectedSale.saleDate || selectedSale.createdAt || Date.now()).toLocaleDateString('fr-FR')}
                 </p>
               </div>
 
@@ -245,10 +239,11 @@ export default function InvoicesPage() {
                   </div>
 
                   <div className="space-y-1.5 border-b border-dashed border-neutral-700 pb-3">
-                    {selectedSale.items?.map((it: any, idx: number) => (
+                    {selectedSale.items?.map((it, idx) => (
                       <div key={idx} className="flex justify-between items-start text-[11px]">
                         <div>
                           <p className="font-semibold text-white">{it.productName}</p>
+                          {it.serialNumber && <p className="text-[10px] text-neutral-400">N° {it.serialNumber}</p>}
                           <p className="text-neutral-500">
                             {it.quantity} x {formatPrice(it.unitPrice)}
                           </p>
@@ -261,20 +256,39 @@ export default function InvoicesPage() {
                   </div>
 
                   <div className="space-y-1 text-xs border-b border-dashed border-neutral-700 pb-3">
-                    {selectedSale.discount > 0 && (
+                    {(selectedSale.discount || 0) > 0 && (
                       <div className="flex justify-between text-neutral-400">
                         <span>Remise:</span>
-                        <span>-{formatPrice(selectedSale.discount)}</span>
+                        <span>-{formatPrice(selectedSale.discount || 0)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm font-extrabold text-white pt-1">
                       <span>TOTAL TTC:</span>
                       <span className="text-gold-soft">{formatPrice(selectedSale.total)}</span>
                     </div>
-                    <div className="flex justify-between text-neutral-400 text-[10px]">
-                      <span>Règlement ({paymentLabel(selectedSale.paymentMethod)}):</span>
-                      <span>{formatPrice(selectedSale.paidAmount || selectedSale.total)}</span>
-                    </div>
+                    {(selectedSale.creditNoteAmount || 0) > 0 && (
+                      <div className="flex justify-between text-neutral-400 text-[10px]">
+                        <span>Avoir {selectedSale.creditNoteCode}:</span>
+                        <span>-{formatPrice(selectedSale.creditNoteAmount || 0)}</span>
+                      </div>
+                    )}
+                    {selectedSale.paymentMethod === 'credit' ? (
+                      <>
+                        <div className="flex justify-between text-neutral-400 text-[10px]">
+                          <span>Déjà payé :</span>
+                          <span>{formatPrice(selectedSale.paidAmount || 0)}</span>
+                        </div>
+                        <div className="flex justify-between text-amber-400 font-bold text-[11px]">
+                          <span>Reste à payer :</span>
+                          <span>{formatPrice(selectedSale.amountDue || 0)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between text-neutral-400 text-[10px]">
+                        <span>Payé ({paymentLabel(selectedSale.paymentMethod)}) :</span>
+                        <span>{formatPrice(selectedSale.total - (selectedSale.creditNoteAmount || 0))}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="text-center text-[10px] text-neutral-500 pt-1 space-y-0.5">
@@ -301,7 +315,7 @@ export default function InvoicesPage() {
                         {selectedSale.invoiceNumber}
                       </p>
                       <p className="text-neutral-400">
-                        {new Date(selectedSale.createdAt).toLocaleDateString('fr-FR')}
+                        {new Date(selectedSale.saleDate || selectedSale.createdAt || Date.now()).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
                   </div>
@@ -328,9 +342,12 @@ export default function InvoicesPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-800/60">
-                      {selectedSale.items?.map((it: any, idx: number) => (
+                      {selectedSale.items?.map((it, idx) => (
                         <tr key={idx}>
-                          <td className="py-2 font-medium text-white">{it.productName}</td>
+                          <td className="py-2 font-medium text-white">
+                            {it.productName}
+                            {it.serialNumber && <span className="block text-[10px] font-mono text-neutral-400">N° série / IMEI : {it.serialNumber}</span>}
+                          </td>
                           <td className="py-2 text-center text-neutral-400">{it.quantity}</td>
                           <td className="py-2 text-right text-neutral-400">{formatPrice(it.unitPrice)}</td>
                           <td className="py-2 text-right font-bold text-white">{formatPrice(it.total)}</td>
@@ -345,16 +362,22 @@ export default function InvoicesPage() {
                         <span>Sous-total:</span>
                         <span>{formatPrice(selectedSale.subtotal || selectedSale.total)}</span>
                       </div>
-                      {selectedSale.discount > 0 && (
+                      {(selectedSale.discount || 0) > 0 && (
                         <div className="flex justify-between text-neutral-400">
                           <span>Remise:</span>
-                          <span>-{formatPrice(selectedSale.discount)}</span>
+                          <span>-{formatPrice(selectedSale.discount || 0)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-base font-extrabold text-gold-soft pt-1 border-t border-neutral-800">
-                        <span>Net à Payer:</span>
+                        <span>Net à payer :</span>
                         <span>{formatPrice(selectedSale.total)}</span>
                       </div>
+                      {(selectedSale.amountDue || 0) > 0 && (
+                        <div className="flex justify-between text-amber-400 font-bold">
+                          <span>Reste à payer :</span>
+                          <span>{formatPrice(selectedSale.amountDue || 0)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -369,6 +392,14 @@ export default function InvoicesPage() {
               >
                 Fermer
               </button>
+              {selectedSale.returnStatus !== 'returned' && (
+                <button
+                  onClick={() => setReturning(selectedSale)}
+                  className="px-4 py-2.5 rounded-xl border border-neutral-700 text-xs text-neutral-200 hover:border-gold flex items-center gap-2"
+                >
+                  <Undo2 className="w-4 h-4" /> Retour de marchandise
+                </button>
+              )}
               <button
                 onClick={() => window.print()}
                 className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs hover:brightness-110 transition-all flex items-center gap-2 shadow-lg shadow-gold/20"
@@ -379,6 +410,7 @@ export default function InvoicesPage() {
           </div>
         </div>
       )}
+      {returning && <ReturnModal sale={returning} fmt={formatPrice} onClose={() => setReturning(null)} />}
     </div>
   );
 }

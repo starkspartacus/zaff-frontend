@@ -64,9 +64,56 @@ export interface Sale {
   creditNoteCode?: string | null;
   creditNoteAmount?: number;
   /** Client (renvoyé peuplé par l'API) */
-  customerId?: { _id: string; name: string; phone?: string | null } | null;
+  customerId?: { _id: string; name: string; phone?: string | null; isReseller?: boolean } | null;
   createdAt?: string;
   items: SaleItem[];
+  subtotal?: number;
+  discount?: number;
+  /** Montant remis par le client (espèces : monnaie rendue = remis − total) */
+  paidAmount?: number | null;
+  saleType?: 'purchase' | 'reseller';
+  /** Vente à crédit : acompte versé, reste à payer, statut */
+  depositAmount?: number;
+  depositMethod?: string | null;
+  amountDue?: number;
+  paymentStatus?: 'paid' | 'partial' | 'unpaid';
+  returnStatus?: 'partial' | 'returned' | null;
+  returnedAmount?: number;
+}
+
+/** Client ou revendeur de la boutique */
+export interface Customer {
+  _id: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  companyName?: string | null;
+  notes?: string | null;
+  isReseller?: boolean;
+  totalPurchases?: number;
+  /** Reste à payer (ventes à crédit) */
+  balance?: number;
+  createdAt?: string;
+}
+
+/** Argent reçu d'un client à crédit (acompte, versement) ou remboursé (montant négatif) */
+export interface CustomerPayment {
+  _id: string;
+  customerId: string;
+  amount: number;
+  method: string;
+  kind: 'deposit' | 'payment' | 'refund';
+  allocations: { saleId: string; invoiceNumber: number; amount: number }[];
+  notes?: string | null;
+  collectedByName?: string | null;
+  createdAt: string;
+}
+
+export interface CustomerDetail {
+  customer: Customer;
+  sales: Sale[];
+  payments: CustomerPayment[];
 }
 
 export type ScanLookup =
@@ -101,6 +148,8 @@ export interface CurrentRegister {
   expectedCash: number;
   since: string | null;
   lastClosedAt: string | null;
+  /** Acomptes et paiements des clients à crédit encaissés */
+  collections?: { amount: number; count: number };
   sales: Pick<Sale, '_id' | 'invoiceNumber' | 'total' | 'paymentMethod' | 'saleDate' | 'items'>[];
 }
 

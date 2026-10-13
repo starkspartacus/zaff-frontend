@@ -55,6 +55,21 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   de la boîte identifie seulement le modèle (rappelé dans la fiche produit et la fenêtre de scan du code-barres).
 - `/app/catalog` lit les produits avec React Query (`useProducts`) : stock rafraîchi en direct par le WebSocket.
   Ne jamais charger une liste avec un `api.get` ponctuel dans un `useEffect` (elle ne se met plus à jour).
+- `/app/sales` **caisse** (propriétaire, vendeur) : produits, catégories et clients en React Query (stock en direct). Le **tarif
+  revendeur** s'applique seulement quand le client choisi est un revendeur (plus d'interrupteur libre) ; prix recalculés au
+  changement de client. Paiement : espèces (montant remis < total → « Il manque … », validation bloquée), Mobile Money,
+  carte, virement, **À crédit** (client obligatoire, acompte facultatif espèces / Mobile Money, « Reste à payer »). Remise
+  bornée à [0, sous-total]. Garantie de la boutique (`defaultWarrantyMonths`) enregistrée pour les appareils à N° de série d'un
+  client connu. Le serveur recalcule de toute façon prix et totaux. Ticket : remise, monnaie rendue, acompte et reste à payer.
+- `/app/customers` **clients & revendeurs** : onglets Tous / Particuliers / Revendeurs / « Doivent de l'argent », bandeau
+  « … à encaisser », colonnes achats et reste à payer, **Encaisser** (`PaymentModal`, jamais plus que la dette), fiche
+  (`CustomerPanel` : ventes avec statut payée / partiellement / à payer, paiements reçus, contrat), téléphone `PhoneInput`
+  (E.164), suppression réservée au propriétaire. **Retour de marchandise** (propriétaire, `components/sales/return-modal.tsx`,
+  aussi dans les Factures) : quantités / N° de série rapportés, part déduite du reste à payer, surplus remboursé.
+- `/app/invoices` : liste en direct (`useSales`), N° de série / IMEI sur le ticket et la facture A4, avoir, reste à payer,
+  « Retour partiel ». `/app/stock` : React Query, prix d'achat et valeur du stock masqués aux vendeurs.
+- Tableau de bord et accueil propriétaire : CA **net** (retours déduits) et « … à encaisser » (`sales.receivables`).
+  Clôture de caisse : « dont … reçus de clients à crédit » ; les ventes à crédit ne sont pas comptées comme encaissées.
 - `/app/my-activity` : mes ventes / mes mises en stock. `/app` propriétaire : chiffres du jour, ventes par
   vendeur, équipe en ligne (temps réel).
 - `/app/cash-closing` vendeur (et propriétaire qui vend) : ma caisse en cours (espèces / Mobile Money à remettre),
@@ -93,9 +108,11 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   accessoires → 6 Prix (marge en direct) → 7 Stock. Suggestions en cascade depuis `GET /global/reference/devices`
   (`useDeviceCatalog`) + les produits déjà créés par la boutique ; toute valeur absente se tape (« Ajouter « … » »).
   Alerte doublon (« Utiliser ce produit »), validation Zod `ProductFormSchema`.
-- **Images produits** : les boutiques **ne photographient plus** leurs produits. Section « Photo » de la fiche produit :
-  photos officielles de l'appareil du catalogue global (la bonne couleur d'abord, choisie automatiquement), ou « Sans
-  photo » ; bouton « Signaler » si une photo est inadaptée. Le produit enregistre `imageId` + `deviceId`. `ProductVisual`
+- **Images produits** : section « Photo » de la fiche produit : photos du catalogue global (la bonne couleur d'abord,
+  choisie automatiquement), **« Prendre / choisir une photo »** (appareil photo du téléphone `capture="environment"` ou
+  galerie, réduite dans le navigateur `prepareImage`, envoyée seulement à l'enregistrement `uploadShopImage` →
+  `/global/images/shop`, annulée si l'enregistrement échoue ; visible par la boutique seulement), ou « Sans photo » ;
+  bouton « Signaler » si une photo est inadaptée. Le produit enregistre `imageId` + `deviceId`. `ProductVisual`
   affiche la photo (vignette ou pleine taille), sinon une illustration colorée par catégorie.
 - **Espace administrateur `/admin`** (hors `/app`, session séparée `stores/admin-store.ts` clé `zaff-admin`, client
   `src/lib/admin-api.ts` ; 401/403 → `/admin/login`). Connexion avec l'e-mail et le mot de passe de l'environnement du
