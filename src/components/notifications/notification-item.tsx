@@ -88,5 +88,7 @@ export function notificationHref(n: AppNotification): string | null {
   if (n.type === 'return.created') return '/app/returns';
   if (n.type === 'repair.ready') return '/app/repairs';
   if (n.type === 'catalog.photo') return '/app/catalog';
+  if (n.type.startsWith('consignment.')) return '/app/consignments';
+  if (n.type === 'customer.payment') return '/app/customers';
   return null;
 }

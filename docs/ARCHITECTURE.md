@@ -81,6 +81,14 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   politique de la boutique** (échange, avoir, remboursement, réparation sous garantie / payante) → résultat (code
   d'avoir imprimable, montant à rendre, ticket SAV). Échange : « Scanner le nouvel appareil » ouvre
   `/app/scan?credit=AV-…` (lu avec `useSearchParams` sous `<Suspense>`), l'avoir est déduit du prix.
+- `/app/consignments` **Dépôts revendeurs** (propriétaire, vendeur ; menu « Dépôts revendeurs ») : appareils confiés à un
+  revendeur (bon `DR-…`, 3 jours par défaut, pièce d'identité facultative, prix convenu par appareil), compteur de jours
+  vert / orange / rouge, Relancer (WhatsApp), Bon (impression), Clôturer (chaque appareil Vendu / Rendu / Il le garde ;
+  paiement espèces, Mobile Money ou plus tard). Un appareil en dépôt scanné dans `/app/scan` → « En dépôt chez … » et lien
+  `/app/consignments?serial=` qui ouvre directement sa clôture.
+- **Rapport de clôture de caisse** (`ClosingReportActions`, `components/cash/closing-report.tsx`) : après la clôture et dans
+  les historiques (vendeur, propriétaire ; chargé à la demande) : WhatsApp au patron, Copier, Imprimer, état de l'e-mail
+  (envoyé automatiquement au patron par le serveur via Resend).
 - `/app/settings` propriétaire : politique de retour et de garantie, avec le résumé « Ce que vos clients entendront ».
 - `/register` : inscription en 4 étapes animées (Votre boutique → Adresse → Vous → Sécurité, frise horizontale
   sur mobile / verticale sur ordinateur). Pays / villes / communes / devises viennent de l'API (`/global/geo/*`,

@@ -117,7 +117,14 @@ export interface CustomerDetail {
 }
 
 export type ScanLookup =
-  | { type: 'unit'; unit: ProductUnit; product: Product; sellable: boolean }
+  | {
+      type: 'unit';
+      unit: ProductUnit;
+      product: Product;
+      sellable: boolean;
+      /** Appareil chez un revendeur : à qui, depuis quand */
+      consignment?: { id: string; code: string; customerName: string; daysOut: number; dueAt: string; overdue: boolean } | null;
+    }
   | { type: 'product'; product: Product; availableUnits: number };
 
 export interface AddUnitsResult {
@@ -276,3 +283,58 @@ export interface CreditNoteInfo {
 }
 
 export const errorMessage = (err: unknown) => (err instanceof Error ? err.message : 'Une erreur est survenue');
+
+/** Appareil confié à un revendeur */
+export interface ConsignmentItem {
+  unitId: string;
+  productId: string;
+  productName: string;
+  serialNumber: string;
+  price: number;
+  status: 'out' | 'sold' | 'returned';
+  closedAt: string | null;
+  closedByName: string | null;
+  invoiceNumber: number | null;
+}
+
+/** Bon de remise à un revendeur (dépôt) */
+export interface Consignment {
+  id: string;
+  _id: string;
+  code: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string | null;
+  items: ConsignmentItem[];
+  dueAt: string;
+  days: number;
+  notes: string | null;
+  handedByName: string | null;
+  status: 'open' | 'closed';
+  createdAt: string;
+  closedAt: string | null;
+  daysOut: number;
+  overdue: boolean;
+  outCount: number;
+  outValue: number;
+}
+
+export interface ConsignmentSummary {
+  units: number;
+  value: number;
+  overdueUnits: number;
+  resellers: number;
+  consignments: number;
+}
+
+/** Rapport de clôture de caisse */
+export interface ClosingReport {
+  code: string;
+  subject: string;
+  text: string;
+  html: string;
+  ownerPhone: string | null;
+  emailedTo: string[];
+  emailedAt: string | null;
+  mailEnabled: boolean;
+}

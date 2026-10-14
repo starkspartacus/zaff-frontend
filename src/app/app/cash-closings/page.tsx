@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { ReportOnOpen } from '@/components/cash/closing-report';
 import { CheckCircle2, Clock, HandCoins, Lock, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useClosings, useOpenRegisters, useValidateClosing } from '@/lib/queries';
@@ -159,6 +160,7 @@ export default function OwnerCashClosingsPage() {
                       <strong>{c.sellerName}</strong> · {dateTime(c.closedAt)}
                     </p>
                     <ClosingStatus closing={c} />
+                    <ReportOnOpen closingId={c._id} />
                   </div>
                   <div className="flex items-center gap-3">
                     {c.cashDifference !== 0 && <DifferenceBadge difference={c.cashDifference} currency={currency} className="text-[10px] py-0.5" />}

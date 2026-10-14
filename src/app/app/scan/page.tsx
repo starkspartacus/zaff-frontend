@@ -383,6 +383,30 @@ function FoundCard(props: {
     );
   }
 
+  if (data.type === 'unit' && !data.sellable && data.consignment) {
+    const k = data.consignment;
+    return (
+      <ResultCard tone="error" onClose={props.onCancel}>
+        <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto" />
+        <p className="text-base font-semibold text-white">Appareil en dépôt chez {k.customerName}</p>
+        <p className="text-sm text-neutral-300">
+          {product.name}
+          <span className="block font-mono text-xs text-neutral-500">{data.unit.serialNumber}</span>
+        </p>
+        <p className={`text-xs ${k.overdue ? 'text-red-400' : 'text-neutral-400'}`}>
+          Bon {k.code} · depuis {k.daysOut} jour(s){k.overdue ? ' · délai dépassé' : ''}
+        </p>
+        <Link
+          href={`/app/consignments?serial=${encodeURIComponent(data.unit.serialNumber)}`}
+          className="block w-full h-12 leading-[3rem] rounded-xl bg-gold text-ink font-semibold"
+        >
+          Enregistrer le retour ou la vente
+        </Link>
+        <ScanAgainButton onClick={props.onCancel} />
+      </ResultCard>
+    );
+  }
+
   if (data.type === 'unit' && !data.sellable) {
     const u = data.unit;
     return (

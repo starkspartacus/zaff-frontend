@@ -11,6 +11,9 @@ import type {
   Category,
   CreditNoteInfo,
   CurrentRegister,
+  ClosingReport,
+  Consignment,
+  ConsignmentSummary,
   Customer,
   CustomerDetail,
   CustomerPayment,
@@ -116,6 +119,15 @@ export const useDashboard = (period: string, enabled = true) =>
 
 export const useSales = (enabled = true) => useQuery({ queryKey: qk.sales(), queryFn: () => get<Sale[]>('/sales'), enabled });
 
+export const useConsignments = (status: 'open' | 'closed' | 'all' = 'open', enabled = true) =>
+  useQuery({ queryKey: qk.consignments(status), queryFn: () => get<Consignment[]>(`/consignments?status=${status}`), enabled });
+
+export const useConsignmentSummary = (enabled = true) =>
+  useQuery({ queryKey: qk.consignmentSummary(), queryFn: () => get<ConsignmentSummary>('/consignments/summary'), enabled });
+
+export const useClosingReport = (id: string | null) =>
+  useQuery({ queryKey: qk.closingReport(id || ''), queryFn: () => get<ClosingReport>(`/cash-closings/${id}/report`), enabled: !!id });
+
 export const useCustomers = (type: 'all' | 'resellers' | 'standard' | 'debtors' = 'all', enabled = true) =>
   useQuery({ queryKey: qk.customers(type), queryFn: () => get<Customer[]>(`/customers?type=${type}`), enabled });
 
@@ -219,6 +231,25 @@ export function useReturnSaleItems() {
     mutationFn: ({ saleId, ...body }: { saleId: string; reason?: string; refundMethod?: string; items: { productId: string; quantity: number; serialNumber?: string }[] }) =>
       post<{ message: string; value: number; debtReduction: number; refundDue: number; refunded: number }>(`/sales/${saleId}/return`, body),
     onSuccess: () => invalidate('sales', 'units', 'products', 'stock', 'customers', 'dashboard', 'cash-closings'),
+  });
+}
+
+/** Remettre des appareils à un revendeur */
+export function useCreateConsignment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (body: Record<string, unknown>) => post<Consignment>('/consignments', body),
+    onSuccess: () => invalidate('consignments', 'units', 'products', 'stock', 'customers', 'dashboard'),
+  });
+}
+
+/** Retour du revendeur : appareils vendus (il paie) et / ou rendus (remis en stock) */
+export function useSettleConsignment() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; sold?: string[]; returned?: string[]; paymentMethod?: string; depositAmount?: number; depositMethod?: string }) =>
+      post<{ consignment: Consignment; sale: Sale | null }>(`/consignments/${id}/settle`, body),
+    onSuccess: () => invalidate('consignments', 'units', 'products', 'stock', 'customers', 'sales', 'cash-closings', 'dashboard', 'my-stats'),
   });
 }
 

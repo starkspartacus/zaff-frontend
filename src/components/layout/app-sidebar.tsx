@@ -28,6 +28,7 @@ import {
   Lock,
   Wallet,
   Undo2,
+  Handshake,
   Settings,
 } from 'lucide-react';
 
@@ -48,6 +49,7 @@ const navGroups: NavGroup[] = [
       { title: 'Vendre (scan)', href: '/app/scan', icon: ScanLine, badge: 'Scan' },
       { title: 'Vitrine des articles', href: '/app/showcase', icon: LayoutGrid },
       { title: 'Retours & garantie', href: '/app/returns', icon: Undo2 },
+      { title: 'Dépôts revendeurs', href: '/app/consignments', icon: Handshake },
       { title: 'Mise en stock (scan)', href: '/app/receive', icon: PackagePlus },
       { title: 'Mon activité du jour', href: '/app/my-activity', icon: CalendarCheck },
       { title: 'Clôturer ma caisse', href: '/app/cash-closing', icon: Lock },

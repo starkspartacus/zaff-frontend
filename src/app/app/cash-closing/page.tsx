@@ -10,6 +10,7 @@ import { errorMessage, PAYMENT_LABELS, type CashClosing, type PaymentTotals } fr
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { BorderBeam } from '@/components/magicui/border-beam';
 import { NumberTicker } from '@/components/magicui/number-ticker';
+import { ClosingReportActions, ReportOnOpen } from '@/components/cash/closing-report';
 import { ClosingStatus, DifferenceBadge, PaymentBreakdown, dateTime, money } from '@/components/cash/closing-ui';
 
 export default function CashClosingPage() {
@@ -77,6 +78,9 @@ export default function CashClosingPage() {
               <span className="text-xs text-neutral-400">Espèces comptées : {money(done.declaredCash, currency)}</span>
               <DifferenceBadge difference={done.cashDifference} currency={currency} />
             </div>
+          </div>
+          <div className="rounded-2xl bg-neutral-950 border border-neutral-800 p-4">
+            <ClosingReportActions closingId={done._id} />
           </div>
           <p className="text-xs text-neutral-400">Votre responsable a été prévenu. Vous serez notifié dès qu&apos;il confirme la réception.</p>
           <div className="grid grid-cols-2 gap-2">
@@ -239,6 +243,7 @@ export default function CashClosingPage() {
                 {c.cashDifference !== 0 && <DifferenceBadge difference={c.cashDifference} currency={currency} className="py-0.5 text-[10px]" />}
               </div>
               <ClosingStatus closing={c} />
+              <ReportOnOpen closingId={c._id} />
             </div>
           ))
         )}
@@ -287,3 +292,4 @@ export default function CashClosingPage() {
     </div>
   );
 }
+
