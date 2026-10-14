@@ -32,6 +32,8 @@ import type {
   Supplier,
   StockCount,
   StockCountScan,
+  CodeSeries,
+  CodeBatch,
 } from '@/lib/types';
 
 const get = <T,>(url: string) => api.get(url) as unknown as Promise<T>;
@@ -403,5 +405,41 @@ export function useStockCountScan() {
     mutationFn: (a: { id: string; code: string } | { id: string; productId: string; qty: number }) =>
       ('code' in a ? post<StockCountScan>(`/stock-counts/${a.id}/scan`, { code: a.code }) : post<StockCountScan>(`/stock-counts/${a.id}/count`, { productId: a.productId, qty: a.qty })),
     onSuccess: () => invalidate('stock-counts'),
+  });
+}
+
+// ─── Codes appareils générés ───
+export const useCodeSeries = () =>
+  useQuery({ queryKey: qk.codeSeries(), queryFn: () => get<{ series: CodeSeries[]; suggestions: Array<{ category: string; prefix: string }> }>('/code-labels/series') });
+export const useCodeBatches = () => useQuery({ queryKey: qk.codeBatches(), queryFn: () => get<CodeBatch[]>('/code-labels/batches') });
+export const useCodeBatch = (id: string | null) =>
+  useQuery({ queryKey: qk.codeBatch(id || ''), queryFn: () => get<CodeBatch>(`/code-labels/batches/${id}`), enabled: !!id });
+
+export function useSaveCodeSeries() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (a: { id?: string; category: string; prefix: string } | { id: string; remove: true }) =>
+      ('remove' in a
+        ? api.delete(`/code-labels/series/${a.id}`)
+        : a.id
+          ? api.put(`/code-labels/series/${a.id}`, { category: a.category, prefix: a.prefix })
+          : api.post('/code-labels/series', { category: a.category, prefix: a.prefix })) as unknown as Promise<CodeSeries>,
+    onSuccess: () => invalidate('code-labels'),
+  });
+}
+
+export function useGenerateCodes() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (body: { seriesId: string; count: number; productId?: string }) => post<CodeBatch>('/code-labels/batches', body),
+    onSuccess: () => invalidate('code-labels'),
+  });
+}
+
+export function useMarkPrinted() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; format: 'a4' | 'thermal'; count?: number }) => post<{ ok: boolean }>(`/code-labels/batches/${id}/printed`, body),
+    onSuccess: () => invalidate('code-labels'),
   });
 }

@@ -2,17 +2,19 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, FileSignature, Plus, RotateCcw, Settings, ShieldCheck, Trash2, Undo2, Wrench } from 'lucide-react';
+import { CheckCircle2, FileSignature, QrCode, Plus, RotateCcw, Settings, ShieldCheck, Trash2, Undo2, Wrench } from 'lucide-react';
 import { ContractSettingsPanel } from '@/components/contract/contract-settings';
+import { CodeLabelsPanel } from '@/components/labels/code-labels-panel';
 import { useReturnPolicy, useUpdateReturnPolicy } from '@/lib/queries';
 import { errorMessage, type ActionToggles, type ReturnPolicy } from '@/lib/types';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { cn } from '@/lib/utils';
 
-type Tab = 'returns' | 'contract';
+type Tab = 'returns' | 'contract' | 'codes';
 const TABS: Array<{ id: Tab; label: string; icon: React.ElementType }> = [
   { id: 'returns', label: 'Retours et garantie', icon: ShieldCheck },
   { id: 'contract', label: 'Contrat client', icon: FileSignature },
+  { id: 'codes', label: 'Codes appareils', icon: QrCode },
 ];
 
 export default function SettingsPage() {
@@ -26,7 +28,9 @@ export default function SettingsPage() {
         <p className="text-xs text-neutral-400 mt-0.5">
           {tab === 'returns'
             ? 'Retours, avoirs et garantie : vos vendeurs ne proposeront que ce que vous autorisez ici.'
-            : 'Le contrat de vente et de garantie remis au client après chaque vente.'}
+            : tab === 'contract'
+              ? 'Le contrat de vente et de garantie remis au client après chaque vente.'
+              : 'Codes uniques (QR + code-barres) pour les appareils livrés sans N° de série, par catégorie.'}
         </p>
       </div>
       <div role="tablist" className="grid grid-cols-2 p-1 rounded-2xl bg-neutral-900 border border-neutral-800">
@@ -47,7 +51,7 @@ export default function SettingsPage() {
           </button>
         ))}
       </div>
-      {tab === 'returns' ? <ReturnPolicyTab /> : <ContractSettingsPanel />}
+      {tab === 'returns' ? <ReturnPolicyTab /> : tab === 'contract' ? <ContractSettingsPanel /> : <CodeLabelsPanel />}
     </div>
   );
 }

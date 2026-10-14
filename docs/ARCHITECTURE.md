@@ -100,6 +100,12 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   accessoires +1 au scan ou quantité tapée (attendu masqué aux vendeurs : comptage à l'aveugle) ; Terminer (correction du
   stock des accessoires au choix) → rapport : manquants (valeur), inattendus, codes inconnus, vendus pendant l'inventaire,
   écarts ; impression ; historique.
+- **Étiquettes QR des appareils** (`CodeLabelsPanel`, `src/components/labels/`) : Paramètres → onglet « Codes appareils »
+  (propriétaire : préfixes par catégorie, un clic depuis les catégories de ses produits) et `/app/labels` (magasinier :
+  génération seulement). Générer 1–500 codes (modèle prévu facultatif) → impression **rouleau thermique 50 × 30 mm** ou
+  **planche A4 3 × 8** (`printLabels` : QR `qrcode` + code-barres Code 128 `jsbarcode` + code en clair) ; fenêtre ouverte
+  au clic (`openPrintWindow`, sinon bloquée). Historique : utilisés / générés, impressions, réimprimer les libres.
+  Lien depuis la Mise en stock (« Appareil sans N° de série lisible ? »).
 - `/app/settings` propriétaire : politique de retour et de garantie, avec le résumé « Ce que vos clients entendront ».
 - `/register` : inscription en 4 étapes animées (Votre boutique → Adresse → Vous → Sécurité, frise horizontale
   sur mobile / verticale sur ordinateur). Pays / villes / communes / devises viennent de l'API (`/global/geo/*`,

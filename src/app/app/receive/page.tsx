@@ -2,6 +2,7 @@
 
 import React, { Suspense, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { scanFeedback } from '@/components/scan/feedback';
 import { errorMessage, type Product } from '@/lib/types';
@@ -184,6 +185,13 @@ function ReceiveStock() {
           placeholder="Scannez ou tapez le N° de série / IMEI"
           hint="Douchette, caméra (bouton Caméra) ou clavier : tapez le numéro puis « OK ». « 123 » ouvre le clavier chiffres. IMEI : *#06# sur le téléphone ou étiquette de la boîte."
         />
+        <p className="text-[11px] text-neutral-500">
+          Appareil sans N° de série lisible ?{' '}
+          <Link href="/app/labels" className="text-gold-soft underline">
+            Imprimez une étiquette QR ZAFF
+          </Link>
+          , collez-la sur l&apos;appareil et scannez-la ici.
+        </p>
 
         {suspect && (
           <div role="alert" className="rounded-2xl border border-amber-500/50 bg-amber-500/10 p-4 space-y-3">

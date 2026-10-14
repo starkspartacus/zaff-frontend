@@ -456,3 +456,33 @@ export interface StockCountScan {
   counted?: number;
   message: string;
 }
+
+// ─── Codes appareils générés (QR / code-barres) ───
+export interface CodeSeries {
+  _id: string;
+  category: string;
+  prefix: string;
+  generatedCount: number;
+  usedCount: number;
+  locked: boolean;
+  createdByName: string | null;
+}
+
+export interface CodeBatch {
+  _id: string;
+  code: string;
+  category: string;
+  prefix: string;
+  fromSeq: number;
+  toSeq: number;
+  count: number;
+  codes?: string[];
+  productId: string | null;
+  productName: string | null;
+  createdByName: string | null;
+  createdAt: string;
+  usedCount: number;
+  printCount: number;
+  prints?: Array<{ at: string; byName: string; format: string; count: number }>;
+  items?: Array<{ code: string; used: boolean; status: string | null; productName: string | null }>;
+}

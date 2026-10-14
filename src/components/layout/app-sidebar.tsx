@@ -30,6 +30,7 @@ import {
   Undo2,
   Handshake,
   ClipboardCheck,
+  QrCode,
   Settings,
 } from 'lucide-react';
 
@@ -53,6 +54,7 @@ const navGroups: NavGroup[] = [
       { title: 'Dépôts revendeurs', href: '/app/consignments', icon: Handshake },
       { title: 'Mise en stock (scan)', href: '/app/receive', icon: PackagePlus },
       { title: 'Inventaire (scan)', href: '/app/inventory', icon: ClipboardCheck },
+      { title: 'Étiquettes QR', href: '/app/labels', icon: QrCode },
       { title: 'Mon activité du jour', href: '/app/my-activity', icon: CalendarCheck },
       { title: 'Clôturer ma caisse', href: '/app/cash-closing', icon: Lock },
     ],
