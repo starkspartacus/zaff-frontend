@@ -25,6 +25,11 @@ import type {
   ReturnLookup,
   ReturnPolicy,
   Sale,
+  PurchaseOrder,
+  PurchaseSummary,
+  ReceiveResult,
+  ReorderSuggestion,
+  Supplier,
 } from '@/lib/types';
 
 const get = <T,>(url: string) => api.get(url) as unknown as Promise<T>;
@@ -317,5 +322,56 @@ export function useCreateReturn() {
   return useMutation({
     mutationFn: (body: Record<string, unknown>) => post<ProductReturn>('/returns', body),
     onSuccess: () => invalidate('returns', 'units', 'products', 'repairs', 'cash-closings', 'dashboard', 'my-stats'),
+  });
+}
+
+// ─── Fournisseurs et commandes ───
+export const useSuppliers = () => useQuery({ queryKey: qk.suppliers(), queryFn: () => get<Supplier[]>('/suppliers') });
+export const usePurchaseOrders = (status: 'open' | 'closed' | 'unpaid' | 'all') =>
+  useQuery({ queryKey: qk.purchaseOrders(status), queryFn: () => get<PurchaseOrder[]>(`/suppliers/orders${status === 'all' ? '' : `?status=${status}`}`) });
+export const usePurchaseSummary = (enabled = true) =>
+  useQuery({ queryKey: qk.purchaseSummary(), queryFn: () => get<PurchaseSummary>('/suppliers/orders/summary'), enabled });
+export const useReorderSuggestions = () => useQuery({ queryKey: qk.reorderSuggestions(), queryFn: () => get<ReorderSuggestion[]>('/suppliers/orders/suggestions') });
+
+export function useSaveSupplier() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id?: string; name: string; contactPerson?: string; phone?: string; email?: string; address?: string; notes?: string }) =>
+      (id ? api.put(`/suppliers/${id}`, body) : api.post('/suppliers', body)) as unknown as Promise<Supplier>,
+    onSuccess: () => invalidate('suppliers'),
+  });
+}
+
+export function useCreatePurchaseOrder() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (body: { supplierId: string; items: Array<{ productId: string; quantity: number; unitPrice?: number }>; expectedAt?: string; notes?: string }) =>
+      post<PurchaseOrder>('/suppliers/orders', body),
+    onSuccess: () => invalidate('suppliers'),
+  });
+}
+
+export function useReceivePurchaseOrder() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; items: Array<{ productId: string; quantity?: number; serialNumbers?: string[] }> }) =>
+      post<ReceiveResult>(`/suppliers/orders/${id}/receive`, body),
+    onSuccess: () => invalidate('suppliers', 'products', 'units', 'stock', 'dashboard'),
+  });
+}
+
+export function usePurchaseOrderAction() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, action }: { id: string; action: 'close' | 'cancel' }) => api.patch(`/suppliers/orders/${id}/${action}`, {}) as unknown as Promise<PurchaseOrder>,
+    onSuccess: () => invalidate('suppliers'),
+  });
+}
+
+export function usePaySupplier() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; amount: number; method: string; note?: string }) => post<PurchaseOrder>(`/suppliers/orders/${id}/payments`, body),
+    onSuccess: () => invalidate('suppliers'),
   });
 }

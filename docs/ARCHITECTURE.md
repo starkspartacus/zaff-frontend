@@ -89,6 +89,11 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
 - **Rapport de clôture de caisse** (`ClosingReportActions`, `components/cash/closing-report.tsx`) : après la clôture et dans
   les historiques (vendeur, propriétaire ; chargé à la demande) : WhatsApp au patron, Copier, Imprimer, état de l'e-mail
   (envoyé automatiquement au patron par le serveur via Resend).
+- `/app/suppliers` **Fournisseurs & commandes** (propriétaire, magasinier) : chiffres (en cours, en retard, à recevoir, à payer
+  — ce dernier pour le propriétaire), onglets Commandes (En cours / À payer / Terminées) · À recommander (suggestions par
+  dernier fournisseur, « Commander tout ») · Fournisseurs. Nouvelle commande (prix d'achat proposé, modifiable), bon envoyé
+  sur WhatsApp ou imprimé ; **Réceptionner** : quantités ou **scan des N° de série** ligne par ligne (doublons refusés,
+  refus du serveur expliqués) ; Payer (propriétaire), Solder, Annuler.
 - `/app/settings` propriétaire : politique de retour et de garantie, avec le résumé « Ce que vos clients entendront ».
 - `/register` : inscription en 4 étapes animées (Votre boutique → Adresse → Vous → Sécurité, frise horizontale
   sur mobile / verticale sur ordinateur). Pays / villes / communes / devises viennent de l'API (`/global/geo/*`,

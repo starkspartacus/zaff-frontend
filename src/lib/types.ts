@@ -338,3 +338,77 @@ export interface ClosingReport {
   emailedAt: string | null;
   mailEnabled: boolean;
 }
+
+// ─── Fournisseurs et commandes ───
+export interface Supplier {
+  _id: string;
+  name: string;
+  contactPerson?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  ordersCount: number;
+  openOrders: number;
+  amountDue: number;
+  totalPurchased: number;
+}
+
+export type PurchaseOrderStatus = 'pending' | 'partial' | 'received' | 'cancelled';
+
+export interface PurchaseOrderItem {
+  productId: string;
+  productName: string;
+  hasSerialNumbers: boolean;
+  quantity: number;
+  receivedQty: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface PurchaseOrder {
+  _id: string;
+  code: string;
+  supplierId: string;
+  supplierName: string;
+  orderDate: string;
+  expectedAt: string | null;
+  status: PurchaseOrderStatus;
+  totalAmount: number;
+  paidAmount: number;
+  amountDue: number;
+  items: PurchaseOrderItem[];
+  receptions: Array<{ at: string; byName: string | null; lines: Array<{ productId: string; productName: string; quantity: number }> }>;
+  payments: Array<{ at: string; amount: number; method: string; byName: string | null; note: string | null }>;
+  createdByName: string | null;
+  notes: string | null;
+  remaining: number;
+  late: boolean;
+  supplier?: Supplier | null;
+}
+
+export interface PurchaseSummary {
+  openOrders: number;
+  lateOrders: number;
+  amountDue: number;
+  toReceive: number;
+}
+
+export interface ReorderSuggestion {
+  productId: string;
+  productName: string;
+  hasSerialNumbers: boolean;
+  stockQuantity: number;
+  minStockAlert: number;
+  onOrder: number;
+  suggestedQty: number;
+  lastSupplierId: string | null;
+  lastSupplierName: string | null;
+  lastUnitPrice: number;
+}
+
+export interface ReceiveResult {
+  order: PurchaseOrder;
+  received: number;
+  results: Array<{ productId: string; productName: string; received: number; rejected: Array<{ serialNumber: string; reason: string }> }>;
+}
