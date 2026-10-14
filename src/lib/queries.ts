@@ -30,6 +30,8 @@ import type {
   ReceiveResult,
   ReorderSuggestion,
   Supplier,
+  StockCount,
+  StockCountScan,
 } from '@/lib/types';
 
 const get = <T,>(url: string) => api.get(url) as unknown as Promise<T>;
@@ -373,5 +375,33 @@ export function usePaySupplier() {
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string; amount: number; method: string; note?: string }) => post<PurchaseOrder>(`/suppliers/orders/${id}/payments`, body),
     onSuccess: () => invalidate('suppliers'),
+  });
+}
+
+// ─── Inventaire par scan ───
+export const useCurrentStockCount = () => useQuery({ queryKey: qk.stockCountCurrent(), queryFn: () => get<StockCount | null>('/stock-counts/current') });
+export const useStockCounts = (enabled = true) => useQuery({ queryKey: qk.stockCounts(), queryFn: () => get<StockCount[]>('/stock-counts'), enabled });
+export const useStockCount = (id: string | null) =>
+  useQuery({ queryKey: qk.stockCount(id || ''), queryFn: () => get<StockCount>(`/stock-counts/${id}`), enabled: !!id });
+
+export function useStockCountAction() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (a: { kind: 'start'; category?: string } | { kind: 'close'; id: string; applyAdjustments: boolean } | { kind: 'cancel'; id: string }) =>
+      (a.kind === 'start'
+        ? api.post('/stock-counts', { category: a.category || undefined })
+        : a.kind === 'close'
+          ? api.post(`/stock-counts/${a.id}/close`, { applyAdjustments: a.applyAdjustments })
+          : api.patch(`/stock-counts/${a.id}/cancel`, {})) as unknown as Promise<StockCount>,
+    onSuccess: () => invalidate('stock-counts', 'products', 'stock'),
+  });
+}
+
+export function useStockCountScan() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (a: { id: string; code: string } | { id: string; productId: string; qty: number }) =>
+      ('code' in a ? post<StockCountScan>(`/stock-counts/${a.id}/scan`, { code: a.code }) : post<StockCountScan>(`/stock-counts/${a.id}/count`, { productId: a.productId, qty: a.qty })),
+    onSuccess: () => invalidate('stock-counts'),
   });
 }

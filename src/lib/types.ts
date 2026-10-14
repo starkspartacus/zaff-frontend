@@ -412,3 +412,47 @@ export interface ReceiveResult {
   received: number;
   results: Array<{ productId: string; productName: string; received: number; rejected: Array<{ serialNumber: string; reason: string }> }>;
 }
+
+// ─── Inventaire par scan ───
+export interface StockCountReport {
+  expectedUnits: number;
+  foundUnits: number;
+  missing: Array<{ unitId: string; serialNumber: string; productId: string; productName: string; addedAt: string | null; value: number }>;
+  missingValue: number;
+  unexpected: Array<{ serialNumber: string; productName: string; status: string; reason: string; duringCount: boolean }>;
+  unknownCodes: string[];
+  plain: Array<{ productId: string; productName: string; expected: number; counted: number | null; difference: number | null; applied: boolean }>;
+  adjustedProducts: number;
+  notCounted: number;
+}
+
+export interface StockCount {
+  _id: string;
+  code: string;
+  category: string | null;
+  status: 'open' | 'closing' | 'closed' | 'cancelled';
+  startedByName: string | null;
+  startedAt: string;
+  closedAt: string | null;
+  closedByName: string | null;
+  scannedBy: string[];
+  unknownCodes?: string[];
+  report: StockCountReport | null;
+  progress?: {
+    expectedUnits: number;
+    foundUnits: number;
+    scannedCodes: number;
+    byProduct: Array<{ productId: string; productName: string; expected: number; found: number }>;
+    plain: Array<{ productId: string; productName: string; expected: number; counted: number | null }>;
+  };
+}
+
+export interface StockCountScan {
+  kind: 'unit' | 'box' | 'product' | 'unknown';
+  result?: 'found' | 'already' | 'unexpected' | 'other_category' | 'counted';
+  serialNumber?: string;
+  productId?: string;
+  productName?: string;
+  counted?: number;
+  message: string;
+}

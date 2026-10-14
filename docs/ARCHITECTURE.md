@@ -94,6 +94,12 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   dernier fournisseur, « Commander tout ») · Fournisseurs. Nouvelle commande (prix d'achat proposé, modifiable), bon envoyé
   sur WhatsApp ou imprimé ; **Réceptionner** : quantités ou **scan des N° de série** ligne par ligne (doublons refusés,
   refus du serveur expliqués) ; Payer (propriétaire), Solder, Annuler.
+- `/app/inventory` **Inventaire (scan)** (propriétaire, magasinier ; vendeurs pour aider à scanner) : démarrer (tout le stock
+  ou une catégorie), avancement en direct (appareils trouvés / attendus, par modèle, qui scanne — WebSocket `stock-counts`),
+  résultat de chaque scan coloré (vert compté, orange déjà compté / boîte / autre catégorie, rouge inattendu / inconnu),
+  accessoires +1 au scan ou quantité tapée (attendu masqué aux vendeurs : comptage à l'aveugle) ; Terminer (correction du
+  stock des accessoires au choix) → rapport : manquants (valeur), inattendus, codes inconnus, vendus pendant l'inventaire,
+  écarts ; impression ; historique.
 - `/app/settings` propriétaire : politique de retour et de garantie, avec le résumé « Ce que vos clients entendront ».
 - `/register` : inscription en 4 étapes animées (Votre boutique → Adresse → Vous → Sécurité, frise horizontale
   sur mobile / verticale sur ordinateur). Pays / villes / communes / devises viennent de l'API (`/global/geo/*`,
