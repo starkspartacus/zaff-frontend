@@ -34,6 +34,8 @@ import type {
   StockCountScan,
   CodeSeries,
   CodeBatch,
+  StockReception,
+  ReceptionResult,
 } from '@/lib/types';
 
 const get = <T,>(url: string) => api.get(url) as unknown as Promise<T>;
@@ -441,5 +443,29 @@ export function useMarkPrinted() {
   return useMutation({
     mutationFn: ({ id, ...body }: { id: string; format: 'a4' | 'thermal'; count?: number }) => post<{ ok: boolean }>(`/code-labels/batches/${id}/printed`, body),
     onSuccess: () => invalidate('code-labels'),
+  });
+}
+
+// ─── Réceptions de marchandise ───
+export const useReceptions = () => useQuery({ queryKey: qk.receptions(), queryFn: () => get<StockReception[]>('/stock-receptions') });
+export const useReception = (id: string | null) =>
+  useQuery({ queryKey: qk.reception(id || ''), queryFn: () => get<StockReception>(`/stock-receptions/${id}`), enabled: !!id });
+
+export function useCreateReception() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (body: { items: Array<{ productId: string; serialNumbers: string[] }>; note?: string; supplierName?: string }) =>
+      post<ReceptionResult>('/stock-receptions', body),
+    onSuccess: () => invalidate('receptions', 'units', 'products', 'stock', 'dashboard', 'my-stats'),
+  });
+}
+
+/** Autre capacité / couleur d'un modèle : fiche séparée (créée ou retrouvée par le serveur) */
+export function useCreateVariant() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; model?: string; color?: string }) =>
+      post<{ product: Product; created: boolean }>(`/catalog/products/${id}/variant`, body),
+    onSuccess: () => invalidate('products'),
   });
 }

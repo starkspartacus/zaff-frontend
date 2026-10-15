@@ -486,3 +486,39 @@ export interface CodeBatch {
   prints?: Array<{ at: string; byName: string; format: string; count: number }>;
   items?: Array<{ code: string; used: boolean; status: string | null; productName: string | null }>;
 }
+
+// ─── Réceptions de marchandise (ravitaillements) ───
+export interface StockReceptionLine {
+  productId: string;
+  productName: string;
+  category: string;
+  categoryName: string;
+  brand: string | null;
+  model: string | null;
+  color: string | null;
+  quantity: number;
+  serialNumbers: string[];
+  unitCost: number;
+}
+
+export interface StockReception {
+  _id: string;
+  code: string;
+  source: 'scan' | 'purchase_order';
+  orderCode: string | null;
+  supplierName: string | null;
+  note: string | null;
+  receivedByName: string | null;
+  createdAt: string;
+  totalUnits: number;
+  totalValue: number;
+  byCategory: Array<{ category: string; categoryName: string; quantity: number }>;
+  modelsCount?: number;
+  lines?: StockReceptionLine[];
+  rejected?: Array<{ productName: string; serialNumber: string; reason: string }>;
+}
+
+export interface ReceptionResult {
+  reception: StockReception | null;
+  results: Array<{ productId: string; created: string[]; rejected: Array<{ serialNumber: string; reason: string }> }>;
+}

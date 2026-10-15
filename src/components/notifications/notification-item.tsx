@@ -92,6 +92,7 @@ export function notificationHref(n: AppNotification): string | null {
   if (n.type === 'purchase.received') return '/app/suppliers';
   if (n.type === 'stock.count.closed') return '/app/inventory';
   if (n.type === 'codes.generated') return '/app/labels';
+  if (n.type === 'stock.received') return '/app/receptions';
   if (n.type === 'customer.payment') return '/app/customers';
   return null;
 }

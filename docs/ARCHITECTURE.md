@@ -54,6 +54,14 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   **Rien n'est en stock avant « Enregistrer N appareil(s) »** (`addUnits` par modèle ; refusés gardés avec la raison).
   Panier conservé sur l'appareil (`zaff-receive-draft`). IMEI scanné sans modèle → choix / création du modèle puis ajout.
   `?product=<id>` (Catalogue, fiche produit) et `&serial=` (IMEI saisi dans la fiche → 1er appareil).
+  **Versions** : pastilles des capacités / couleurs de la famille du modèle (+ « Autre capacité / couleur ») ; option
+  mémorisée « Demander la capacité et la couleur à chaque appareil scanné » (`zaff-receive-ask`, activée par défaut) →
+  `VersionSheet` (pastilles, saisie libre, Entrée = OK ; combinaison inconnue → `POST /catalog/products/:id/variant`).
+  **Compteur de la livraison** en direct : catégorie → modèle (capacité / couleur séparées) → nombre, total.
+  « Enregistrer » = une réception `REC-n` (`POST /stock-receptions`), résumé par catégorie.
+- `/app/receptions` **historique des réceptions** (propriétaire, magasinier ; menu « Réceptions (historique) ») : 7 j / 30 j /
+  tout, totaux (réceptions, articles, valeur d'achat pour le propriétaire), pastilles par catégorie, liste par jour (qui,
+  heure, catégories, commande fournisseur), détail catégorie → modèle → N° de série, refusés, impression du bon.
 - Fiche produit : un IMEI tapé dans « Code-barres de la boîte » est signalé, **pas enregistré comme code du modèle** et devient
   le 1er appareil mis en stock (`onSaved(product, { firstSerial })`).
 - **Le stock d'un produit à N° de série ne monte qu'en scannant le N° de série / IMEI de chaque appareil** ; le code-barres

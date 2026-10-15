@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { AlertTriangle, ArrowRightLeft, CheckCircle2, ClipboardList, Loader2, PackagePlus, Plus, Search, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, CheckCircle2, ClipboardList, History, Layers, Loader2, PackagePlus, Plus, Search, Trash2, X } from 'lucide-react';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { scanFeedback } from '@/components/scan/feedback';
 import { ProductForm } from '@/components/products/product-form';
@@ -11,7 +11,7 @@ import { ProductVisual } from '@/components/products/product-visual';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { api } from '@/lib/api';
 import { imeiCheck } from '@/lib/imei';
-import { useAddUnits, useProducts } from '@/lib/queries';
+import { useCategories, useCreateReception, useCreateVariant, useProducts } from '@/lib/queries';
 import { errorMessage, type Product, type ScanLookup } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +36,10 @@ interface Item {
 const DRAFT_KEY = 'zaff-receive-draft';
 const norm = (code: string) => code.replace(/\s+/g, '').toUpperCase();
 const details = (p: Product) => [p.model, p.color].filter(Boolean).join(' · ');
+const low = (v?: string | null) => (v || '').trim().toLowerCase();
+/** Même famille = même catégorie, marque et nom : seules la capacité et la couleur changent (fiches et stocks séparés) */
+const familyKey = (p: Product) => [p.category, low(p.brand), low(p.name)].join('|');
+const ASK_KEY = 'zaff-receive-ask';
 
 function loadDraft(): Item[] {
   try {
@@ -60,11 +64,23 @@ function ReceiveStock() {
   const { data: productsData } = useProducts();
   const products = useMemo(() => productsData ?? [], [productsData]);
   const params = useSearchParams();
-  const addUnits = useAddUnits();
+  const reception = useCreateReception();
+  const { data: categories = [] } = useCategories();
+  const catName = (slug?: string | null) => categories.find((c) => c.slug === slug)?.name || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : 'Sans catégorie');
+  /** Demander capacité / couleur à chaque appareil scanné (réglage mémorisé sur l'appareil) */
+  const [askVersion, setAskVersion] = useState(() => {
+    try {
+      return localStorage.getItem(ASK_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  });
+  const [versionFor, setVersionFor] = useState<string | null>(null);
 
   const [currentId, setCurrentId] = useState<string | null>(params.get('product'));
-  const [items, setItems] = useState<Item[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  // Brouillon relu au chargement (page rendue côté navigateur : useSearchParams sous <Suspense>)
+  const [items, setItems] = useState<Item[]>(() => (typeof window === 'undefined' ? [] : loadDraft()));
+  const hydrated = typeof window !== 'undefined';
   const [message, setMessage] = useState<{ tone: 'ok' | 'warn' | 'bad'; text: string } | null>(null);
   /** N° scanné alors qu'aucun modèle n'est choisi : il attend le choix du modèle */
   const [waiting, setWaiting] = useState<string | null>(null);
@@ -72,17 +88,24 @@ function ReceiveStock() {
   const [suspect, setSuspect] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
-  const [summary, setSummary] = useState<Array<{ name: string; count: number }> | null>(null);
+  const [summary, setSummary] = useState<{ code: string; total: number; byCategory: Array<{ categoryName: string; quantity: number }> } | null>(null);
   const seededSerial = useRef(false);
 
   const byId = useMemo(() => new Map(products.map((p) => [p._id, p])), [products]);
   const current = currentId ? byId.get(currentId) ?? null : null;
+  const family = useMemo(() => (current ? products.filter((p) => p.hasSerialNumbers && familyKey(p) === familyKey(current)) : []), [products, current]);
 
-  // Brouillon : relu au chargement, enregistré à chaque changement
-  useEffect(() => {
-    setItems(loadDraft());
-    setHydrated(true);
-  }, []);
+  // Brouillon enregistré à chaque changement
+  const toggleAsk = () => {
+    setAskVersion((v) => {
+      try {
+        localStorage.setItem(ASK_KEY, v ? '0' : '1');
+      } catch {
+        /* ignoré */
+      }
+      return !v;
+    });
+  };
   useEffect(() => {
     if (!hydrated) return;
     try {
@@ -113,16 +136,24 @@ function ReceiveStock() {
     }
   };
 
-  const addSerial = (serial: string, productId: string) => {
+  const addSerial = (serial: string, productId: string): boolean => {
     if (items.some((i) => i.serial === serial)) {
       scanFeedback(false);
       setMessage({ tone: 'warn', text: `${serial} est déjà dans la liste.` });
-      return;
+      return false;
     }
     scanFeedback(true);
     setMessage(null);
     setItems((list) => [{ serial, productId, state: 'checking', at: Date.now() }, ...list]);
     check(serial);
+    return true;
+  };
+
+  /** Version confirmée pour l'appareil scanné : il passe sur cette fiche, qui devient le modèle en cours */
+  const assignVersion = (serial: string, p: Product) => {
+    setItems((list) => list.map((i) => (i.serial === serial ? { ...i, productId: p._id } : i)));
+    setCurrentId(p._id);
+    setVersionFor(null);
   };
 
   const chooseModel = (p: Product, firstSerial?: string) => {
@@ -182,7 +213,9 @@ function ReceiveStock() {
       return;
     }
     if (legacy) setCurrentId(legacy._id);
-    addSerial(code, target._id);
+    const added = addSerial(code, target._id);
+    // Gagner du temps : même modèle → on confirme seulement la capacité et la couleur de CET appareil
+    if (added && askVersion && !legacy) setVersionFor(code);
   };
 
   const handlePaste = () => {
@@ -211,31 +244,42 @@ function ReceiveStock() {
     const byProduct = new Map<string, string[]>();
     ready.forEach((i) => byProduct.set(i.productId, [...(byProduct.get(i.productId) || []), i.serial]));
     setItems((list) => list.map((i) => (i.state === 'ready' ? { ...i, state: 'saving' } : i)));
-    const done: Array<{ name: string; count: number }> = [];
-    for (const [productId, serials] of byProduct) {
-      try {
-        const res = await addUnits.mutateAsync({ productId, serialNumbers: serials });
-        const ok = new Set(res.created.map((u) => u.serialNumber));
-        const why = new Map(res.rejected.map((r) => [r.serialNumber, r.reason]));
-        setItems((list) =>
-          list.map((i) =>
-            i.productId === productId && serials.includes(i.serial)
-              ? ok.has(i.serial)
-                ? { ...i, state: 'saved', note: undefined }
-                : { ...i, state: 'rejected', note: why.get(i.serial) || 'Refusé' }
-              : i,
-          ),
-        );
-        if (ok.size) done.push({ name: byId.get(productId)?.name || 'Modèle', count: ok.size });
-      } catch (e) {
-        setItems((list) => list.map((i) => (i.productId === productId && serials.includes(i.serial) ? { ...i, state: 'rejected', note: errorMessage(e) } : i)));
-      }
+    try {
+      const res = await reception.mutateAsync({ items: [...byProduct].map(([productId, serialNumbers]) => ({ productId, serialNumbers })) });
+      const ok = new Set(res.results.flatMap((r) => r.created));
+      const why = new Map(res.results.flatMap((r) => r.rejected.map((x) => [x.serialNumber, x.reason] as const)));
+      setItems((list) =>
+        list.map((i) =>
+          i.state !== 'saving' ? i : ok.has(i.serial) ? { ...i, state: 'saved', note: undefined } : { ...i, state: 'rejected', note: why.get(i.serial) || 'Refusé' },
+        ),
+      );
+      scanFeedback(ok.size > 0);
+      if (res.reception) setSummary({ code: res.reception.code, total: res.reception.totalUnits, byCategory: res.reception.byCategory });
+    } catch (e) {
+      scanFeedback(false);
+      setItems((list) => list.map((i) => (i.state === 'saving' ? { ...i, state: 'ready', note: undefined } : i)));
+      setMessage({ tone: 'bad', text: errorMessage(e) });
     }
-    scanFeedback(done.length > 0);
-    setSummary(done);
     // Les appareils enregistrés quittent le panier ; les refusés restent, avec la raison
     setTimeout(() => setItems((list) => list.filter((i) => i.state !== 'saved')), 1500);
   };
+
+  /** Compteur de la livraison : catégorie → modèle (capacité / couleur séparées) */
+  const counter = useMemo(() => {
+    const cats = new Map<string, { name: string; total: number; models: Map<string, number> }>();
+    for (const i of items) {
+      if (i.state === 'conflict' || i.state === 'rejected') continue;
+      const p = byId.get(i.productId);
+      const slug = p?.category || '';
+      const c = cats.get(slug) || { name: catName(slug), total: 0, models: new Map<string, number>() };
+      c.total += 1;
+      c.models.set(i.productId, (c.models.get(i.productId) || 0) + 1);
+      cats.set(slug, c);
+    }
+    return [...cats.values()].sort((a, b) => b.total - a.total);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, byId, categories]);
+  const counted = counter.reduce((a, c) => a + c.total, 0);
 
   return (
     <div className="max-w-xl mx-auto space-y-4 pb-28">
@@ -277,9 +321,36 @@ function ReceiveStock() {
         )}
       </button>
 
+      {current && (
+        <div className="space-y-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            {family.map((v) => {
+              const n = items.filter((i) => i.productId === v._id && i.state !== 'conflict').length;
+              return (
+                <button
+                  key={v._id}
+                  onClick={() => setCurrentId(v._id)}
+                  className={cn('shrink-0 h-9 px-3 rounded-full border text-xs font-semibold', v._id === current._id ? 'border-gold bg-gold/15 text-gold-soft' : 'border-neutral-800 text-neutral-400')}
+                >
+                  {details(v) || 'Standard'}
+                  {n ? ` · ${n}` : ''}
+                </button>
+              );
+            })}
+            <button onClick={() => setVersionFor('')} className="shrink-0 h-9 px-3 rounded-full border border-dashed border-gold/50 text-xs font-semibold text-gold-soft">
+              + Autre capacité / couleur
+            </button>
+          </div>
+          <label className="flex items-center gap-2 text-[11px] text-neutral-400">
+            <input type="checkbox" checked={askVersion} onChange={toggleAsk} className="accent-[var(--color-gold,#d4a017)]" />
+            Demander la capacité et la couleur à chaque appareil scanné
+          </label>
+        </div>
+      )}
+
       <BarcodeScanner
         onScan={onScan}
-        paused={!!suspect || !!picker}
+        paused={!!suspect || !!picker || versionFor !== null}
         placeholder="Scannez la boîte ou l'IMEI / N° de série"
         hint="Boîte (code EAN) = choisit le modèle · IMEI / N° de série = ajoute un appareil. *#06# sur le téléphone affiche son IMEI."
       />
@@ -320,9 +391,14 @@ function ReceiveStock() {
         <button onClick={() => setPasteOpen(!pasteOpen)} className="text-neutral-400 hover:text-white flex items-center gap-1.5">
           <ClipboardList className="w-4 h-4" /> Coller une liste de N° de série
         </button>
-        <Link href="/app/labels" className="text-gold-soft underline">
-          Appareil sans N° lisible ? Étiquette QR
-        </Link>
+        <span className="flex items-center gap-3">
+          <Link href="/app/receptions" className="text-neutral-400 hover:text-white flex items-center gap-1">
+            <History className="w-3.5 h-3.5" /> Historique
+          </Link>
+          <Link href="/app/labels" className="text-gold-soft underline">
+            Sans N° lisible ? Étiquette QR
+          </Link>
+        </span>
       </div>
       {pasteOpen && (
         <div className="space-y-2">
@@ -339,17 +415,47 @@ function ReceiveStock() {
         </div>
       )}
 
-      {summary && summary.length > 0 && (
+      {summary && (
         <BlurFade className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-1">
           <p className="text-sm font-bold text-white flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" /> Mis en stock
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" /> Réception {summary.code} : {summary.total} article(s) en stock
           </p>
-          {summary.map((s) => (
-            <p key={s.name} className="text-xs text-neutral-200">
-              {s.count} × {s.name}
-            </p>
-          ))}
+          <p className="text-xs text-neutral-200">{summary.byCategory.map((c) => `${c.categoryName} ${c.quantity}`).join(' · ')}</p>
+          <Link href="/app/receptions" className="text-[11px] text-gold-soft underline">
+            Voir l&apos;historique des réceptions
+          </Link>
         </BlurFade>
+      )}
+
+      {/* Compteur de la livraison : utile quand on ne connaît pas les quantités à l'avance */}
+      {counted > 0 && (
+        <div className="rounded-2xl border border-gold/30 bg-neutral-950 p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5" /> Compteur de la livraison
+            </p>
+            <p className="text-2xl font-black text-gold-soft">{counted}</p>
+          </div>
+          {counter.map((c) => (
+            <div key={c.name} className="space-y-0.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold text-white">{c.name}</span>
+                <span className="font-bold text-white">{c.total}</span>
+              </div>
+              {[...c.models].map(([pid, n]) => {
+                const p = byId.get(pid);
+                return (
+                  <div key={pid} className="flex items-center justify-between text-[11px] text-neutral-400 pl-3">
+                    <span className="truncate">
+                      {p?.name} {p ? `· ${details(p)}` : ''}
+                    </span>
+                    <span className="font-mono">× {n}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Panier : une carte par appareil, groupées par modèle */}
@@ -365,7 +471,7 @@ function ReceiveStock() {
                 {p && <ProductVisual imageId={p.imageId} category={p.category} brand={p.brand} name={p.name} size="thumb" className="w-10 h-10 shrink-0" />}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-white truncate">{p?.name || 'Modèle supprimé'}</p>
-                  <p className="text-[11px] text-neutral-500 truncate">{p ? details(p) : ''}</p>
+                  <p className="text-[11px] text-neutral-500 truncate">{p ? [catName(p.category), details(p)].filter(Boolean).join(' · ') : ''}</p>
                 </div>
                 <span className="text-sm font-black text-gold-soft shrink-0">× {count}</span>
                 <button onClick={() => setPicker({ forGroup: productId })} className="text-[11px] text-neutral-400 underline shrink-0">
@@ -421,10 +527,10 @@ function ReceiveStock() {
             </button>
             <button
               onClick={save}
-              disabled={!items.some((i) => i.state === 'ready') || checking || addUnits.isPending}
+              disabled={!items.some((i) => i.state === 'ready') || checking || reception.isPending}
               className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-sm disabled:opacity-50"
             >
-              {addUnits.isPending
+              {reception.isPending
                 ? 'Enregistrement…'
                 : checking
                   ? 'Vérification…'
@@ -435,6 +541,16 @@ function ReceiveStock() {
             <p className="max-w-xl mx-auto text-[11px] text-red-400 mt-1">Les appareils refusés restent dans la liste : corrigez ou retirez-les.</p>
           )}
         </div>
+      )}
+
+      {versionFor !== null && current && (
+        <VersionSheet
+          base={current}
+          family={family}
+          serial={versionFor || null}
+          onChoose={(p) => (versionFor ? assignVersion(versionFor, p) : (setCurrentId(p._id), setVersionFor(null)))}
+          onClose={() => setVersionFor(null)}
+        />
       )}
 
       {picker && <ModelPicker products={products} waiting={waiting} onPick={chooseModel} onClose={() => (setPicker(null), setWaiting(null))} />}
@@ -505,6 +621,82 @@ function ModelPicker({ products, waiting, onPick, onClose }: { products: Product
             )}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function Chips({ values, value, onPick, placeholder }: { values: string[]; value: string; onPick: (v: string) => void; placeholder: string }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {values.map((v) => (
+        <button key={v} onClick={() => onPick(v)} className={cn('h-11 px-4 rounded-xl border text-sm font-semibold', low(v) === low(value) ? 'border-gold bg-gold/15 text-gold-soft' : 'border-neutral-800 text-neutral-300')}>
+          {v}
+        </button>
+      ))}
+      <input
+        value={values.some((v) => low(v) === low(value)) ? '' : value}
+        onChange={(e) => onPick(e.target.value)}
+        placeholder={placeholder}
+        className="h-11 w-32 rounded-xl border border-dashed border-neutral-700 bg-transparent px-3 text-sm text-white"
+        aria-label={placeholder}
+      />
+    </div>
+  );
+}
+
+/**
+ * Version de l'appareil (capacité / couleur) : pastilles des versions déjà connues du modèle, saisie libre sinon.
+ * Une combinaison inconnue crée une nouvelle fiche (mêmes prix, stock séparé) : un iPhone 11 64 Go et un 128 Go
+ * ne sont jamais mélangés.
+ */
+function VersionSheet({ base, family, serial, onChoose, onClose }: { base: Product; family: Product[]; serial: string | null; onChoose: (p: Product) => void; onClose: () => void }) {
+  const createVariant = useCreateVariant();
+  const caps = [...new Set(family.map((p) => p.model?.trim()).filter(Boolean) as string[])];
+  const colors = [...new Set(family.map((p) => p.color?.trim()).filter(Boolean) as string[])];
+  const [cap, setCap] = useState(base.model?.trim() || '');
+  const [color, setColor] = useState(base.color?.trim() || '');
+  const [error, setError] = useState<string | null>(null);
+  const match = family.find((p) => low(p.model) === low(cap) && low(p.color) === low(color));
+
+  const confirm = async () => {
+    setError(null);
+    if (match) return onChoose(match);
+    try {
+      const r = await createVariant.mutateAsync({ id: base._id, model: cap.trim(), color: color.trim() });
+      onChoose(r.product);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm" onKeyDown={(e) => e.key === 'Enter' && confirm()}>
+      <div className="w-full sm:max-w-md bg-neutral-950 border border-neutral-800 rounded-t-3xl sm:rounded-3xl p-5 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-white">{base.name} : quelle version ?</h2>
+            {serial && <p className="text-xs text-neutral-400 font-mono">{serial}</p>}
+          </div>
+          <button onClick={onClose} className="p-1 text-neutral-400" aria-label="Fermer">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-xs text-neutral-400">Capacité / configuration</p>
+          <Chips values={caps} value={cap} onPick={setCap} placeholder="Autre (ex : 256 Go)" />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-xs text-neutral-400">Couleur</p>
+          <Chips values={colors} value={color} onPick={setColor} placeholder="Autre couleur" />
+        </div>
+        <p className="text-[11px] text-neutral-500">
+          {match ? `Fiche existante · ${match.stockQuantity} en stock` : 'Nouvelle version : une fiche séparée sera créée (mêmes prix, stock à part).'}
+        </p>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <button onClick={confirm} disabled={createVariant.isPending} className="w-full h-12 rounded-2xl bg-gold text-ink font-bold disabled:opacity-60">
+          {createVariant.isPending ? 'Création…' : `OK · ${[cap, color].filter(Boolean).join(' · ') || 'Standard'}`}
+        </button>
       </div>
     </div>
   );
