@@ -303,7 +303,15 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
     try {
       // La photo prise sur l'appareil n'est envoyée que maintenant, au clic sur « Enregistrer »
       if (useLocal && localPhoto) {
-        uploadedId = await uploadShopImage(localPhoto, { brand: brand.trim() || category.trim(), model: effectiveName.trim(), color: color.trim() || undefined, category: slug || undefined });
+        try {
+          uploadedId = await uploadShopImage(localPhoto, { brand: brand.trim() || category.trim(), model: effectiveName.trim(), color: color.trim() || undefined, category: slug || undefined });
+        } catch (photoErr) {
+          // La photo ne doit jamais empêcher d'enregistrer le stock : on propose de continuer sans elle
+          const goOn = window.confirm(
+            `La photo n'a pas pu être envoyée (${errorMessage(photoErr)}).\n\nEnregistrer le produit sans photo ? Vous pourrez l'ajouter plus tard depuis le Catalogue.`,
+          );
+          if (!goOn) throw photoErr;
+        }
       }
       // Catégorie / marque : réutilise l'existante de la boutique ou la crée
       let cat = shopCat;
