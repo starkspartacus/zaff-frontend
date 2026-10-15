@@ -33,6 +33,8 @@ import {
   ImageOff,
   Globe2,
   ScanLine,
+  Layers,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -46,6 +48,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { ProductVisual } from './product-visual';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { imeiCheck } from '@/lib/imei';
+import { useNotificationStore } from '@/stores/notification-store';
 import { fieldErrors, ProductFormSchema } from '@/lib/schemas';
 
 /**
@@ -185,6 +188,9 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   /** Scan du code-barres de la boîte à la caméra (ou douchette) */
   const [scanOpen, setScanOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  /** Ajout multiple : autres versions du même modèle (capacité / couleur / prix), enregistrées avec le produit */
+  const [versions, setVersions] = useState<VersionRow[]>([]);
+  const [recap, setRecap] = useState<null | { main: Product; rows: Array<{ product: Product; created: boolean }>; error?: string; firstSerial?: string }>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // ─── Données dérivées ───
@@ -301,6 +307,17 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       document.querySelector('[data-invalid="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    // Versions : chacune doit être différente du produit principal et des autres
+    if (!initial && versions.length) {
+      const keyOf = (v: string, c: string) => `${norm(v)}|${norm(c)}`;
+      const seen = new Set([keyOf(variant, color)]);
+      for (const [i, v] of versions.entries()) {
+        if (!v.variant.trim() && !v.color.trim()) return setSaveError(`Version ${i + 2} : indiquez la capacité ou la couleur.`);
+        const k = keyOf(v.variant, v.color);
+        if (seen.has(k)) return setSaveError(`Version ${i + 2} (${[v.variant, v.color].filter(Boolean).join(' · ')}) : déjà dans la liste.`);
+        seen.add(k);
+      }
+    }
     setSaving(true);
     setSaveError(null);
     let uploadedId: string | null = null;
@@ -351,7 +368,39 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
         : await api.post('/catalog/products', payload)) as unknown as Product;
       await queryClient.invalidateQueries({ queryKey: ['products'] });
       await queryClient.invalidateQueries({ queryKey: ['images'] });
-      onSaved(saved, barcodeIsImei && hasSerialNumbers ? { firstSerial: barcode.replace(/[\s-]/g, '') } : undefined);
+      const firstSerial = barcodeIsImei && hasSerialNumbers ? barcode.replace(/[\s-]/g, '') : undefined;
+      if (!initial && versions.length) {
+        // Toutes les versions en un appel ; le produit principal est déjà enregistré quoi qu'il arrive
+        let rows: Array<{ product: Product; created: boolean }> = [];
+        let error: string | undefined;
+        try {
+          rows = (await api.post(`/catalog/products/${saved._id}/variants`, {
+            variants: versions.map((v) => ({
+              model: v.variant.trim() || undefined,
+              color: v.color.trim() || undefined,
+              purchasePrice: v.purchasePrice ? Number(v.purchasePrice) : undefined,
+              salePrice: v.salePrice ? Number(v.salePrice) : undefined,
+            })),
+          })) as unknown as Array<{ product: Product; created: boolean }>;
+          await queryClient.invalidateQueries({ queryKey: ['products'] });
+        } catch (e) {
+          error = errorMessage(e);
+        }
+        const createdCount = 1 + rows.filter((r) => r.created).length;
+        useNotificationStore.getState().push({
+          id: `local-versions-${saved._id}`,
+          type: 'catalog.versions',
+          title: error ? 'Produit créé, versions à vérifier' : 'Produits créés',
+          message: `${effectiveName.trim()} : ${createdCount} version(s) ajoutée(s) au catalogue`,
+          level: error ? 'warning' : 'success',
+          data: {},
+          createdAt: new Date().toISOString(),
+          read: true,
+        });
+        setRecap({ main: saved, rows, error, firstSerial });
+        return;
+      }
+      onSaved(saved, firstSerial ? { firstSerial } : undefined);
     } catch (err) {
       // Produit non enregistré : la photo tout juste envoyée est annulée (aucun fichier orphelin)
       if (uploadedId) await discardShopImage(uploadedId);
@@ -473,6 +522,17 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
             ))}
           </div>
         ) : null}
+        {!initial && (
+          <VersionsEditor
+            main={{ variant, color }}
+            rows={versions}
+            onChange={setVersions}
+            variantLabel={profile?.variantLabel || 'Capacité'}
+            variantOptions={variantOptions}
+            colorOptions={colorOptions}
+            defaults={{ purchasePrice, salePrice }}
+          />
+        )}
       </Section>
 
       {/* 4. Photo (base partagée par toutes les boutiques) */}
@@ -789,7 +849,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
           className="flex-1 sm:flex-none px-6 h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
         >
           {saving ? <span className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" /> : <Check className="w-4 h-4" />}
-          {initial ? 'Enregistrer' : compact ? 'Créer et scanner les appareils' : 'Créer le produit'}
+          {initial ? 'Enregistrer' : versions.length ? `Créer les ${versions.length + 1} versions` : compact ? 'Créer et scanner les appareils' : 'Créer le produit'}
         </button>
       </div>
       {scanOpen && (
@@ -814,7 +874,148 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
           </div>
         </div>
       )}
+      {recap && (
+        <RecapModal
+          recap={recap}
+          currency={establishment?.currency || 'F CFA'}
+          onDone={() => {
+            const r = recap;
+            setRecap(null);
+            setVersions([]);
+            onSaved(r.main, r.firstSerial ? { firstSerial: r.firstSerial } : undefined);
+          }}
+        />
+      )}
     </form>
+  );
+}
+
+interface VersionRow {
+  key: number;
+  variant: string;
+  color: string;
+  purchasePrice: string;
+  salePrice: string;
+}
+
+/** Lignes « autre version » : même modèle, capacité / couleur / prix propres (fiche et stock séparés) */
+function VersionsEditor({
+  main,
+  rows,
+  onChange,
+  variantLabel,
+  variantOptions,
+  colorOptions,
+  defaults,
+}: {
+  main: { variant: string; color: string };
+  rows: VersionRow[];
+  onChange: (rows: VersionRow[]) => void;
+  variantLabel: string;
+  variantOptions: string[];
+  colorOptions: string[];
+  defaults: { purchasePrice: string; salePrice: string };
+}) {
+  const set = (key: number, patch: Partial<VersionRow>) => onChange(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  const add = () => {
+    const last = rows[rows.length - 1];
+    const used = new Set([main.variant, ...rows.map((r) => r.variant)].map((v) => v.trim().toLowerCase()));
+    const nextCap = variantOptions.find((v) => !used.has(v.trim().toLowerCase())) || '';
+    onChange([
+      ...rows,
+      {
+        key: Date.now(),
+        variant: nextCap,
+        color: last?.color ?? main.color,
+        purchasePrice: last?.purchasePrice ?? defaults.purchasePrice,
+        salePrice: last?.salePrice ?? defaults.salePrice,
+      },
+    ]);
+  };
+  const inputCls = 'h-10 w-full rounded-xl bg-neutral-900 border border-neutral-800 px-3 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-gold';
+  return (
+    <div className="space-y-2 pt-1">
+      {rows.length > 0 && (
+        <p className="text-[11px] text-neutral-400 flex items-center gap-1.5">
+          <Layers className="w-3.5 h-3.5 text-gold" /> Version 1 : {[main.variant, main.color].filter(Boolean).join(' · ') || 'celle ci-dessus'} — chaque version a sa fiche et son stock.
+        </p>
+      )}
+      {rows.map((r, i) => (
+        <div key={r.key} className="rounded-2xl border border-gold/30 bg-gold/5 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-white">Version {i + 2}</p>
+            <button type="button" onClick={() => onChange(rows.filter((x) => x.key !== r.key))} className="p-1 text-neutral-400 hover:text-red-400" aria-label={`Retirer la version ${i + 2}`}>
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input list="zaff-variant-options" value={r.variant} onChange={(e) => set(r.key, { variant: e.target.value })} placeholder={variantLabel} className={inputCls} aria-label={`${variantLabel} version ${i + 2}`} />
+            <input list="zaff-color-options" value={r.color} onChange={(e) => set(r.key, { color: e.target.value })} placeholder="Couleur" className={inputCls} aria-label={`Couleur version ${i + 2}`} />
+            <input inputMode="numeric" value={r.purchasePrice} onChange={(e) => set(r.key, { purchasePrice: e.target.value.replace(/\D/g, '') })} placeholder="Prix d'achat" className={inputCls} aria-label={`Prix d'achat version ${i + 2}`} />
+            <input inputMode="numeric" value={r.salePrice} onChange={(e) => set(r.key, { salePrice: e.target.value.replace(/\D/g, '') })} placeholder="Prix de vente" className={inputCls} aria-label={`Prix de vente version ${i + 2}`} />
+          </div>
+        </div>
+      ))}
+      <datalist id="zaff-variant-options">
+        {variantOptions.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      <datalist id="zaff-color-options">
+        {colorOptions.map((v) => (
+          <option key={v} value={v} />
+        ))}
+      </datalist>
+      <button type="button" onClick={add} className="w-full h-11 rounded-xl border border-dashed border-gold/50 text-gold-soft text-sm font-semibold flex items-center justify-center gap-2">
+        <Plus className="w-4 h-4" /> Ajouter une autre version (capacité / couleur)
+      </button>
+    </div>
+  );
+}
+
+/** Récapitulatif après un ajout multiple */
+function RecapModal({
+  recap,
+  currency,
+  onDone,
+}: {
+  recap: { main: Product; rows: Array<{ product: Product; created: boolean }>; error?: string };
+  currency: string;
+  onDone: () => void;
+}) {
+  const all = [{ product: recap.main, created: true }, ...recap.rows];
+  const created = all.filter((r) => r.created).length;
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-md sm:p-4">
+      <div className="w-full sm:max-w-md max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-neutral-950 border border-neutral-800 p-5 space-y-4">
+        <div className="text-center space-y-1">
+          <span className="mx-auto w-14 h-14 rounded-full bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center">
+            <Check className="w-7 h-7 text-emerald-400" />
+          </span>
+          <p className="text-xl font-black text-white">{created} version(s) créée(s)</p>
+          <p className="text-sm text-neutral-400">{recap.main.name} · chaque version a sa fiche et son stock</p>
+        </div>
+        <div className="space-y-2">
+          {all.map((r) => (
+            <div key={r.product._id} className="flex items-center gap-3 rounded-xl bg-neutral-900 px-3 py-2.5">
+              <ProductVisual imageId={r.product.imageId} category={r.product.category} brand={r.product.brand} name={r.product.name} size="thumb" className="w-10 h-10 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white truncate">{[r.product.model, r.product.color].filter(Boolean).join(' · ') || 'Standard'}</p>
+                <p className="text-[11px] text-neutral-500 font-mono truncate">{r.product.sku}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold text-gold-soft">{(r.product.salePrice || 0).toLocaleString('fr-FR')} {currency}</p>
+                <p className={cn('text-[10px]', r.created ? 'text-emerald-400' : 'text-amber-400')}>{r.created ? 'Créée' : 'Existait déjà'}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        {recap.error && <p className="rounded-xl bg-red-950/40 border border-red-800/50 p-3 text-xs text-red-200">Le produit principal est enregistré, mais les autres versions n&apos;ont pas pu l&apos;être : {recap.error}</p>}
+        <button type="button" onClick={onDone} className="w-full h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-sm">
+          {recap.main.hasSerialNumbers ? 'Continuer : scanner les appareils' : 'Terminé'}
+        </button>
+      </div>
+    </div>
   );
 }
 

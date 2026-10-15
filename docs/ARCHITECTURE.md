@@ -146,6 +146,10 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   accessoires → 6 Prix (marge en direct) → 7 Stock. Suggestions en cascade depuis `GET /global/reference/devices`
   (`useDeviceCatalog`) + les produits déjà créés par la boutique ; toute valeur absente se tape (« Ajouter « … » »).
   Alerte doublon (« Utiliser ce produit »), validation Zod `ProductFormSchema`.
+  **Ajout multiple** (création seulement) : section Version → « Ajouter une autre version » (`VersionsEditor` : capacité,
+  couleur, prix d'achat / de vente, retirer ; version suivante pré-remplie), versions identiques refusées ; bouton « Créer les
+  N versions » = produit principal puis `POST /catalog/products/:id/variants` ; toast + `RecapModal` (chaque version : SKU,
+  prix, Créée / Existait déjà) puis « Continuer : scanner les appareils ». Sans version ajoutée : comportement inchangé.
 - **Images produits** : section « Photo » de la fiche produit : photos du catalogue global (la bonne couleur d'abord,
   choisie automatiquement), **« Prendre / choisir une photo »** (appareil photo du téléphone `capture="environment"` ou
   galerie) : **studio photo** `studioPhoto` (`src/lib/images.ts`) — photo réduite à 1600 px puis optimisée par le serveur
