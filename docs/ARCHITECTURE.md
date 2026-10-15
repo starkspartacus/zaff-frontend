@@ -46,7 +46,13 @@ messages d'erreur compréhensibles. Couleurs de marque or : jetons `gold`, `gold
 de toute façon les permissions : ne jamais s'y fier côté client seul.
 
 ## Écrans clés
-- `/app/scan` vendeur : scan → fiche → « Voulez-vous vendre cet article ? » → Oui → écran « Vendu ! ».
+- `/app/scan` vendeur et propriétaire : scan → fiche → « Voulez-vous vendre cet article ? » → Oui → écran « Vendu ! ».
+  **« Oui, vendre » ne s'active qu'après confirmation de l'article** : lu par la caméra ou la douchette (`BarcodeScanner`
+  `onScan(code, source)` : `camera` | `scanner` = caractères en rafale ≤ 35 ms | `keyboard`) → vérifié d'office ; saisi à la
+  main ou ouvert depuis la Vitrine (`?code=`) → zone « Scannez l'article pour activer » : scan, ou **N° retapé** si l'étiquette
+  est illisible ; autre N° refusé (« Ce n'est pas le même article »). `confirmation` envoyée au serveur. Accessoire avec
+  code-barres : même contrôle. **Client et garantie** ouverts d'office pour un appareil (`PhoneInput`, durée = garantie par
+  défaut de la politique) : la garantie est créée avec la vente et imprimée sur le contrat.
 - `/app/receive` **mise en stock en rafale** (magasinier, propriétaire) : un seul champ de scan ; **code-barres de la boîte →
   modèle en cours** (reste choisi d'un scan à l'autre, carte en haut) ; **IMEI / N° de série → une carte par appareil** dans un
   panier groupé par modèle (« × 3 »), vérifiée aussitôt (`/units/lookup` : déjà en stock / vendu → carte rouge), doublon

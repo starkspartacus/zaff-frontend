@@ -5,11 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { api } from '@/lib/api';
-import { BarcodeScanner } from '@/components/scan/barcode-scanner';
+import { BarcodeScanner, type ScanSource } from '@/components/scan/barcode-scanner';
+import { PhoneInput } from '@/components/forms/geo-fields';
 import { ProductVisual } from '@/components/products/product-visual';
 import { scanFeedback } from '@/components/scan/feedback';
 import { errorMessage, type CreditNoteInfo, type Product, type Sale, type ScanLookup } from '@/lib/types';
-import { lookupCreditNote, useCreateSale, useMyStats, useSellUnit } from '@/lib/queries';
+import { lookupCreditNote, useCreateSale, useMyStats, useReturnPolicy, useSellUnit } from '@/lib/queries';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { BorderBeam } from '@/components/magicui/border-beam';
@@ -21,6 +22,8 @@ import {
   CreditCard,
   FileSignature,
   PackageSearch,
+  Lock,
+  ShieldCheck,
   Ticket,
   ScanLine,
   Smartphone,
@@ -75,6 +78,9 @@ function ScanSell() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [warrantyMonths, setWarrantyMonths] = useState(12);
+  const defaultWarranty = useReturnPolicy().data?.defective?.defaultWarrantyMonths ?? 12;
+  /** L'appareil a-t-il été confirmé physiquement ? scan (caméra / douchette) ou N° retapé (étiquette illisible) */
+  const [confirmation, setConfirmation] = useState<'scan' | 'manual' | null>(null);
   const isSelling = sellUnit.isPending || createSale.isPending;
 
   // Avoir (échange ou bon d'achat) appliqué à la prochaine vente
@@ -99,14 +105,17 @@ function ScanSell() {
     setPaymentMethod('cash');
     setPrice(product?.salePrice || 0);
     setEditPrice(false);
-    setShowCustomer(false);
+    // Appareil suivi : client et garantie proposés d'office (la garantie est liée à la vente)
+    setShowCustomer(!!product?.hasSerialNumbers);
     setCustomerName('');
     setCustomerPhone('');
-    setWarrantyMonths(12);
+    setWarrantyMonths(defaultWarranty);
   };
 
-  const handleScan = async (code: string) => {
+  const handleScan = async (code: string, source?: ScanSource) => {
     setStep({ kind: 'loading', code });
+    // Lu par la caméra ou la douchette = appareil présent ; saisi à la main ou ouvert depuis la Vitrine = à confirmer
+    setConfirmation(source === 'camera' || source === 'scanner' ? 'scan' : null);
     try {
       const data = (await api.get(`/units/lookup/${encodeURIComponent(code)}`)) as unknown as Lookup;
       resetOptions(data.product);
@@ -142,6 +151,7 @@ function ScanSell() {
           unitPrice: Number(price) || 0,
           warrantyMonths: customer.customerName || customer.customerPhone ? warrantyMonths : 0,
           creditNoteCode: credit?.code,
+          confirmation: confirmation || undefined,
           ...customer,
         });
         sale = res.sale;
@@ -271,6 +281,8 @@ function ScanSell() {
           setWarrantyMonths={setWarrantyMonths}
           creditBalance={credit?.balance || 0}
           onApplyCredit={applyCredit}
+          confirmation={confirmation}
+          onConfirm={setConfirmation}
         />
         </BlurFade>
       )}
@@ -360,12 +372,31 @@ function FoundCard(props: {
   setWarrantyMonths: (v: number) => void;
   creditBalance: number;
   onApplyCredit: (code: string) => Promise<void>;
+  confirmation: 'scan' | 'manual' | null;
+  onConfirm: (c: 'scan' | 'manual') => void;
 }) {
+  const { establishment } = useAuth();
+  const [country, setCountry] = useState(establishment?.countryCode || 'CI');
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [creditCode, setCreditCode] = useState('');
   const [showCredit, setShowCredit] = useState(false);
   const { data, formatPrice } = props;
   const product = data.product;
   const details = [product.brand, product.model, product.color].filter(Boolean).join(' · ');
+  const normCode = (c: string) => c.replace(/\s+/g, '').toUpperCase();
+  /** Code attendu pour confirmer : N° de série de l'appareil, ou code-barres de l'accessoire */
+  const expected = data.type === 'unit' ? data.unit.serialNumber : product.barcode || null;
+  const locked = !!expected && !props.confirmation;
+  const confirm = (code: string, source: ScanSource) => {
+    if (expected && normCode(code) === normCode(expected)) {
+      setConfirmError(null);
+      scanFeedback(true);
+      props.onConfirm(source === 'keyboard' ? 'manual' : 'scan');
+    } else {
+      scanFeedback(false);
+      setConfirmError(`Ce n'est pas le même article (${normCode(code)}). Scannez l'appareil que le client emporte.`);
+    }
+  };
 
   // Code-barres d'un modèle suivi par N° de série : il faut l'appareil précis
   if (data.type === 'product' && product.hasSerialNumbers) {
@@ -541,7 +572,7 @@ function FoundCard(props: {
           className="w-full px-4 py-3 flex items-center justify-between text-xs text-neutral-300"
         >
           <span className="flex items-center gap-2">
-            <UserPlus className="w-4 h-4 text-gold" /> Client et garantie (facultatif)
+            <UserPlus className="w-4 h-4 text-gold" /> Client et garantie {data.type === 'unit' ? '(conseillé)' : '(facultatif)'}
           </span>
           <ChevronDown className={`w-4 h-4 transition-transform ${props.showCustomer ? 'rotate-180' : ''}`} />
         </button>
@@ -553,13 +584,7 @@ function FoundCard(props: {
               placeholder="Nom du client"
               className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold"
             />
-            <input
-              type="tel"
-              value={props.customerPhone}
-              onChange={(e) => props.setCustomerPhone(e.target.value)}
-              placeholder="Téléphone"
-              className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold"
-            />
+            <PhoneInput country={country} onCountryChange={setCountry} value={props.customerPhone} onChange={props.setCustomerPhone} />
             {data.type === 'unit' && (
               <select
                 value={props.warrantyMonths}
@@ -573,9 +598,39 @@ function FoundCard(props: {
                 <option value={24}>Garantie 24 mois</option>
               </select>
             )}
+            {data.type === 'unit' && (
+              <p className="text-[11px] text-neutral-500 flex items-start gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-gold shrink-0 mt-0.5" />
+                {props.customerName || props.customerPhone
+                  ? `La garantie de ${props.warrantyMonths} mois est créée avec la vente, au nom du client, et imprimée sur son contrat (QR de vérification).`
+                  : 'Indiquez le nom ou le téléphone du client pour enregistrer sa garantie avec la vente.'}
+              </p>
+            )}
           </div>
         )}
       </div>
+
+      {/* Contrôle de sécurité : l'article vendu doit être physiquement scanné (ou son N° retapé) */}
+      {expected && (
+        <div className={`rounded-2xl border p-4 space-y-2 ${props.confirmation ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-amber-500/50 bg-amber-500/5'}`}>
+          {props.confirmation ? (
+            <p className="text-sm font-semibold text-emerald-400 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" /> Article vérifié {props.confirmation === 'scan' ? 'par scan' : 'par saisie du N°'}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-white flex items-center gap-2">
+                <Lock className="w-4 h-4 text-amber-400" /> Scannez l&apos;article pour activer « Oui, vendre »
+              </p>
+              <p className="text-[11px] text-neutral-400">
+                Étiquette illisible ? Tapez le {data.type === 'unit' ? 'N° de série / IMEI' : 'code-barres'} inscrit sur l&apos;appareil puis « OK ».
+              </p>
+              <BarcodeScanner onScan={confirm} placeholder={data.type === 'unit' ? "Scannez ou tapez l'IMEI de l'appareil" : 'Scannez le code-barres'} />
+              {confirmError && <p className="text-xs text-red-400">{confirmError}</p>}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Question de confirmation */}
       <div className="space-y-2">
@@ -590,14 +645,14 @@ function FoundCard(props: {
           </button>
           <button
             onClick={props.onSell}
-            disabled={props.isSelling}
+            disabled={props.isSelling || locked}
             className="col-span-2 h-14 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-base hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-gold/20"
           >
             {props.isSelling ? (
               <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
             ) : (
               <>
-                <CheckCircle2 className="w-5 h-5" /> Oui, vendre
+                {locked ? <Lock className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />} Oui, vendre
               </>
             )}
           </button>

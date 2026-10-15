@@ -4,8 +4,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, CameraOff, Keyboard, ScanLine } from 'lucide-react';
 
 interface BarcodeScannerProps {
-  /** Appelé avec le code lu (caméra, douchette ou saisie manuelle) */
-  onScan: (code: string) => void;
+  /**
+   * Appelé avec le code lu. `source` : `camera` (caméra), `scanner` (douchette : caractères tapés en rafale)
+   * ou `keyboard` (saisie / collage à la main) — utile pour exiger un vrai scan de l'appareil.
+   */
+  onScan: (code: string, source: ScanSource) => void;
   /** Suspend la lecture caméra (ex. pendant une confirmation) */
   paused?: boolean;
   placeholder?: string;
@@ -15,7 +18,11 @@ interface BarcodeScannerProps {
   hint?: string;
 }
 
+export type ScanSource = 'camera' | 'scanner' | 'keyboard';
+
 const SAME_CODE_DELAY_MS = 2500;
+/** Une douchette « tape » chaque caractère en quelques millisecondes ; un humain en 100 ms ou plus */
+const SCANNER_MAX_MS_PER_CHAR = 35;
 
 export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartCamera = false, hint }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -34,14 +41,16 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
     onScanRef.current = onScan;
   });
 
-  const emit = useCallback((raw: string) => {
+  /** Rythme de frappe du champ : sert à reconnaître une douchette */
+  const typing = useRef<{ first: number; last: number; chars: number; pasted: boolean }>({ first: 0, last: 0, chars: 0, pasted: false });
+  const emit = useCallback((raw: string, source: ScanSource) => {
     const code = raw.trim();
     if (!code || pausedRef.current) return;
     const now = Date.now();
     // La caméra relit le même code plusieurs fois par seconde : on l'ignore un instant
     if (code === lastScan.current.code && now - lastScan.current.at < SAME_CODE_DELAY_MS) return;
     lastScan.current = { code, at: now };
-    onScanRef.current(code);
+    onScanRef.current(code, source);
   }, []);
 
   // Caméra (ZXing : codes-barres 1D, QR, DataMatrix — Android et iPhone)
@@ -65,7 +74,7 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
           { video: { facingMode: { ideal: 'environment' } } },
           videoRef.current,
           (result) => {
-            if (result) emit(result.getText());
+            if (result) emit(result.getText(), 'camera');
           }
         );
         if (stopped) controls.stop();
@@ -94,7 +103,11 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
   const submitManual = (e: React.FormEvent) => {
     e.preventDefault();
     lastScan.current = { code: '', at: 0 }; // une saisie volontaire passe toujours
-    emit(manual);
+    const t = typing.current;
+    const perChar = t.chars > 1 ? (t.last - t.first) / (t.chars - 1) : Infinity;
+    const source: ScanSource = !t.pasted && manual.trim().length >= 6 && perChar <= SCANNER_MAX_MS_PER_CHAR ? 'scanner' : 'keyboard';
+    emit(manual, source);
+    typing.current = { first: 0, last: 0, chars: 0, pasted: false };
     setManual('');
   };
 
@@ -123,7 +136,19 @@ export function BarcodeScanner({ onScan, paused = false, placeholder, autoStartC
           <input
             ref={inputRef}
             value={manual}
-            onChange={(e) => setManual(e.target.value)}
+            onChange={(e) => {
+              const now = performance.now();
+              const t = typing.current;
+              const added = e.target.value.length - manual.length;
+              if (!e.target.value) typing.current = { first: 0, last: 0, chars: 0, pasted: false };
+              else {
+                if (!t.chars) t.first = now;
+                if (added > 1) t.pasted = true; // collage ou saisie automatique
+                t.last = now;
+                t.chars += Math.max(1, added);
+              }
+              setManual(e.target.value);
+            }}
             placeholder={placeholder || 'Scannez ou tapez le N° de série / IMEI'}
             autoComplete="off"
             inputMode={numeric ? 'numeric' : 'text'}
