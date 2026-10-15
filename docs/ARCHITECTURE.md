@@ -47,10 +47,15 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
 
 ## Écrans clés
 - `/app/scan` vendeur : scan → fiche → « Voulez-vous vendre cet article ? » → Oui → écran « Vendu ! ».
-- `/app/receive` magasinier : choisir / créer le modèle (suggestions du catalogue de référence global),
-  puis scanner chaque appareil (✓ / ✗ avec la raison, annulation possible). `?product=<id>` : modèle déjà choisi
-  (bouton « Mettre en stock » du Catalogue, « Scanner les appareils » de la fiche produit, et automatiquement après la
-  création d'un produit à N° de série dans le Catalogue).
+- `/app/receive` **mise en stock en rafale** (magasinier, propriétaire) : un seul champ de scan ; **code-barres de la boîte →
+  modèle en cours** (reste choisi d'un scan à l'autre, carte en haut) ; **IMEI / N° de série → une carte par appareil** dans un
+  panier groupé par modèle (« × 3 »), vérifiée aussitôt (`/units/lookup` : déjà en stock / vendu → carte rouge), doublon
+  refusé, contrôle IMEI (« Ajouter quand même »). Retirer une carte, « Autre modèle » pour un groupe, coller une liste, Vider.
+  **Rien n'est en stock avant « Enregistrer N appareil(s) »** (`addUnits` par modèle ; refusés gardés avec la raison).
+  Panier conservé sur l'appareil (`zaff-receive-draft`). IMEI scanné sans modèle → choix / création du modèle puis ajout.
+  `?product=<id>` (Catalogue, fiche produit) et `&serial=` (IMEI saisi dans la fiche → 1er appareil).
+- Fiche produit : un IMEI tapé dans « Code-barres de la boîte » est signalé, **pas enregistré comme code du modèle** et devient
+  le 1er appareil mis en stock (`onSaved(product, { firstSerial })`).
 - **Le stock d'un produit à N° de série ne monte qu'en scannant le N° de série / IMEI de chaque appareil** ; le code-barres
   de la boîte identifie seulement le modèle (rappelé dans la fiche produit et la fenêtre de scan du code-barres).
 - `/app/catalog` lit les produits avec React Query (`useProducts`) : stock rafraîchi en direct par le WebSocket.

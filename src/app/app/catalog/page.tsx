@@ -274,11 +274,11 @@ export default function CatalogPage() {
               key={editingProduct?._id || 'new'}
               initial={editingProduct}
               onCancel={() => setIsModalOpen(false)}
-              onSaved={(saved) => {
+              onSaved={(saved, extra) => {
                 setIsModalOpen(false);
                 fetchData();
                 // Nouveau produit à N° de série : son stock monte en scannant chaque appareil, on y va directement
-                if (!editingProduct && saved.hasSerialNumbers) router.push(`/app/receive?product=${saved._id}`);
+                if (!editingProduct && saved.hasSerialNumbers) router.push(`/app/receive?product=${saved._id}${extra?.firstSerial ? `&serial=${encodeURIComponent(extra.firstSerial)}` : ''}`);
               }}
               onUseExisting={(p) => setEditingProduct(p)}
             />

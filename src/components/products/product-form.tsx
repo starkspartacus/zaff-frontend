@@ -45,6 +45,7 @@ import { reportImage, uploadShopImage, discardShopImage, studioPhoto, useSharedI
 import { useAuth } from '@/contexts/auth-context';
 import { ProductVisual } from './product-visual';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
+import { imeiCheck } from '@/lib/imei';
 import { fieldErrors, ProductFormSchema } from '@/lib/schemas';
 
 /**
@@ -115,7 +116,8 @@ export interface ProductFormProps {
   compact?: boolean;
   /** Valeurs de départ (ex. code-barres scanné) */
   defaults?: Partial<{ barcode: string; category: string }>;
-  onSaved: (product: Product) => void;
+  /** `firstSerial` : IMEI saisi par erreur comme code-barres de la boîte → 1er appareil à mettre en stock */
+  onSaved: (product: Product, extra?: { firstSerial?: string }) => void;
   onCancel: () => void;
   /** Produit existant identique : le reprendre plutôt qu'en créer un doublon */
   onUseExisting?: (product: Product) => void;
@@ -147,6 +149,8 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
   const [skuTouched, setSkuTouched] = useState(!!initial);
   const [skuSuffix] = useState(() => String(Math.floor(100 + Math.random() * 900)));
   const [barcode, setBarcode] = useState(initial?.barcode || defaults?.barcode || '');
+  /** Un IMEI identifie UN téléphone : ce n'est pas le code-barres de la boîte (commun à tout le modèle) */
+  const barcodeIsImei = imeiCheck(barcode) === 'valid';
   const [condition, setCondition] = useState<ProductCondition>(initial?.condition || 'new');
   const [accessories, setAccessories] = useState<string[]>(initial?.accessories ? initial.accessories.split(ACC_SEP).filter(Boolean) : []);
   const [purchasePrice, setPurchasePrice] = useState(initial?.purchasePrice ? String(initial.purchasePrice) : '');
@@ -323,7 +327,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
       const payload = {
         name: effectiveName.trim(),
         sku: effectiveSku.trim(),
-        barcode: barcode.trim() || undefined,
+        barcode: barcodeIsImei ? undefined : barcode.trim() || undefined,
         category: cat.slug,
         brand: brandDoc?.name || undefined,
         brandId: brandDoc?._id || undefined,
@@ -347,7 +351,7 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
         : await api.post('/catalog/products', payload)) as unknown as Product;
       await queryClient.invalidateQueries({ queryKey: ['products'] });
       await queryClient.invalidateQueries({ queryKey: ['images'] });
-      onSaved(saved);
+      onSaved(saved, barcodeIsImei && hasSerialNumbers ? { firstSerial: barcode.replace(/[\s-]/g, '') } : undefined);
     } catch (err) {
       // Produit non enregistré : la photo tout juste envoyée est annulée (aucun fichier orphelin)
       if (uploadedId) await discardShopImage(uploadedId);
@@ -660,7 +664,14 @@ export function ProductForm({ initial, compact, defaults, onSaved, onCancel, onU
             placeholder="Tapez ou scannez"
             mono
             icon={Barcode}
-            error={errors.barcode}
+            error={
+              errors.barcode ||
+              (barcodeIsImei
+                ? hasSerialNumbers
+                  ? 'Ceci est un IMEI (un seul téléphone) : il ne sera pas le code du modèle, il deviendra le 1er appareil mis en stock.'
+                  : 'Ceci est un IMEI (un seul téléphone), pas le code-barres de la boîte : il ne sera pas enregistré.'
+                : undefined)
+            }
             inputMode="numeric"
             action={
               <button type="button" onClick={() => setScanOpen(true)} className="text-[11px] text-gold flex items-center gap-1">
