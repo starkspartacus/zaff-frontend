@@ -522,3 +522,75 @@ export interface ReceptionResult {
   reception: StockReception | null;
   results: Array<{ productId: string; created: string[]; rejected: Array<{ serialNumber: string; reason: string }> }>;
 }
+
+/** Stock par modèle et capacité (`GET /stock/models`) : une version = une fiche produit (capacité, couleur, état) */
+export interface StockVersion {
+  productId: string;
+  sku: string | null;
+  capacity: string | null;
+  color: string | null;
+  condition: 'new' | 'refurbished' | 'used';
+  imageId: string | null;
+  tracked: boolean;
+  inStock: number;
+  consigned: number;
+  defective: number;
+  inRepair: number;
+  sold: number;
+  salePrice: number;
+  resellerPrice: number;
+  /** Propriétaire et magasinier seulement */
+  purchasePrice?: number;
+  value?: number;
+  saleValue: number;
+  minStockAlert: number;
+  coverDays: number | null;
+  avgAgeDays: number | null;
+  oldestDays: number | null;
+  agingUnits: number;
+  status: 'out' | 'low' | 'ok';
+  reorder: number;
+}
+
+export interface StockFamily {
+  key: string;
+  category: string;
+  brand: string | null;
+  name: string;
+  deviceId: string | null;
+  imageId: string | null;
+  versions: StockVersion[];
+  inStock: number;
+  consigned: number;
+  defective: number;
+  inRepair: number;
+  sold: number;
+  value?: number;
+  saleValue: number;
+  agingUnits: number;
+  oldestDays: number | null;
+  outVersions: number;
+  lowVersions: number;
+  reorder: number;
+  capacities: Array<{ capacity: string | null; inStock: number; sold: number; fromPrice: number | null; colors: string[] }>;
+}
+
+export interface StockModels {
+  periodDays: number;
+  agingDays: number;
+  totals: {
+    families: number;
+    versions: number;
+    inStock: number;
+    consigned: number;
+    defective: number;
+    inRepair: number;
+    sold: number;
+    value?: number;
+    saleValue: number;
+    agingUnits: number;
+    outVersions: number;
+    lowVersions: number;
+  };
+  families: StockFamily[];
+}

@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { useProducts, useStockMovements } from '@/lib/queries';
 import { errorMessage } from '@/lib/types';
 import { UnitsTable } from '@/components/stock/units-table';
+import { StockByModel } from '@/components/stock/stock-by-model';
 import { Input } from '@/components/ui/input';
 import { GlowButton } from '@/components/seraui/glow-button';
 import {
@@ -33,7 +34,7 @@ export default function StockPage() {
   const movements = movementsQuery.data ?? [];
   const isLoading = productsQuery.isLoading || movementsQuery.isLoading;
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'levels' | 'units' | 'history'>('levels');
+  const [activeTab, setActiveTab] = useState<'models' | 'levels' | 'units' | 'history'>('models');
 
   // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -136,7 +137,17 @@ export default function StockPage() {
 
       {/* Tabs */}
       <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('models')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'models'
+                ? 'bg-gold text-ink'
+                : 'text-neutral-400 hover:text-white bg-neutral-900'
+            }`}
+          >
+            Par modèle et capacité
+          </button>
           <button
             onClick={() => setActiveTab('levels')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
@@ -182,7 +193,9 @@ export default function StockPage() {
       </div>
 
       {/* Content based on tab */}
-      {activeTab === 'units' ? (
+      {activeTab === 'models' ? (
+        <StockByModel search={search} canManage={canManage} formatPrice={formatPrice} />
+      ) : activeTab === 'units' ? (
         <UnitsTable search={search} canManage={canManage} />
       ) : activeTab === 'levels' ? (
         <div className="bg-neutral-950/80 border border-neutral-800/80 rounded-3xl overflow-hidden shadow-xl">

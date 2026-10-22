@@ -6,6 +6,9 @@ import { useAuth } from '@/contexts/auth-context';
 import { useSales } from '@/lib/queries';
 import type { Sale } from '@/lib/types';
 import { ReturnModal } from '@/components/sales/return-modal';
+import { ReceiptButton } from '@/components/print/receipt-button';
+import { printInvoiceA4 } from '@/components/print/receipt';
+import { openPrintWindow } from '@/components/labels/print-labels';
 import { Input } from '@/components/ui/input';
 import {
   FileSignature,
@@ -119,7 +122,7 @@ export default function InvoicesPage() {
                       {sale.invoiceNumber}
                     </td>
                     <td className="py-3.5 px-4 text-neutral-300">
-                      {new Date(sale.saleDate || sale.createdAt || Date.now()).toLocaleDateString('fr-FR', {
+                      {new Date(sale.saleDate || sale.createdAt || 0).toLocaleDateString('fr-FR', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
@@ -191,7 +194,7 @@ export default function InvoicesPage() {
                   Facture {selectedSale.invoiceNumber}
                 </h2>
                 <p className="text-xs text-neutral-400">
-                  Émise le {new Date(selectedSale.saleDate || selectedSale.createdAt || Date.now()).toLocaleDateString('fr-FR')}
+                  Émise le {new Date(selectedSale.saleDate || selectedSale.createdAt || 0).toLocaleDateString('fr-FR')}
                 </p>
               </div>
 
@@ -315,7 +318,7 @@ export default function InvoicesPage() {
                         {selectedSale.invoiceNumber}
                       </p>
                       <p className="text-neutral-400">
-                        {new Date(selectedSale.saleDate || selectedSale.createdAt || Date.now()).toLocaleDateString('fr-FR')}
+                        {new Date(selectedSale.saleDate || selectedSale.createdAt || 0).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
                   </div>
@@ -400,12 +403,25 @@ export default function InvoicesPage() {
                   <Undo2 className="w-4 h-4" /> Retour de marchandise
                 </button>
               )}
-              <button
-                onClick={() => window.print()}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs hover:brightness-110 transition-all flex items-center gap-2 shadow-lg shadow-gold/20"
-              >
-                <Printer className="w-4 h-4" /> Imprimer Document
-              </button>
+              {printFormat === 'thermal' ? (
+                <ReceiptButton saleId={selectedSale._id} compact className="min-w-[220px]" />
+              ) : (
+                <button
+                  onClick={() => {
+                    let win: Window | undefined;
+                    try {
+                      win = openPrintWindow('Préparation de la facture…');
+                    } catch (e) {
+                      alert(e instanceof Error ? e.message : String(e));
+                      return;
+                    }
+                    printInvoiceA4(selectedSale._id, win).catch((e) => alert(e instanceof Error ? e.message : String(e)));
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-xs hover:brightness-110 transition-all flex items-center gap-2 shadow-lg shadow-gold/20"
+                >
+                  <Printer className="w-4 h-4" /> Imprimer la facture A4
+                </button>
+              )}
             </div>
           </div>
         </div>

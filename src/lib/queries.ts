@@ -36,6 +36,7 @@ import type {
   CodeBatch,
   StockReception,
   ReceptionResult,
+  StockModels,
 } from '@/lib/types';
 
 const get = <T,>(url: string) => api.get(url) as unknown as Promise<T>;
@@ -159,6 +160,10 @@ export interface StockMovementRow {
   notes?: string | null;
   createdAt: string;
 }
+
+/** Stock par modèle et capacité (familles → versions), rafraîchi en direct (scope `stock`) */
+export const useStockModels = (days = 30) =>
+  useQuery({ queryKey: qk.stockModels(days), queryFn: () => get<StockModels>(`/stock/models?days=${days}`) });
 
 export const useStockMovements = (limit = 100) =>
   useQuery({ queryKey: qk.stockMovements(limit), queryFn: () => get<StockMovementRow[]>(`/stock/movements?limit=${limit}`) });

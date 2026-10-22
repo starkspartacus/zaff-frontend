@@ -30,6 +30,7 @@ export const qk = {
   customer: (id: string) => ['customers', 'detail', id] as const,
   stockOverview: () => ['stock', 'overview'] as const,
   stockMovements: (limit: number) => ['stock', 'movements', limit] as const,
+  stockModels: (days: number) => ['stock', 'models', days] as const,
   notifications: () => ['notifications'] as const,
   currentRegister: () => ['cash-closings', 'current'] as const,
   closings: (days: number, status: string) => ['cash-closings', 'list', days, status] as const,

@@ -29,6 +29,8 @@ import {
 import confetti from 'canvas-confetti';
 import { BarcodeScanner } from '@/components/scan/barcode-scanner';
 import { scanFeedback } from '@/components/scan/feedback';
+import { prepareAutoReceipt, ReceiptButton } from '@/components/print/receipt-button';
+import { printReceipt } from '@/components/print/receipt';
 import { errorMessage, type Customer, type Product, type Sale, type ScanLookup } from '@/lib/types';
 
 type PayMethod = 'cash' | 'card' | 'mobile' | 'bank_transfer' | 'credit';
@@ -242,6 +244,8 @@ export default function SalesPosPage() {
   const handleFinalizeSale = async () => {
     if (!canValidate) return;
     setCheckoutError(null);
+    // Impression automatique du ticket : fenêtre ouverte dès le clic (sinon bloquée par le navigateur)
+    const receiptWin = prepareAutoReceipt();
     try {
       // Le serveur recalcule prix et totaux ; sans client choisi : vente comptant
       const withCustomer = !!selectedCustomer;
@@ -268,11 +272,13 @@ export default function SalesPosPage() {
       });
 
       setCompletedSale({ ...result, change: paymentMethod === 'cash' ? changeToReturn : 0 });
+      if (receiptWin) printReceipt(result._id, {}, receiptWin).catch(() => undefined);
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 }, colors: ['#d4a017', '#e5b83b', '#ffffff'] });
       setCart([]);
       setDiscount(0);
       setIsCheckoutOpen(false);
     } catch (err) {
+      receiptWin?.close();
       setCheckoutError(errorMessage(err));
     }
   };
@@ -779,6 +785,7 @@ export default function SalesPosPage() {
               </div>
             </div>
 
+            <ReceiptButton saleId={completedSale._id} />
             <Link
               href={`/contract?sale=${completedSale._id}`}
               className="w-full py-2.5 rounded-xl bg-gold/10 border border-gold/40 text-gold-soft text-xs font-bold flex items-center justify-center gap-2"

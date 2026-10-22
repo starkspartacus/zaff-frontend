@@ -53,6 +53,17 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   est illisible ; autre N° refusé (« Ce n'est pas le même article »). `confirmation` envoyée au serveur. Accessoire avec
   code-barres : même contrôle. **Client et garantie** ouverts d'office pour un appareil (`PhoneInput`, durée = garantie par
   défaut de la politique) : la garantie est créée avec la vente et imprimée sur le contrat.
+  **Particulier | Revendeur** : revendeur choisi dans la liste (`useCustomers('resellers')`, dette affichée) → tarif
+  revendeur (rappel du prix public), « À crédit » + acompte (reste à payer en direct), `customerId` + `saleType: reseller` ;
+  « Oui, vendre » bloqué tant que le revendeur n'est pas choisi, que l'acompte dépasse le montant, ou qu'un vendeur passe sous
+  le prix d'achat. Le revendeur reste choisi d'un scan à l'autre. Écran « Vendu ! » : dette du client, ticket, contrat.
+- **Ticket de caisse thermique** (`src/components/print/`) : `printReceipt(saleId)` lit `GET /sales/:id/receipt` et imprime
+  dans sa propre fenêtre (58 mm = 48 mm utiles, 80 mm = 72 mm ; boutique, N°, vendeur, client / revendeur, N° de série, fin de
+  garantie, remise, avoir, monnaie rendue, acompte, reste à payer + signature à crédit, QR de vérification, délai de retour).
+  `ReceiptButton` : réglages **par appareil** (`zaff-receipt` : largeur, 1 ou 2 exemplaires client + boutique, impression
+  automatique). Impression automatique : `prepareAutoReceipt()` ouvre la fenêtre **au clic** de la vente (sinon bloquée),
+  fermée si la vente échoue. Branché sur le scan, la caisse POS et les Factures (+ `printInvoiceA4` : facture A4 seule,
+  plus de `window.print()` de toute la page).
 - `/app/receive` **mise en stock en rafale** (magasinier, propriétaire) : un seul champ de scan ; **code-barres de la boîte →
   modèle en cours** (reste choisi d'un scan à l'autre, carte en haut) ; **IMEI / N° de série → une carte par appareil** dans un
   panier groupé par modèle (« × 3 »), vérifiée aussitôt (`/units/lookup` : déjà en stock / vendu → carte rouge), doublon
@@ -85,6 +96,11 @@ de toute façon les permissions : ne jamais s'y fier côté client seul.
   (`CustomerPanel` : ventes avec statut payée / partiellement / à payer, paiements reçus, contrat), téléphone `PhoneInput`
   (E.164), suppression réservée au propriétaire. **Retour de marchandise** (propriétaire, `components/sales/return-modal.tsx`,
   aussi dans les Factures) : quantités / N° de série rapportés, part déduite du reste à payer, surplus remboursé.
+- `/app/stock` onglet **« Par modèle et capacité »** (par défaut, `StockByModel`, `useStockModels(days)`, clé `['stock','models',days]`) :
+  chiffres (vendables, chez les revendeurs, atelier, vendus, valeur d'achat — propriétaire / magasinier —, stock dormant),
+  filtres (rupture, stock bas, dormant, à recommander, catégorie, période 7–180 j), carte par modèle avec pastilles de
+  capacité (dispo / épuisé barré, « dès » prix) puis tableau des versions (dispo, dehors, vendus, couverture, âge, prix public
+  / revendeur, « Racheter N », « Mettre en stock »).
 - `/app/invoices` : liste en direct (`useSales`), N° de série / IMEI sur le ticket et la facture A4, avoir, reste à payer,
   « Retour partiel ». `/app/stock` : React Query, prix d'achat et valeur du stock masqués aux vendeurs.
 - Tableau de bord et accueil propriétaire : CA **net** (retours déduits) et « … à encaisser » (`sales.receivables`).

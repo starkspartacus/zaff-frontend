@@ -21,10 +21,10 @@ function barcodeSvg(code: string): string {
 }
 
 /** À appeler dès le clic (avant toute attente réseau), sinon le navigateur bloque la fenêtre */
-export function openPrintWindow(): Window {
-  const w = window.open('', '_blank', 'width=820,height=900');
-  if (!w) throw new Error('Autorisez l’ouverture des fenêtres pour imprimer les étiquettes.');
-  w.document.write('<p style="font-family:system-ui;padding:24px">Préparation des étiquettes…</p>');
+export function openPrintWindow(message = 'Préparation des étiquettes…', size = 'width=820,height=900'): Window {
+  const w = window.open('', '_blank', size);
+  if (!w) throw new Error('Autorisez l’ouverture des fenêtres (pop-up) pour imprimer.');
+  w.document.write(`<p style="font-family:system-ui;padding:24px">${message}</p>`);
   return w;
 }
 

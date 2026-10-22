@@ -9,8 +9,10 @@ import { BarcodeScanner, type ScanSource } from '@/components/scan/barcode-scann
 import { PhoneInput } from '@/components/forms/geo-fields';
 import { ProductVisual } from '@/components/products/product-visual';
 import { scanFeedback } from '@/components/scan/feedback';
-import { errorMessage, type CreditNoteInfo, type Product, type Sale, type ScanLookup } from '@/lib/types';
-import { lookupCreditNote, useCreateSale, useMyStats, useReturnPolicy, useSellUnit } from '@/lib/queries';
+import { errorMessage, type CreditNoteInfo, type Customer, type Product, type Sale, type ScanLookup } from '@/lib/types';
+import { prepareAutoReceipt, ReceiptButton } from '@/components/print/receipt-button';
+import { printReceipt } from '@/components/print/receipt';
+import { lookupCreditNote, useCreateSale, useCustomers, useMyStats, useReturnPolicy, useSellUnit } from '@/lib/queries';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import { BlurFade } from '@/components/magicui/blur-fade';
 import { BorderBeam } from '@/components/magicui/border-beam';
@@ -20,6 +22,8 @@ import {
   CheckCircle2,
   ChevronDown,
   CreditCard,
+  HandCoins,
+  Store,
   FileSignature,
   PackageSearch,
   Lock,
@@ -38,13 +42,17 @@ type Step =
   | { kind: 'loading'; code: string }
   | { kind: 'found'; data: Lookup }
   | { kind: 'error'; message: string }
-  | { kind: 'sold'; sale: Sale; productName: string; serialNumber?: string };
+  | { kind: 'sold'; sale: Sale; productName: string; serialNumber?: string; customerName?: string };
 
 const PAYMENTS = [
   { id: 'cash', label: 'Espèces', icon: Banknote },
   { id: 'mobile', label: 'Mobile Money', icon: Smartphone },
   { id: 'card', label: 'Carte', icon: CreditCard },
+  { id: 'credit', label: 'À crédit', icon: HandCoins },
 ] as const;
+
+/** Prix proposé : tarif revendeur pour un revendeur (s'il existe), sinon prix public */
+const priceFor = (p: Product | undefined, reseller: boolean) => (reseller && (p?.resellerPrice || 0) > 0 ? p!.resellerPrice! : p?.salePrice || 0);
 
 /** La page lit `?credit=AV-…` (échange) : composant client sous Suspense, recommandé par Next pour useSearchParams */
 export default function ScanSellPage() {
@@ -78,6 +86,11 @@ function ScanSell() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [warrantyMonths, setWarrantyMonths] = useState(12);
+  /** Particulier (prix public) ou revendeur enregistré (tarif revendeur, crédit possible) */
+  const [saleMode, setSaleMode] = useState<'retail' | 'reseller'>('retail');
+  const [resellerId, setResellerId] = useState<string>('');
+  const [deposit, setDeposit] = useState(0);
+  const { data: resellers = [] } = useCustomers('resellers');
   const defaultWarranty = useReturnPolicy().data?.defective?.defaultWarrantyMonths ?? 12;
   /** L'appareil a-t-il été confirmé physiquement ? scan (caméra / douchette) ou N° retapé (étiquette illisible) */
   const [confirmation, setConfirmation] = useState<'scan' | 'manual' | null>(null);
@@ -103,7 +116,8 @@ function ScanSell() {
 
   const resetOptions = (product?: Product) => {
     setPaymentMethod('cash');
-    setPrice(product?.salePrice || 0);
+    setPrice(priceFor(product, saleMode === 'reseller' && !!resellerId));
+    setDeposit(0);
     setEditPrice(false);
     // Appareil suivi : client et garantie proposés d'office (la garantie est liée à la vente)
     setShowCustomer(!!product?.hasSerialNumbers);
@@ -136,12 +150,27 @@ function ScanSell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule recherche à l'ouverture
   }, [codeParam]);
 
+  /** Changer de client : le prix suit (tarif revendeur ↔ prix public), le crédit n'est permis qu'au revendeur */
+  const chooseMode = (mode: 'retail' | 'reseller', id = resellerId) => {
+    setSaleMode(mode);
+    setResellerId(id);
+    if (mode === 'retail' && paymentMethod === 'credit') setPaymentMethod('cash');
+    if (step.kind === 'found') setPrice(priceFor(step.data.product, mode === 'reseller' && !!id));
+  };
+
   const handleSell = async () => {
     if (step.kind !== 'found') return;
     const { data } = step;
-    const customer = showCustomer && (customerName || customerPhone)
-      ? { customerName: customerName || undefined, customerPhone: customerPhone || undefined }
-      : {};
+    const reseller = saleMode === 'reseller' && resellerId ? resellers.find((r) => r._id === resellerId) : undefined;
+    const customer: { customerId?: string; customerName?: string; customerPhone?: string } = reseller
+      ? { customerId: reseller._id }
+      : showCustomer && (customerName || customerPhone)
+        ? { customerName: customerName || undefined, customerPhone: customerPhone || undefined }
+        : {};
+    const hasCustomer = !!(customer.customerId || customer.customerName || customer.customerPhone);
+    const credit_ = paymentMethod === 'credit' ? { depositAmount: deposit || 0, depositMethod: deposit > 0 ? 'cash' : undefined } : {};
+    // Impression automatique du ticket : fenêtre ouverte dès le clic (sinon bloquée par le navigateur)
+    const receiptWin = prepareAutoReceipt();
     try {
       let sale: Sale;
       if (data.type === 'unit') {
@@ -149,9 +178,11 @@ function ScanSell() {
           serialNumber: data.unit.serialNumber,
           paymentMethod,
           unitPrice: Number(price) || 0,
-          warrantyMonths: customer.customerName || customer.customerPhone ? warrantyMonths : 0,
+          warrantyMonths: hasCustomer ? warrantyMonths : 0,
           creditNoteCode: credit?.code,
           confirmation: confirmation || undefined,
+          saleType: reseller ? 'reseller' : 'purchase',
+          ...credit_,
           ...customer,
         });
         sale = res.sale;
@@ -164,11 +195,13 @@ function ScanSell() {
           discount: 0,
           total: Number(price) || 0,
           paymentMethod,
-          saleType: 'purchase',
+          saleType: reseller ? 'reseller' : 'purchase',
           creditNoteCode: credit?.code,
+          ...credit_,
           ...customer,
         });
       }
+      if (receiptWin) printReceipt(sale._id, {}, receiptWin).catch(() => undefined);
       scanFeedback(true);
       setCredit(null); // un avoir ne sert qu'une fois (le reste éventuel reste sur l'avoir)
       setStep({
@@ -176,8 +209,10 @@ function ScanSell() {
         sale,
         productName: data.product.name,
         serialNumber: data.type === 'unit' ? data.unit.serialNumber : undefined,
+        customerName: reseller?.name || customer.customerName,
       });
     } catch (err) {
+      receiptWin?.close();
       scanFeedback(false);
       setStep({ kind: 'error', message: errorMessage(err) });
     }
@@ -283,6 +318,12 @@ function ScanSell() {
           onApplyCredit={applyCredit}
           confirmation={confirmation}
           onConfirm={setConfirmation}
+          saleMode={saleMode}
+          resellerId={resellerId}
+          resellers={resellers}
+          onChooseMode={chooseMode}
+          deposit={deposit}
+          setDeposit={setDeposit}
         />
         </BlurFade>
       )}
@@ -307,6 +348,14 @@ function ScanSell() {
               </span>
             ) : null}
           </p>
+          {step.sale.paymentMethod === 'credit' && (
+            <p className="text-sm font-bold text-amber-400">
+              {step.customerName ? `${step.customerName} doit ` : 'Reste à payer : '}
+              {formatPrice(step.sale.amountDue || 0)}
+              {step.sale.depositAmount ? <span className="block text-xs font-normal text-neutral-400">Acompte reçu : {formatPrice(step.sale.depositAmount)}</span> : null}
+            </p>
+          )}
+          <ReceiptButton saleId={step.sale._id} />
           <Link
             href={`/contract?sale=${step.sale._id}`}
             className="w-full h-12 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-bold text-sm flex items-center justify-center gap-2"
@@ -374,8 +423,14 @@ function FoundCard(props: {
   onApplyCredit: (code: string) => Promise<void>;
   confirmation: 'scan' | 'manual' | null;
   onConfirm: (c: 'scan' | 'manual') => void;
+  saleMode: 'retail' | 'reseller';
+  resellerId: string;
+  resellers: Customer[];
+  onChooseMode: (mode: 'retail' | 'reseller', id?: string) => void;
+  deposit: number;
+  setDeposit: (v: number) => void;
 }) {
-  const { establishment } = useAuth();
+  const { establishment, user } = useAuth();
   const [country, setCountry] = useState(establishment?.countryCode || 'CI');
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [creditCode, setCreditCode] = useState('');
@@ -386,7 +441,15 @@ function FoundCard(props: {
   const normCode = (c: string) => c.replace(/\s+/g, '').toUpperCase();
   /** Code attendu pour confirmer : N° de série de l'appareil, ou code-barres de l'accessoire */
   const expected = data.type === 'unit' ? data.unit.serialNumber : product.barcode || null;
+  const isReseller = props.saleMode === 'reseller';
+  const reseller = isReseller ? props.resellers.find((r) => r._id === props.resellerId) : undefined;
+  const needsReseller = isReseller && !reseller;
+  const toPay = Math.max(0, props.price - props.creditBalance);
+  const depositTooHigh = props.paymentMethod === 'credit' && props.deposit > toPay;
+  // Un vendeur ne vend pas à perte (le serveur refuse de toute façon) : prévenu avant d'appuyer
+  const belowCost = user?.role === 'seller' && (product.purchasePrice || 0) > 0 && props.price < (product.purchasePrice || 0);
   const locked = !!expected && !props.confirmation;
+  const blocked = locked || needsReseller || depositTooHigh || belowCost;
   const confirm = (code: string, source: ScanSource) => {
     if (expected && normCode(code) === normCode(expected)) {
       setConfirmError(null);
@@ -511,7 +574,65 @@ function FoundCard(props: {
         >
           {props.editPrice ? 'Valider le prix' : 'Modifier le prix'}
         </button>
+        {reseller && (
+          <p className="text-[11px] text-gold-soft mt-1">
+            {(product.resellerPrice || 0) > 0 ? `Tarif revendeur (public : ${formatPrice(product.salePrice)})` : "Pas de tarif revendeur pour ce modèle : prix public"}
+          </p>
+        )}
+        {belowCost && <p className="text-[11px] text-red-400 mt-1">Prix sous le prix d&apos;achat : seul le propriétaire peut vendre à ce prix.</p>}
       </div>
+
+      {/* Client : particulier ou revendeur enregistré */}
+      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Type de client">
+        {(
+          [
+            ['retail', 'Particulier', UserPlus],
+            ['reseller', 'Revendeur', Store],
+          ] as const
+        ).map(([mode, label, Icon]) => (
+          <button
+            key={mode}
+            role="radio"
+            aria-checked={props.saleMode === mode}
+            onClick={() => props.onChooseMode(mode)}
+            className={`h-11 rounded-2xl border text-xs font-semibold flex items-center justify-center gap-2 ${
+              props.saleMode === mode ? 'bg-gold/15 border-gold text-gold-soft' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
+            }`}
+          >
+            <Icon className="w-4 h-4" /> {label}
+          </button>
+        ))}
+      </div>
+      {isReseller && (
+        <div className="space-y-1.5">
+          <select
+            value={props.resellerId}
+            onChange={(e) => props.onChooseMode('reseller', e.target.value)}
+            aria-label="Revendeur"
+            className={`w-full h-11 px-3 rounded-xl bg-neutral-900 border text-sm text-white focus:outline-none focus:border-gold ${needsReseller ? 'border-amber-500/60' : 'border-neutral-800'}`}
+          >
+            <option value="">Choisissez le revendeur…</option>
+            {props.resellers.map((r) => (
+              <option key={r._id} value={r._id}>
+                {r.name}
+                {r.phone ? ` · ${r.phone}` : ''}
+                {(r.balance || 0) > 0 ? ` · doit ${formatPrice(r.balance || 0)}` : ''}
+              </option>
+            ))}
+          </select>
+          {props.resellers.length === 0 && (
+            <p className="text-[11px] text-neutral-500">
+              Aucun revendeur enregistré.{' '}
+              <Link href="/app/customers" className="text-gold-soft underline">
+                Ajouter un revendeur
+              </Link>
+            </p>
+          )}
+          {(reseller?.balance || 0) > 0 && (
+            <p className="text-[11px] text-amber-400">{reseller!.name} doit déjà {formatPrice(reseller!.balance || 0)}.</p>
+          )}
+        </div>
+      )}
 
       {/* Avoir */}
       {props.creditBalance > 0 ? (
@@ -547,8 +668,8 @@ function FoundCard(props: {
       )}
 
       {/* Paiement */}
-      <div className="grid grid-cols-3 gap-2">
-        {PAYMENTS.map((m) => {
+      <div className={`grid gap-2 ${isReseller ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        {PAYMENTS.filter((m) => m.id !== 'credit' || isReseller).map((m) => {
           const Icon = m.icon;
           const active = props.paymentMethod === m.id;
           return (
@@ -564,8 +685,25 @@ function FoundCard(props: {
           );
         })}
       </div>
+      {props.paymentMethod === 'credit' && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
+          <label className="text-[11px] text-neutral-300 block">Acompte versé maintenant (espèces, facultatif)</label>
+          <input
+            type="number"
+            min={0}
+            value={props.deposit || ''}
+            onChange={(e) => props.setDeposit(Math.max(0, Number(e.target.value) || 0))}
+            placeholder="0"
+            className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold"
+          />
+          <p className={`text-xs font-bold ${depositTooHigh ? 'text-red-400' : 'text-amber-400'}`}>
+            {depositTooHigh ? "L'acompte dépasse le montant de la vente" : `Reste à payer : ${formatPrice(toPay - props.deposit)}`}
+          </p>
+        </div>
+      )}
 
       {/* Client (optionnel) */}
+      {!isReseller && (
       <div className="rounded-2xl border border-neutral-800">
         <button
           onClick={() => props.setShowCustomer(!props.showCustomer)}
@@ -609,6 +747,21 @@ function FoundCard(props: {
           </div>
         )}
       </div>
+      )}
+      {isReseller && data.type === 'unit' && (
+        <select
+          value={props.warrantyMonths}
+          onChange={(e) => props.setWarrantyMonths(Number(e.target.value))}
+          aria-label="Garantie"
+          className="w-full h-11 px-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-white focus:outline-none focus:border-gold"
+        >
+          <option value={0}>Sans garantie</option>
+          <option value={3}>Garantie 3 mois</option>
+          <option value={6}>Garantie 6 mois</option>
+          <option value={12}>Garantie 12 mois</option>
+          <option value={24}>Garantie 24 mois</option>
+        </select>
+      )}
 
       {/* Contrôle de sécurité : l'article vendu doit être physiquement scanné (ou son N° retapé) */}
       {expected && (
@@ -634,7 +787,10 @@ function FoundCard(props: {
 
       {/* Question de confirmation */}
       <div className="space-y-2">
-        <p className="text-center text-sm font-semibold text-white">Voulez-vous vendre cet article ?</p>
+        <p className="text-center text-sm font-semibold text-white">
+          {reseller ? `Vendre cet article à ${reseller.name} ?` : 'Voulez-vous vendre cet article ?'}
+        </p>
+        {needsReseller && <p className="text-center text-[11px] text-amber-400">Choisissez le revendeur pour appliquer son tarif.</p>}
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={props.onCancel}
@@ -645,14 +801,14 @@ function FoundCard(props: {
           </button>
           <button
             onClick={props.onSell}
-            disabled={props.isSelling || locked}
+            disabled={props.isSelling || blocked}
             className="col-span-2 h-14 rounded-2xl bg-gradient-to-r from-gold to-gold-deep text-ink font-extrabold text-base hover:brightness-110 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-gold/20"
           >
             {props.isSelling ? (
               <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
             ) : (
               <>
-                {locked ? <Lock className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />} Oui, vendre
+                {blocked ? <Lock className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />} Oui, vendre
               </>
             )}
           </button>
